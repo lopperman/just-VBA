@@ -51,13 +51,13 @@ Private Function TmpUtilSheet() As Worksheet
     
     If WorksheetExists(TMP_RANGE_UTIL_WORKSHEET) = False Then
         Dim retWS As Worksheet
-        Dim uis As UiState: uis = SuspendState
+        
         Set retWS = Excel.Application.Worksheets.add(After:=Worksheets(Worksheets.Count))
         retWS.Name = TMP_RANGE_UTIL_WORKSHEET
         retWS.visible = xlSheetVeryHidden
         Set TmpUtilSheet = retWS
         Set retWS = Nothing
-        RestoreState uis
+        
     Else
         Set TmpUtilSheet = ThisWorkbook.Worksheets(TMP_RANGE_UTIL_WORKSHEET)
     End If
@@ -65,7 +65,7 @@ End Function
 
 Public Function ArrRange(rng As Range, flags As ArrayOptionFlags) As Variant
     
-    Dim uis As UiState: uis = SuspendState
+    
     
     Dim retArray As Variant
     Dim unique As Boolean
@@ -118,7 +118,7 @@ Public Function ArrRange(rng As Range, flags As ArrayOptionFlags) As Variant
         Erase retArray
     End If
     
-    RestoreState uis
+    
 
 End Function
 Public Function ArrListObj(lstObj As ListObject, flags As ArrayOptionFlags) As Variant
@@ -129,7 +129,7 @@ End Function
 
 Public Function RangeInfo(rg As Range) As RngInfo
 
-    Dim uis As UiState: uis = SuspendState
+    
 
     Dim retV As RngInfo
     If rg Is Nothing Then
@@ -148,7 +148,7 @@ Public Function RangeInfo(rg As Range) As RngInfo
     
     RangeInfo = retV
     
-    RestoreState uis
+    
 End Function
 
 Public Function RangeArea(rg As Range) As AreaStruct
@@ -172,7 +172,7 @@ End Function
 
 Public Function RangeTo1DArray(ByVal rng As Range) As Variant()
 'TODO:  Optimizae to build 1D array from Arrays from each Area in rng
-    Dim uis As UiState: uis = SuspendState
+    
 
 '   Return all cells in Range as 1D Array
     Dim retV() As Variant
@@ -186,14 +186,14 @@ Public Function RangeTo1DArray(ByVal rng As Range) As Variant()
     Next cl
     RangeTo1DArray = retV
     
-    RestoreState uis
+    
 End Function
 
 Public Function GetUniqueSortedListCol(lstObj As ListObject, lstCol As Variant, Optional returnType As ListReturnType = ListReturnType.lrtArray) As Variant
 '   Returns unique 1-based, 2D array from specific ListObject ListColumn
 '   Return Type = Array (default), Dictionary, or Collection
     If lstObj.listRows.Count = 0 Then Exit Function
-    Dim uis As UiState: uis = SuspendState
+    
     
     Dim tdic As Dictionary
     Dim tCol As Collection
@@ -227,12 +227,12 @@ Public Function GetUniqueSortedListCol(lstObj As ListObject, lstCol As Variant, 
         Erase arr
     End If
     
-    RestoreState uis
+    
     
 End Function
 Public Function ArrListCols(lstObj As ListObject, flags As ArrayOptionFlags, ParamArray listCols() As Variant) As Variant
 '   Get Array from specific ListObject listColum(s)
-    Dim uis As UiState: uis = SuspendState
+    
 
     Dim idx As Long, rng As Range
     If lstObj.listRows.Count > 0 Then
@@ -247,7 +247,7 @@ Public Function ArrListCols(lstObj As ListObject, flags As ArrayOptionFlags, Par
     End If
     Set rng = Nothing
     
-    RestoreState uis
+    
 End Function
 Public Function ArrParams(ParamArray vals() As Variant) As Variant
 '   Build standard array from ParamsArray so it can be passed as Variant() to other functions
@@ -286,7 +286,7 @@ Public Function ArrParams(ParamArray vals() As Variant) As Variant
 End Function
 Public Function ArrArray(arr As Variant, flags As ArrayOptionFlags, Optional zeroBasedAsColumns As Boolean = False) As Variant
 '   By default, a zero-based array will become multiple rows.  Set 'zeroBasedAsColumns' to create 1 row with multiple columns
-    Dim uis As UiState: uis = SuspendState
+    
 
     Dim retArray As Variant
     Dim unique As Boolean
@@ -330,7 +330,7 @@ Public Function ArrArray(arr As Variant, flags As ArrayOptionFlags, Optional zer
         Erase retArray
     End If
     
-    RestoreState uis
+    
 End Function
 
 
@@ -402,7 +402,7 @@ End Function
 
 Private Function UniqueRC1Arr(arr As Variant, flags As ArrayOptionFlags) As Variant
     
-    Dim uis As UiState: uis = SuspendState
+    
     
     Dim retArray As Variant
     Dim fixARR As Variant
@@ -479,7 +479,7 @@ Private Function UniqueRC1Arr(arr As Variant, flags As ArrayOptionFlags) As Vari
     If ArrDimensions(fixARR) > 0 Then Erase fixARR
     If ArrDimensions(retArray) > 0 Then Erase retArray
     
-    RestoreState uis
+    
 
 End Function
 
@@ -620,7 +620,7 @@ End Function
 
 Private Function ClearTempRangeUtil()
     
-    Dim uis As UiState: uis = SuspendState
+    
     
     With TmpUtilSheet
         .Cells.EntireColumn.ColumnWidth = .StandardWidth
@@ -628,6 +628,6 @@ Private Function ClearTempRangeUtil()
         .Cells.Clear
     End With
     
-    RestoreState uis
+    
     
 End Function

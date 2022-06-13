@@ -44,7 +44,58 @@ Public Type RngInfo
     AreasSameColumns As Boolean
     Areas As Long
 End Type
-Public Type UiState
+
+' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
+'   ENUMS FOR WORKING WITH pbPerf
+' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
+'       ___ ___ ___ ___ ___ ___ ___ ___ ___ ___ ___ ___
+'           Flag Enum Items that are used when calling
+'           SetPerf(options as ftPerStates)
+'           FlagEnums can be 'added' (like how the Msgbox arguments work)
+        Public Enum ftPerfOption
+            poINVALID = 0
+            ' CLEAR Control -- returns to default user interaction mode
+                    poClearControl = 2 ^ 0
+                ' Use any combination of these option with 'poClearControl'
+                ' E.g.:    SetPerf poClearControl + poForeFinalSheet + poKeepTraceQueued
+                    poIgnoreSheetProtect = 2 ^ 1 ' Do not Protect Active Sheet
+                    poKeepTraceQueued = 2 ^ 2 ' Do not write out queued Trace Info
+                    poForceFinalSheet = 2 ^ 3 ' For User to 'Land' On Specific Sheet
+                    poBypassCloseChecks = 2 ^ 4 ' Disable Any 'OnClosing' Checking (In case of Error 51 -- Internal Error)
+            
+            ' SUSPEND Control -- Default 'turns everything off, but you can
+            ' selective adjust if needed
+                    poSuspendControl = 2 ^ 5
+             ' Use any combination of these options with 'poSuspendControl'
+             ' E.g.:    SetPerf poSuspendControl + poCalcModeManual + poDoNotDisable_Alerts
+                    poCalcModeManual = 2 ^ 6 ' Keep Calculation (Defaults to Automantic) on Manual Mode on next 'poClearControl' is called
+                    poDoNotDisable_Screen = 2 ^ 7 ' Do Not Disable Screen During 'SuspendControl'
+                    poDoNotDisable_Interaction = 2 ^ 8 ' Do Not Disable User Interaction During 'SuspendControl'
+                    poDoNotDisable_Alerts = 2 ^ 9 ' Do Not Disable Alerts During 'Suspend Control
+                    
+            ' CHECK/VALIDATE SuspendControl -- This ensures all the Application 'Performance' properties
+            '   are set to the  values applied during the last ' SetPerf poSuspendControl'
+            '   It's common to need to change a performance property while code is running -- for example there may
+            '   be a screen update you wish to perform. After the code requiring manual adjustments to these properties
+            '   rather than needing to remember what to set everything back to , simply call ' SetPerf poCheckControl '
+            '   poCheckControl can be used as often as needed while the Default 'SuspendControl' or
+            '   custom 'SuspendControl' values are being used. (Returns to 'Default User Control' any time the 'SetPerf poClearControl' is called
+                    poCheckControl = 2 ^ 10
+            
+            ' MISC. Control Operation
+            '   The 'Performance' State Only has 2 'modes':
+            '    - Default User Interaction mode (Events ON, Screen Updating ON, etc)
+            '    - SuspendControl mode (Using either the Default SuspendControl configuration (Which allows tweaking some properties), or
+            '    - a custom ftPerfStates Type that you have set. (See the 'SetPerfCustom' Function for more into on that
+            '  The the current Performance Mode is in 'SuspendControl', an error will be raised if you try to set a new 'SuspendControl' configuration
+            '  In the vent you need to change the performance options in the middle of your code, you can call 'SetPerf poOverride' to clear
+            '  the current PerfState before applying a new one.
+                    poOverride = 2 ^ 11
+        End Enum
+        
+Public Type ftPerfStates
+    IsPerfState As Boolean
+    IsDefault As Boolean
     Events As Boolean
     Interactive As Boolean
     Screen As Boolean
@@ -56,6 +107,16 @@ End Type
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
 '   GENERALIZED ENUMS
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
+Public Enum ftOperatingState
+    [_ftunknown] = -1
+    ftOpening = 0
+    ftRunning = 1
+    ftClosing = 2
+    ftUpgrading = 3
+    ftResetting = 4
+    ftImporting = 5
+End Enum
+
 
 
 Public Enum RangeFunctionOperator
@@ -225,17 +286,10 @@ Public Enum HolidayEnum
     holidayName = 1
     holidayDt = 2
 End Enum
-Public Enum ftOperatingState
-    [_ftunknown] = -1
-    ftOpening = 0
-    ftRunning = 1
-    ftClosing = 2
-    ftUpgrading = 3
-    ftResetting = 4
-    ftImporting = 5
-End Enum
+
 
 Private l_preventProtection As Boolean
+Private l_OperatingState As ftOperatingState
 
 Public Property Let PreventProtection(preventProtect As Boolean)
     l_preventProtection = preventProtect
@@ -244,64 +298,19 @@ Public Property Get PreventProtection() As Boolean
     PreventProtection = l_preventProtection
 End Property
 
-
-' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~    SYSTEM STATE    ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
-Public Function RestoreStateDefault()
-    RestoreState DefaultState
-End Function
-Private Property Get DefaultState() As UiState
-    Dim retV As UiState
-    retV.alerts = True
-    retV.calc = xlCalculationAutomatic
-    retV.Cursor = XlMousePointer.xlDefault
-    retV.Events = True
-    retV.Interactive = True
-    retV.Screen = True
-    DefaultState = retV
-End Property
-Public Function CurrentUIState() As UiState
-'   Get Current 'UI' State Settings
-    Dim retV As UiState
-    retV.alerts = Application.DisplayAlerts
-    retV.calc = Application.Calculation
-    retV.Cursor = Application.Cursor
-    retV.Events = Application.EnableEvents
-    retV.Interactive = Application.Interactive
-    retV.Screen = Application.ScreenUpdating
-    CurrentUIState = retV
-End Function
-Public Function RestoreState(prevState As UiState)
-'   Update Current State Settings to values in 'prevState'
-    SetState prevState
-End Function
-Public Function SetState(updState As UiState)
-    With Excel.Application
-        If Not .Interactive = updState.Interactive Then .Interactive = updState.Interactive
-        If Not .ScreenUpdating = updState.Screen Then .ScreenUpdating = updState.Screen
-        If Not .Cursor = updState.Cursor Then .Cursor = updState.Cursor
-        If Not .Calculation = updState.calc Then .Calculation = updState.calc
-        If Not .DisplayAlerts = updState.alerts Then .DisplayAlerts = updState.alerts
-        If Not .EnableEvents = updState.Events Then .EnableEvents = updState.Events
-    End With
-End Function
-Public Function SuspendState( _
-    Optional scrnUpd As Boolean = False, _
-    Optional scrnInter As Boolean = True, _
-    Optional alerts As Boolean = False, _
-    Optional calcMode As XlCalculation = xlCalculationAutomatic _
-    ) As UiState
-'   Returns current UIState (before suspension options updated)
-    Dim retV As UiState
-    retV = CurrentUIState
-    With Excel.Application
-        If .EnableEvents Then .EnableEvents = False
-        If Not .ScreenUpdating = scrnUpd Then .ScreenUpdating = scrnUpd
-        If Not .Interactive = scrnInter Then .Interactive = scrnInter
-        If Not .DisplayAlerts = alerts Then .DisplayAlerts = alerts
-        If Not .Calculation = calcMode Then .Calculation = calcMode
-    End With
-    SuspendState = retV
-End Function
-' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~   (END) SYSTEM STATE    ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
-
-
+' BEGIN ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~    OPERATING STATE    ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+    Public Function IsFTClosing() As Variant
+        IsFTClosing = (l_OperatingState = ftClosing)
+    End Function
+    Public Function IsFTOpening() As Variant
+        IsFTOpening = (l_OperatingState = ftOpening)
+    End Function
+    
+    Public Property Get ftState() As ftOperatingState
+        ftState = l_OperatingState
+        wsOpenClose.Calculate
+    End Property
+    Public Property Let ftState(ftsVal As ftOperatingState)
+        l_OperatingState = ftsVal
+    End Property
+' END ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~    OPERATING STATE    ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~

@@ -46,7 +46,7 @@ End Function
 Public Function ReplaceListColFormulaWithStatic(lstObj As ListObject, column As Variant)
 '   Replaces listColumn formula with static values
 '   Column = Name of ListColumn or Index of ListColumn
-    Dim uis As UiState: uis = SuspendState
+    
     
     Dim tARR As Variant
     If Not lstObj.ListColumns(column).DataBodyRange Is Nothing Then
@@ -61,7 +61,7 @@ Public Function ReplaceListColFormulaWithStatic(lstObj As ListObject, column As 
     
     If ArrDimensions(tARR) > 0 Then Erase tARR
     
-    RestoreState uis
+    
 End Function
 
 Public Function PopulateStaticFromFormula(lstObj As ListObject, lstColName As String, r1c1Formula As String, Optional createIfMissing As Boolean = True, Optional numberFormat As String = vbNullString) As Boolean
@@ -72,7 +72,7 @@ On Error GoTo E:
     If lstObj.listRows.Count = 0 Then
         Exit Function
     End If
-    Dim uis As UiState: uis = SuspendState
+    
     
     Dim tmpColArr As Variant
     If ListColumnExists(lstObj, lstColName) = False And createIfMissing = True Then
@@ -107,7 +107,7 @@ Finalize:
     If ArrDimensions(tmpColArr) > 0 Then Erase tmpColArr
     PopulateStaticFromFormula = Not failed
     
-    RestoreState uis
+    
     If Err.Number <> 0 Then Err.Clear
     Exit Function
 E:
@@ -154,7 +154,7 @@ End Function
 Public Function AddColumnIfMissing(lstObj As ListObject, colName As String, Optional position As Long = -1, Optional numberFormat As String = vbNullString) As Boolean
 '   Add column 'colName' to 'lstObj', if missing. Optionally provide ListColumn position, and NumberFormat for data display
 On Error Resume Next
-    Dim uis As UiState: uis = SuspendState
+    
     
     Dim retV As Boolean
     If Not ListColumnExists(lstObj, colName) Then
@@ -172,6 +172,6 @@ On Error Resume Next
     AddColumnIfMissing = (Err.Number = 0)
     If Err.Number <> 0 Then Err.Clear
     Set nc = Nothing
-    RestoreState uis
+    
     If Err.Number <> 0 Then Err.Clear
 End Function

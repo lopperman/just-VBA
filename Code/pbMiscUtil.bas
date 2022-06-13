@@ -19,7 +19,6 @@ Option Base 1
 Public Const TEMP_DIRECTORY_NAME As String = "FinToolTemp"
 Public Const LOG_DIRECTORY_NAME As String = "Logs"
 
-Private l_OperatingState As ftOperatingState
 Private l_listObjDict As Dictionary
 
 Public Function pbProtectSheet(ws As Worksheet) As Boolean
@@ -31,25 +30,11 @@ End Function
 Public Function pbUnprotectSheet(ws As Worksheet) As Boolean
     'Replace with you own implementation
     'pbpbUnprotectSheet = True
-    
     pbUnprotectSheet = UnprotectSHT(ws)
 End Function
 
 
-Public Function IsFTClosing() As Variant
-    IsFTClosing = (l_OperatingState = ftClosing)
-End Function
-Public Function IsFTOpening() As Variant
-    IsFTOpening = (l_OperatingState = ftOpening)
-End Function
 
-Public Property Get ftState() As ftOperatingState
-    ftState = l_OperatingState
-    wsOpenClose.Calculate
-End Property
-Public Property Let ftState(ftsVal As ftOperatingState)
-    l_OperatingState = ftsVal
-End Property
 
 
 Public Property Get DefaultTempTblPrefixes() As Variant()
@@ -235,7 +220,7 @@ Public Function MsgBox_FT(prompt As String, Optional buttons As VbMsgBoxStyle = 
     If Not ButtonOptionSet(buttons, vbSystemModal) Then buttons = buttons + vbSystemModal
     If Not ButtonOptionSet(buttons, vbMsgBoxSetForeground) Then buttons = buttons + vbMsgBoxSetForeground
     Beep
-    If Not ThisWorkbook.ActiveSheet Is Application.ActiveSheet Then
+    If Not ThisWorkbook.activeSheet Is Application.activeSheet Then
         Application.ScreenUpdating = True
         ThisWorkbook.Activate
         DoEvents

@@ -104,9 +104,9 @@ Public Function Assert(condition As Boolean)
 End Function
 
 Public Function DebugPrint(Optional stmnt As Variant)
-    If DebugMode Then
-        If IsMissing(stmnt) Then stmnt = ""
-        Debug.Print Concat("( ", Now, " )", vbTab, stmnt)
+    If IsMissing(stmnt) Then stmnt = ""
+    If DebugInfo Or DebugMode Then
+        Trace stmnt
     End If
 End Function
 
@@ -126,7 +126,6 @@ Private Function QueueTrace(trcInfo As Variant)
     End If
     
     TraceQueue.add trcInfo
-
 End Function
 
 Public Property Get IsDEV() As Boolean
@@ -139,22 +138,32 @@ Public Function TraceSessionStart(Optional sessionName As String = vbNullString)
     Trace "Starting: " & l_traceSession, forceDoEvents:=True
 End Function
 
+Public Function DumpTraceIfAvail()
+    If Len(DUMP_TRACE_CALL_NAME) > 0 Then
+        Application.Run DUMP_TRACE_CALL_NAME
+        DoEvents
+    End If
+End Function
+
 Public Function TraceSessionEnd()
     If Len(l_traceSession & vbNullString) = 0 Then l_traceSession = "UNK Trace Session"
     Trace "Completed: " & l_traceSession & vbNullString, forceDoEvents:=True
     l_traceSession = vbNullString
-    If Len(DUMP_TRACE_CALL_NAME) > 0 Then
-        Application.Run DUMP_TRACE_CALL_NAME
-    End If
+    DumpTraceIfAvail
 End Function
 
 Public Function TrcSysInfo() As String
-    TrcSysInfo = " ( E-" & IIf(Events, 1, 0) & ", S-" & IIf(Application.ScreenUpdating, 1, 0) & ", I-" & IIf(Application.Interactive, 1, 0) & ", C-" & IIf(Application.Calculation = xlCalculationAutomatic, 1, 0) & ")"
+    TrcSysInfo = " ( E-" & IIf(Events, "*ON*", "off") & ", S-" & IIf(Application.ScreenUpdating, "*ON*", "off") & ", I-" & IIf(Application.Interactive, "*ON*", "off") & ", C-" & IIf(Application.Calculation = xlCalculationAutomatic, "auto", "man") & ")"
 End Function
 
+Public Function NowWithMS() As String
+    NowWithMS = Format(Now, "yyyymmdd hh:mm:ss") & Right(Format(Timer, "0.000"), 4)
+End Function
 
 Public Function Trace(ByVal msg As String, Optional ByVal forceWrite As Boolean = False, Optional ByVal forceDoEvents As Boolean = False, Optional ByVal forceDebug As Boolean = False)
     If ftState = ftClosing Then Exit Function
+    
+   If msg Like "FALSE" Then Stop
     
     If ThisWorkbook.readOnly Then
         GoTo Finalize:
@@ -164,14 +173,17 @@ Public Function Trace(ByVal msg As String, Optional ByVal forceWrite As Boolean 
     End If
     l_lastTraceMsg = msg
     
-    If DebugInfo Then
-        QueueTrace Array(Now, msg, TrcSysInfo)
-   End If
-    If DebugMode Then
-        DebugPrint ConcatWithDelim(", ", Now, msg, TrcSysInfo)
-   End If
+    If DebugInfo Or DebugMode Then
+        Dim nw As String
+        nw = NowWithMS
+        Dim trcArr As Variant
+        trcArr = Array(nw, msg, IIf(InStr(1, msg, "BusyWait", vbTextCompare) > 0, "", TrcSysInfo))
+        If DebugInfo Then QueueTrace trcArr
+        If DebugMode Then Debug.Print Join(Array(nw & " -- " & msg, IIf(InStr(1, msg, "BusyWait", vbTextCompare) > 0, "", TrcSysInfo)), ", ")
+    End If
     
-    If wsBusy Is ThisWorkbook.ActiveSheet Then
+    
+    If wsBusy Is ThisWorkbook.activeSheet Then
         wsBusy.UpdateMsg msg & " " & TrcSysInfo, forceDoEvents
         forceDoEvents = False
     ElseIf forceDoEvents Then

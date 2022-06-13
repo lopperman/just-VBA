@@ -38,15 +38,15 @@ Finalize:
     If Err.Number <> 0 Then Err.Clear
     On Error GoTo 0
 End Function
-Public Function UniqueRowNumberInRange(ByVal target As Range) As Long()
+Public Function UniqueRowNumberInRange(ByVal Target As Range) As Long()
 
     Dim tmpD As New Dictionary
     tmpD.CompareMode = BinaryCompare
     Dim areaIDX As Long, rwIDX As Long
     Dim realRow As Long
-    For areaIDX = 1 To target.Areas.Count
-        For rwIDX = 1 To target.Areas(areaIDX).Rows.Count
-            realRow = target.Areas(areaIDX).Rows(rwIDX).Row
+    For areaIDX = 1 To Target.Areas.Count
+        For rwIDX = 1 To Target.Areas(areaIDX).Rows.Count
+            realRow = Target.Areas(areaIDX).Rows(rwIDX).Row
             If Not tmpD.Exists(realRow) Then
                 tmpD(realRow) = realRow
             End If
@@ -65,11 +65,11 @@ Public Function UniqueRowNumberInRange(ByVal target As Range) As Long()
     End If
 
 End Function
-Public Function IsListObjectHeader(ByVal target As Range) As Boolean
+Public Function IsListObjectHeader(ByVal Target As Range) As Boolean
 '   Returns True if target(1,1) intersects with any ListObject HeaderRowRange
-    If target Is Nothing Then Exit Function
-    If Not target.ListObject Is Nothing Then
-        If Not Intersect(target(1, 1), target.ListObject.HeaderRowRange) Is Nothing Then
+    If Target Is Nothing Then Exit Function
+    If Not Target.ListObject Is Nothing Then
+        If Not Intersect(Target(1, 1), Target.ListObject.HeaderRowRange) Is Nothing Then
             IsListObjectHeader = True
         End If
     End If
