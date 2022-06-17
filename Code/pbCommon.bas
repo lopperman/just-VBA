@@ -20,6 +20,11 @@ Option Base 1
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
 '   GENERALIZED TYPES
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
+Public Enum ecComparisonType
+    ecOR = 0 'default
+    ecAnd
+End Enum
+
 Public Type ArrInformation
     Rows As Long
     Columns As Long
@@ -290,6 +295,11 @@ End Enum
 
 Private l_preventProtection As Boolean
 Private l_OperatingState As ftOperatingState
+
+
+Public Property Get StartupPath() As String
+    StartupPath = PathCombine(True, Application.StartupPath)
+End Property
 
 Public Property Let PreventProtection(preventProtect As Boolean)
     l_preventProtection = preventProtect

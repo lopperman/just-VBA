@@ -63,33 +63,26 @@ Private Function TmpUtilSheet() As Worksheet
     End If
 End Function
 
+
+
 Public Function ArrRange(rng As Range, flags As ArrayOptionFlags) As Variant
-    
-    
-    
     Dim retArray As Variant
     Dim unique As Boolean
     Dim aInfo As ArrInformation
     Dim tmpValue As Variant
     Dim RngInfo As RngInfo
-    
     RngInfo = RangeInfo(rng)
-    
-    If FlagEnumCompare(flags, aoAreaSizesMustMatch) Then
+    If EnumCompare(flags, aoAreaSizesMustMatch) Then
         If RngInfo.AreasSameColumns = False And RngInfo.AreasSameRows = False Then
             RaiseError ERR_INVALID_RANGE_SIZE, "Range Areas must all be the same size (ftRangeArray.ArrRange)"
         End If
     End If
-    
-    unique = FlagEnumCompare(flags, ArrayOptionFlags.aoUnique) Or FlagEnumCompare(flags, ArrayOptionFlags.aoUniqueNoSort)
-    
-   If FlagEnumCompare(flags, ArrayOptionFlags.aoVisibleRangeOnly) Then
+    unique = EnumCompare(flags, ArrayOptionFlags.aoUnique + ArrayOptionFlags.aoUniqueNoSort, ecOR)
+   If EnumCompare(flags, ArrayOptionFlags.aoVisibleRangeOnly) Then
         retArray = BuildRC1(rng.SpecialCells(xlCellTypeVisible))
    Else
         retArray = BuildRC1(rng)
    End If
-    
-    
     If unique Then
         retArray = UniqueRC1Arr(retArray, flags)
     End If
@@ -291,7 +284,7 @@ Public Function ArrArray(arr As Variant, flags As ArrayOptionFlags, Optional zer
     Dim retArray As Variant
     Dim unique As Boolean
     
-    unique = FlagEnumCompare(flags, ArrayOptionFlags.aoUnique)
+    unique = EnumCompare(flags, ArrayOptionFlags.aoUnique)
 
     If ArrDimensions(arr) = 1 Then
         retArray = ConvertArrToRCArr(arr, zeroBasedAsColumns)
@@ -430,7 +423,7 @@ Private Function UniqueRC1Arr(arr As Variant, flags As ArrayOptionFlags) As Vari
         Set tmpRng = .Range("A1")
         Set tmpRng = tmpRng.Resize(rowSize:=aInfo.Rows, ColumnSize:=aInfo.Columns)
         tmpRng.value = arr
-        If Not FlagEnumCompare(flags, ArrayOptionFlags.aoUniqueNoSort) Then
+        If Not EnumCompare(flags, ArrayOptionFlags.aoUniqueNoSort) Then
             Dim sidx As Long, sRNG As Range
             .Sort.SortFields.Clear
             For sidx = 1 To tmpRng.Columns.Count
@@ -569,7 +562,7 @@ E:
 End Function
 
 Private Function ConvertArrToRCArr(ByVal arr As Variant, Optional zeroBasedAsColumns As Boolean = False) As Variant
-    Dim retV() As Variant, rwCount As Long, isBase0 As Boolean, arrIDX As Long, colCount As Long
+    Dim retV() As Variant, rwCount As Long, isBase0 As Boolean, arrIDX As Long, colcount As Long
     If IsArrInit(arr) = False Then
         ReDim retV(1 To 1, 1 To 1)
         retV(1, 1) = arr
@@ -596,7 +589,7 @@ Private Function ConvertArrToRCArr(ByVal arr As Variant, Optional zeroBasedAsCol
             ConvertArrToRCArr = retV
         Else
             isBase0 = LBound(arr) = 0
-            colCount = UBound(arr) - LBound(arr) + 1
+            colcount = UBound(arr) - LBound(arr) + 1
             If isBase0 Then
                 ReDim retV(1 To 1, 1 To UBound(arr) + 1)
             Else

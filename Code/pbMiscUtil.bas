@@ -34,8 +34,63 @@ Public Function pbUnprotectSheet(ws As Worksheet) As Boolean
 End Function
 
 
+Public Function DeleteFolderFiles(folderPath As String, Optional patternMatch As String = vbNullString)
+On Error Resume Next
+    folderPath = PathCombine(True, folderPath)
+    
+    If DirectoryFileCount(folderPath) > 0 Then
+        Dim myPath As Variant
+        myPath = PathCombine(True, folderPath)
+        ChDir folderPath
+        Dim myFile, MyName As String
+        MyName = Dir(myPath, vbNormal)
+        Do While MyName <> ""
+            If (GetAttr(PathCombine(False, myPath, MyName)) And vbNormal) = vbNormal Then
+                If patternMatch = vbNullString Then
+                    Kill PathCombine(False, myPath, MyName)
+                Else
+                    If LCase(MyName) Like LCase(patternMatch) Then
+                        Kill PathCombine(False, myPath, MyName)
+                    End If
+                End If
+            End If
+            MyName = Dir()
+        Loop
+    End If
+    If Err.Number <> 0 Then Err.Clear
+End Function
 
+Public Function DirectoryFileCount(tmpDirPath As String) As Long
+On Error Resume Next
 
+    Dim myFile, myPath, MyName As String, retV As Long
+    myPath = PathCombine(True, tmpDirPath)
+    MyName = Dir(myPath, vbNormal)
+    Do While MyName <> ""
+        If (GetAttr(PathCombine(False, myPath, MyName)) And vbNormal) = vbNormal Then
+            retV = retV + 1
+        End If
+        MyName = Dir()
+    Loop
+    DirectoryFileCount = retV
+    If Err.Number <> 0 Then Err.Clear
+End Function
+
+Public Function DirectoryDirectoryCount(tmpDirPath As String) As Long
+On Error Resume Next
+
+    Dim myFile, myPath, MyName As String, retV As Long
+    myPath = PathCombine(True, tmpDirPath)
+    MyName = Dir(myPath, vbDirectory)
+    Do While MyName <> ""
+        If (GetAttr(PathCombine(False, myPath, MyName)) And vbDirectory) = vbDirectory Then
+            retV = retV + 1
+        End If
+        MyName = Dir()
+    Loop
+    DirectoryDirectoryCount = retV
+    If Err.Number <> 0 Then Err.Clear
+End Function
 
 Public Property Get DefaultTempTblPrefixes() As Variant()
     'DEFAULT PREFIXES TO INDICATE A TABLE/LISTOBJECT IS TEMPORARY
@@ -143,7 +198,7 @@ On Error GoTo E:
         sw.StopTimer
         DoEvents
         If IsDEV And DebugMode Then
-            Debug.Print "mdlGlobal.wt - Load All listObjects: " & sw.ResultAsTime
+            DebugPrint "mdlGlobal.wt - Load All listObjects: " & sw.ResultAsTime
         End If
         Set sw = Nothing
     End If
@@ -196,11 +251,14 @@ Public Function CleanSingleTicks(wbName As String) As String
     End If
     CleanSingleTicks = retV
 End Function
-' ~~~~~~~~~~   FLAG ENUM COMPARE ~~~~~~~~~~'
-Public Function FlagEnumCompare(theEnum As Variant, enumMember As Variant) As Boolean
-'Use to check Bitwise enums
-    FlagEnumCompare = CBool(theEnum And enumMember) = True
+
+' ~~~ ~~ FLAG ENUM COMPARE ~~~ ~~~
+Public Function EnumCompare(theEnum As Variant, enumMember As Variant, Optional ByVal iType As ecComparisonType = ecComparisonType.ecOR) As Boolean
+    Dim c As Long
+    c = theEnum And enumMember
+    EnumCompare = IIf(iType = ecOR, c <> 0, c = enumMember)
 End Function
+
 
 ' ~~~~~~~~~~   INPUT BOX   ~~~~~~~~~~'
 Public Function InputBox_FT(prompt As String, Optional title As String = "Financial Tool - Input Needed", Optional default As Variant, Optional inputType As ftInputBoxType) As Variant
@@ -217,10 +275,10 @@ Public Function MsgBox_FT(prompt As String, Optional buttons As VbMsgBoxStyle = 
     Dim evts As Boolean: evts = Events
     Dim screenUpd As Boolean: screenUpd = Application.ScreenUpdating
     EventsOff
-    If Not ButtonOptionSet(buttons, vbSystemModal) Then buttons = buttons + vbSystemModal
-    If Not ButtonOptionSet(buttons, vbMsgBoxSetForeground) Then buttons = buttons + vbMsgBoxSetForeground
+    If Not EnumCompare(buttons, vbSystemModal) Then buttons = buttons + vbSystemModal
+    If Not EnumCompare(buttons, vbMsgBoxSetForeground) Then buttons = buttons + vbMsgBoxSetForeground
     Beep
-    If Not ThisWorkbook.activeSheet Is Application.activeSheet Then
+    If Not ThisWorkbook.ActiveSheet Is Application.ActiveSheet Then
         Application.ScreenUpdating = True
         ThisWorkbook.Activate
         DoEvents
@@ -354,11 +412,11 @@ Public Function PathCombine(includeEndSeparator As Boolean, ParamArray vals() As
 ' COMBINE PATH AND/OR FILENAME SEGMENTS
 ' WORKS FOR MAC OR PC ('/' vs '\'), and for web url's
 '
-'   Debug.Print PathCombine(True, "/usr", "\\what", "/a//", "mess")
+'   DebugPrint PathCombine(True, "/usr", "\\what", "/a//", "mess")
 '      outputs:  /usr/what/a/mess/
-'   Debug.Print PathCombine(False, "/usr", "\\what", "/a//", "mess", "word.docx/")
+'   DebugPrint PathCombine(False, "/usr", "\\what", "/a//", "mess", "word.docx/")
 '      outputs: /usr/what/a/mess/word.docx
-'   Debug.Print PathCombine(true,"https://www.google.com\badurl","gmail")
+'   DebugPrint PathCombine(true,"https://www.google.com\badurl","gmail")
 '       outputs:  https://www.google.com/badurl/gmail/
     
     Dim tDelim As String, isHTTP As Boolean
@@ -664,7 +722,7 @@ End Function
 Public Function CallOnTime_OneArg(wbName As String, procName As String, argVal As Variant, Optional secondsDelay As Long = 0)
     If IsDEV Then
         Beep
-        Debug.Print " ***** DEV ***** See if OnTime can work properly as Application.Run"
+        DebugPrint " ***** DEV ***** See if OnTime can work properly as Application.Run"
     End If
     wbName = CleanSingleTicks(wbName)
     If TypeName(argVal) = "String" Then
@@ -686,5 +744,42 @@ Public Function CallOnTime(wbName As String, procName As String, Optional second
     Dim tProc As String
     tProc = "'" & wbName & "'!'" & procName & "'"
     Application.OnTime EarliestTime:=GetTimeDelay(secondsDelay), Procedure:=tProc
+End Function
+
+Public Property Get ActiveSheetName() As String
+    If Not ThisWorkbook.ActiveSheet Is Nothing Then
+        ActiveSheetName = ThisWorkbook.ActiveSheet.Name
+    End If
+End Property
+
+
+Public Property Get Events() As Boolean
+    Events = Application.EnableEvents
+End Property
+Public Property Let Events(evtOn As Boolean)
+    If Not Application.EnableEvents = evtOn Then
+        Application.EnableEvents = evtOn
+    End If
+End Property
+Public Function EventsOff()
+    Events = False
+End Function
+Public Function EventsOn()
+    Events = True
+End Function
+
+
+
+'   Example Usage: ConcatWithDelim(", ","Why","Doesn't","VBA","Have","This")
+'       outputs:  Why, Doesn't, VBA, Have, This
+Public Function ConcatWithDelim(delimeter As String, ParamArray items() As Variant) As String
+    ConcatWithDelim = Join(items, delimeter)
+End Function
+
+
+'   Example Usage: Dim msg as string: msg = "Hello There today's date is: ": DebugPrint Concat(msg,Date)
+'       outputs: Hello There today's date is: 5/24/22
+Public Function Concat(ParamArray items() As Variant) As String
+    Concat = Join(items, "")
 End Function
 

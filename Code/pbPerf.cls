@@ -13,18 +13,55 @@ Attribute VB_Exposed = False
 ' pbPerf v1.0.0
 ' (c) Paul Brower - https://github.com/lopperman/VBA-pbUtil
 '
-' Manage the PERFORMANCE STATE (EnableEvents, ScreenUpdating, UserInteraction, etc) of  your Workbook/App
+'   Manage Application Settings from a single location to improve performance while
+'   code is executing. (Includes suspending events)
 '
-'       ~~~ 'EASY MODE' ~~~ (Just Use LockdownOn, LockdownOff)
+'   If you need something re-enabled (e.g. ScreenUpdate) while your code is running,
+'   you don't need to worry about changing the setting back. Just place the following
+'   call at the end of your method: 'pbPerf.Check'
+'   'pbPerf.Check' will verify all Application Setting are in the Propery 'Suspended' State
 '
-'       LockdownOn
-'        - Use anywhere in the app at anytime to turn OFF or DISABLE
-'               Events, ScreenUpdating,Interaction,DisplayAlerts,Animations,Etc
-
-'       DefaultMode
-'        - Use anywhere in the app at anytime to turn ON or ENABLE:
-'               Will Always set Application.Calculation = xlCalculationAutomatic
-'               Events, ScreenUpdating,Interaction,DisplayAlerts,Animations,Etc
+'       ~~~  USAGE STRATEGY  ~~~
+'       There are typically 3 types of actions that can start code running in your app:
+'       (1) User Clicking A Control that has a Macro Assign (Or by Running a Macro),
+'       (2) Automatic Code Execution, like 'Auto_Run' Macro, 'OnTime' Application
+'            Call, Workbook_Open, etc
+'       (3) Event triggered by user interaction with Worksheet Objects (like
+'            Double-Clicking a range, Changing A Range, Etc)
+'       If you are able to have a clear 'Starting' and 'Ending' Path for your code,
+'           this Module will enable you to 'turn things off or on' one time for
+'           each time code is tirggered and executed.
+'       (This means all the hundreds of places you have code doing things like:
+'           Application.EnableEvents = True/False, Application.ScreenUpdating = True/False
+'           ALL that code can (and should be) delete, and replaced with One Call
+'           to this Module when your code starts, and one call to this module when
+'           your code ends.
+'
+'       ~~~ 'EASY MODE' ~~~
+'       To Simplify the use of this module, and still get all the benefits ofo having
+'       Application states managed in one place, use the 3 methods below
+'
+'       1. (SUSPEND) SuspendMode(Optional calc As XlCalculation = XlCalculation.xlCalculationAutomatic)
+'            - Syntax:  pbPerf.SuspendMode
+'            - Place the App in 'Performance' Mode By Turning off EnableEvents, ScreenUpdating,
+'              User Interaction, and various Animations
+'
+'       2. (CHECK) Check
+'            - Syntax: pbPerf.Check
+'            - If Current Application Mode is 'Default', this will Put the App into Suspend Mode
+'            - If Current Application MOde is 'Suspend' then this will verify all the Application
+'              Settting are set correct.  (If you had changed something in your code. like ScreenUpdating,
+'              this method will change it back
+'
+'       3. (CHECK) DefaultMode
+'            - Syntax: pbPerf.DefaultMode
+'                       Optional ignoreProtect As Boolean = False, _
+'                       Optional ignoreDumpTrace As Boolean = False, _
+'                       Optional forceSheet As Boolean = False, _
+'                       Optional enableCloseBypass As Boolean = False
+'            - This method return Application to DefaultMode (Events On, User Interacation Restored)
+'
+'
 '
 ' @module pbDebug
 ' @author Paul Brower
@@ -35,6 +72,25 @@ Option Compare Text
 Option Base 1
 
 Private lPerfState As ftPerfStates
+Private Const PRIVATE_ERR_CLASS_INSTANCE_PROHIBITED = vbObjectError + 1022
+Private Const PRIVATE_ERR_FORCED_WORKSHEET_NOT_FOUND = vbObjectError + 1025
+
+' If the 'poForceFinalSheet' Enum Option is included with 'PerfState' call to ClearState, it will Navigate to
+' this worksheet nme (FORCED_WORKSHEET_NAME)
+
+Private Const FORCED_WORKSHEET_NAME As String = "Dashboard"
+Private l_homeSheet As Worksheet
+Private Property Get homeSheet()
+    If Len(FORCED_WORKSHEET_NAME) > 0 Then
+        If l_homeSheet Is Nothing Then
+            Set l_homeSheet = ThisWorkbook.Worksheets(FORCED_WORKSHEET_NAME)
+        End If
+        Set homeSheet = l_homeSheet
+    End If
+End Property
+Private Property Get HasHomeSheet() As Boolean
+    HasHomeSheet = Not homeSheet Is Nothing
+End Property
 
 ' ________________________________________
 '  ~~~~ ~~~~ ~~~ ~~~ EASY MODE ~~~ ~~~ ~~~ ~~~
@@ -44,7 +100,7 @@ Private lPerfState As ftPerfStates
         Optional forceSheet As Boolean = False, _
         Optional enableCloseBypass As Boolean = False)
         
-        PerfStateClear doNotProtect:=ignoreProtect, doNotDumpTrace:=ignoreDumpTrace, forceToDashboard:=forceSheet, byPassCloseChk:=enableCloseBypass
+        PerfStateClear doNotProtect:=ignoreProtect, doNotDumpTrace:=ignoreDumpTrace, forceSheet:=forceSheet, byPassCloseChk:=enableCloseBypass
     
     End Function
 
@@ -86,35 +142,34 @@ Public Function PerfState(options As ftPerfOption) As Boolean
     '    - Add Default Control (SuspendControl)
     '    - Add Custom Control
     
-        If PerfEnumCompare(options, ftPerfOption.poOverride) Then
-            ''TODO: ERR ON INVALID ADDITIONAL ENUMS
+        If EnumCompare(options, ftPerfOption.poOverride) Then
             lPerfState.IsPerfState = False
         End If
         
         '   ~~~ ~~~ CLEARING CONTROL ~~ ~~~
-        If PerfEnumCompare(options, ftPerfOption.poClearControl) Then
-                Dim tmpDisableProt As Boolean, tmpBypassCloseChk As Boolean, tmpDoNotDump As Boolean, tmpForceDashboard As Boolean
+        If EnumCompare(options, ftPerfOption.poClearControl) Then
+                Dim tmpDisableProt As Boolean, tmpBypassCloseChk As Boolean, tmpDoNotDump As Boolean, tmpForce As Boolean
                 'Default calc to Automatic
-                If PerfEnumCompare(options, ftPerfOption.poIgnoreSheetProtect) Then tmpDisableProt = True
-                If PerfEnumCompare(options, ftPerfOption.poKeepTraceQueued) Then tmpDoNotDump = True
-                If PerfEnumCompare(options, ftPerfOption.poBypassCloseChecks) Then tmpBypassCloseChk = True
-                If PerfEnumCompare(options, ftPerfOption.poForceFinalSheet) Then tmpForceDashboard = True
+                If EnumCompare(options, ftPerfOption.poIgnoreSheetProtect) Then tmpDisableProt = True
+                If EnumCompare(options, ftPerfOption.poKeepTraceQueued) Then tmpDoNotDump = True
+                If EnumCompare(options, ftPerfOption.poBypassCloseChecks) Then tmpBypassCloseChk = True
+                If EnumCompare(options, ftPerfOption.poForceFinalSheet) Then tmpForce = True
         
-                PerfStateClear doNotProtect:=tmpDisableProt, doNotDumpTrace:=tmpDoNotDump, forceToDashboard:=tmpForceDashboard, byPassCloseChk:=tmpBypassCloseChk
+                PerfStateClear doNotProtect:=tmpDisableProt, doNotDumpTrace:=tmpDoNotDump, forceSheet:=tmpForce, byPassCloseChk:=tmpBypassCloseChk
                 
         '   ~~~ ~~~ ADDING CONTROL (SUSPEND) ~~ ~~~
-        ElseIf PerfEnumCompare(options, ftPerfOption.poSuspendControl) Then
+        ElseIf EnumCompare(options, ftPerfOption.poSuspendControl) Then
                 
                 Dim tmpScreen As Boolean, tmpInter As Boolean, tmpAlert As Boolean, tmpCalc As XlCalculation
                 'Default calc to Automatic
                 tmpCalc = xlCalculationAutomatic
-                If PerfEnumCompare(options, ftPerfOption.poCalcModeManual) Then tmpCalc = xlCalculationManual
-                If PerfEnumCompare(options, ftPerfOption.poDoNotDisable_Alerts) Then tmpAlert = True
-                If PerfEnumCompare(options, ftPerfOption.poDoNotDisable_Screen) Then tmpScreen = True
-                If PerfEnumCompare(options, ftPerfOption.poDoNotDisable_Interaction) Then tmpInter = True
+                If EnumCompare(options, ftPerfOption.poCalcModeManual) Then tmpCalc = xlCalculationManual
+                If EnumCompare(options, ftPerfOption.poDoNotDisable_Alerts) Then tmpAlert = True
+                If EnumCompare(options, ftPerfOption.poDoNotDisable_Screen) Then tmpScreen = True
+                If EnumCompare(options, ftPerfOption.poDoNotDisable_Interaction) Then tmpInter = True
                 SuspendState scrnUpd:=tmpScreen, scrnInter:=tmpInter, alerts:=tmpAlert, calcMode:=tmpCalc
         
-        ElseIf PerfEnumCompare(options, ftPerfOption.poCheckControl) Then
+        ElseIf EnumCompare(options, ftPerfOption.poCheckControl) Then
             CheckState
         End If
     
@@ -175,14 +230,15 @@ End Function
 
 Private Function PerfStateClear(Optional doNotProtect As Boolean = False, _
     Optional doNotDumpTrace As Boolean = False, _
-    Optional forceToDashboard As Boolean = False, _
+    Optional forceSheet As Boolean = False, _
     Optional byPassCloseChk As Boolean = False)
     On Error GoTo E:
+    
 '   ~~~ ~~~ THIS FUNCTION CLEARS THE EXISTING 'SUSPEND' CONTROL
 '                   AND THEN APPLIES THE 'DEFAULT (User Mode) ' PERFORMANCE SETTINGS
     '   NOTE, THIS METHOD IS NOT INTENDED TO NAVIGATE SHEETS.
     '   IT IS INTENDED TO ** CLOSE ** wsBusy and wsOpenClose, IF they are visible and the App is not Closing
-    '   IT IS INTENDED TO NAVIGATE TO ** wsDashBoard in the event that **:
+    '   IT IS INTENDED TO NAVIGATE TO ** homeSheet in the event that **:
     '    - This Function is runnning after an Error Has been raised, and Sheet desination may no longer be known
     '    - For an abnormal reason, there is no valid visble Sheet to navigate to
     
@@ -191,42 +247,42 @@ Private Function PerfStateClear(Optional doNotProtect As Boolean = False, _
     actSht = ActiveSheetName
     CheckState
     
+'   ~~~ ~~~ ~~~ ~~~    GENERAL ACTIONS   ~~~ ~~~ ~~~ ~~~
+        If Not doNotDumpTrace Then
+            If TraceQueueCount > 100 Then DumpTraceIfAvail
+        End If
+    
+    
 '   ~~~ ~~~ ~~~ ~~~   TODO - POSSIBLE RAISE ERROR   ~~~ ~~~ ~~~ ~~~
-        ''TODO: NEED TO ABSTRACT PACKAGEMGR OUT OF pbCommon Modules
+        ''TODO: NEED TO ABSTRACT PackageMgr. OUT OF pbCommon Modules
         If PackageMgr.PackageIsExecuting Then
             '   WE SHOULDN'T EVER BE CALLING THIS IF A PACKAGE IS RUNNING
             '   TODO: FIGURE OUT HOW TO DO SIMILAR CHECK IF AN EVENT TRIGGERED PROCESS IS RUNNING (E.G. DOUBLE CLICK)
             If IsDEV Then
                 Beep
-                Debug.Print "PerfStateClear called while package is executing. SHOULD PROBABLY MAKE THIS RAISE ERROR"
+                DebugPrint "PerfStateClear called while package is executing. SHOULD PROBABLY MAKE THIS RAISE ERROR"
                 'Stop
             End If
         End If
 
-'   ~~~ ~~~ ~~~ ~~~    GENERAL ACTIONS   ~~~ ~~~ ~~~ ~~~
-        If Not doNotDumpTrace Then DumpTraceIfAvail
 
     
     '   APP IS ** NOT ** CLOSING
     If Not ftState = ftClosing Then
         '   MAKE SURE WE HAVE A VALID ACTIVE SHEET
-        If ThisWorkbook.activeSheet Is Nothing Then
-            If Not wsDashboard.visible = xlSheetVisible Then wsDashboard.visible = xlSheetVisible
-            wsDashboard.Activate
+        If ThisWorkbook.ActiveSheet Is Nothing Then
+            If Not homeSheet.visible = xlSheetVisible Then homeSheet.visible = xlSheetVisible
+            homeSheet.Activate
         End If
-        If ThisWorkbook.activeSheet Is wsBusy Or ThisWorkbook.activeSheet Is wsOpenClose Then
-            If Not wsDashboard.visible = xlSheetVisible Then wsDashboard.visible = xlSheetVisible
-            wsDashboard.Activate
+        If ThisWorkbook.ActiveSheet Is wsBusy Or ThisWorkbook.ActiveSheet Is wsOpenClose Then
+            If Not homeSheet.visible = xlSheetVisible Then homeSheet.visible = xlSheetVisible
+            homeSheet.Activate
             If Not wsBusy.visible = xlSheetVeryHidden Then wsBusy.visible = xlSheetVeryHidden
             If Not wsOpenClose.visible = xlSheetVeryHidden Then wsOpenClose.visible = xlSheetVeryHidden
         End If
-'        If Not WOMRunning Then
-'            StartWOM
-'            GoTo Finalize:
-'        End If
     End If
     
-    If Not doNotProtect Then ProtectSHT ThisWorkbook.activeSheet
+    If Not doNotProtect Then ProtectSHT ThisWorkbook.ActiveSheet
     
     '   APP ** IS ** CLOSING
     If ftState = ftClosing Then
@@ -236,12 +292,14 @@ Private Function PerfStateClear(Optional doNotProtect As Boolean = False, _
 Finalize:
     On Error Resume Next
     
-    If forceToDashboard Then
-        If Not wsDashboard.visible = xlSheetVisible Then wsDashboard.visible = xlSheetVisible
-        wsDashboard.Activate
+    If forceSheet Then
+        With ThisWorkbook.Worksheets(FORCED_WORKSHEET_NAME)
+            If Not .visible = xlSheetVisible Then .visible = xlSheetVisible
+            .Activate
+        End With
     End If
     
-    ButtonPause = False
+    ''ButtonPause = False
     PackageRunning = False
     
     lPerfState = DefaultState
@@ -309,13 +367,13 @@ Private Function SetState(updState As ftPerfStates)
             .EnableAnimations = False
             .PrintCommunication = False
             .EnableMacroAnimations = False
-            ButtonPause = True
+            ''ButtonPause = True
         Else
         ' ~~~ SET DEFAULT (CLEAR) STATE ~~~
             .EnableAnimations = True
             .PrintCommunication = True
             .EnableMacroAnimations = True
-            ButtonPause = False
+            ''ButtonPause = False
         End If
     End With
     
@@ -357,18 +415,15 @@ Public Function RestoreDefaultAppSettingsOnly()
         Application.Calculation = xlCalculationAutomatic
         Application.EnableAnimations = True
         Application.EnableMacroAnimations = True
-        ButtonPause = False
+        ''ButtonPause = False
 
 End Function
 
-'   ___ ___ ___ ___ ___ ___ ___ ___ ___ ___ ___ ___
-'   ~~~~~~~~~~   FLAG ENUM COMPARE ~~~~~~~~~~'
-    Private Function PerfEnumCompare(theEnum As Variant, enumMember As Variant) As Boolean
-        'Use to check Bitwise enums
-        PerfEnumCompare = CBool(theEnum And enumMember) = True
-    End Function
-
-
+Private Sub Class_Initialize()
+    'If you have the pbError Module from https://github.com/lopperman/VBA-pbUtil
+    ' Then you can change the const used for the error to: ERR_CLASS_INSTANCE_PROHIBITED
+    If Not Me Is pbPerf Then RaiseError PRIVATE_ERR_CLASS_INSTANCE_PROHIBITED, errorDesc:="pbPerf may not be created as a new Class Instance outside it's PredeclaredId 'pbPerf'"
+End Sub
 
 
 
