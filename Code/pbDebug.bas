@@ -104,15 +104,14 @@ Public Function Assert(condition As Boolean)
 End Function
 
 Public Function DebugPrint(Optional stmnt As Variant)
-    If DebugMode Then
-        If IsMissing(stmnt) Then stmnt = ""
-        Debug.Print Concat("( ", Now, " )", vbTab, stmnt)
+    If IsMissing(stmnt) Then stmnt = ""
+    If DebugInfo Or DebugMode Then
+        Trace stmnt
     End If
 End Function
 
 Public Function ShutdownDebug()
    ClearTraceQueue
-
 End Function
 
 Public Property Get LastTraceMsg() As String
@@ -126,7 +125,6 @@ Private Function QueueTrace(trcInfo As Variant)
     End If
     
     TraceQueue.add trcInfo
-
 End Function
 
 Public Property Get IsDEV() As Boolean
@@ -139,39 +137,50 @@ Public Function TraceSessionStart(Optional sessionName As String = vbNullString)
     Trace "Starting: " & l_traceSession, forceDoEvents:=True
 End Function
 
+Public Function DumpTraceIfAvail()
+    If Len(DUMP_TRACE_CALL_NAME) > 0 Then
+        Application.Run DUMP_TRACE_CALL_NAME
+        DoEvents
+    End If
+End Function
+
 Public Function TraceSessionEnd()
     If Len(l_traceSession & vbNullString) = 0 Then l_traceSession = "UNK Trace Session"
     Trace "Completed: " & l_traceSession & vbNullString, forceDoEvents:=True
     l_traceSession = vbNullString
-    If Len(DUMP_TRACE_CALL_NAME) > 0 Then
-        Application.Run DUMP_TRACE_CALL_NAME
-    End If
+    DumpTraceIfAvail
 End Function
 
 Public Function TrcSysInfo() As String
-    TrcSysInfo = " ( E-" & IIf(Events, 1, 0) & ", S-" & IIf(Application.ScreenUpdating, 1, 0) & ", I-" & IIf(Application.Interactive, 1, 0) & ", C-" & IIf(Application.Calculation = xlCalculationAutomatic, 1, 0) & ")"
+    TrcSysInfo = " ( E-" & IIf(Events, "*ON*", "off") & ", S-" & IIf(Application.ScreenUpdating, "*ON*", "off") & ", I-" & IIf(Application.Interactive, "*ON*", "off") & ", C-" & IIf(Application.Calculation = xlCalculationAutomatic, "auto", "man") & ")"
 End Function
 
+Public Function NowWithMS() As String
+    NowWithMS = Format(Now, "yyyymmdd hh:mm:ss") & Right(Format(Timer, "0.000"), 4)
+End Function
 
 Public Function Trace(ByVal msg As String, Optional ByVal forceWrite As Boolean = False, Optional ByVal forceDoEvents As Boolean = False, Optional ByVal forceDebug As Boolean = False)
     If ftState = ftClosing Then Exit Function
     
-    If ThisWorkbook.readOnly Then
+    If msg = vbNullString Or Len(msg) = 0 Then
         GoTo Finalize:
     End If
-    If msg = vbNullString Or Len(msg) = 0 Then
+    If ThisWorkbook.readOnly Then
+        Debug.Print msg
         GoTo Finalize:
     End If
     l_lastTraceMsg = msg
     
-    If DebugInfo Then
-        QueueTrace Array(Now, msg, TrcSysInfo)
-   End If
-    If DebugMode Then
-        DebugPrint ConcatWithDelim(", ", Now, msg, TrcSysInfo)
-   End If
+    If DebugInfo Or DebugMode Or forceWrite Or forceDebug Then
+        Dim nw As String
+        nw = NowWithMS
+        Dim trcArr As Variant
+        trcArr = Array(nw, msg, IIf(InStr(1, msg, "BusyWait", vbTextCompare) > 0, "", TrcSysInfo))
+        QueueTrace trcArr
+        If DebugMode Then Debug.Print Join(Array(nw & " -- " & msg, IIf(InStr(1, msg, "BusyWait", vbTextCompare) > 0, "", TrcSysInfo)), ", ")
+    End If
     
-    If wsBusy Is ThisWorkbook.ActiveSheet Then
+    If wsBusy.visible = xlSheetVisible Then
         wsBusy.UpdateMsg msg & " " & TrcSysInfo, forceDoEvents
         forceDoEvents = False
     ElseIf forceDoEvents Then
@@ -183,4 +192,64 @@ Finalize:
         Err.Clear
     End If
     
+End Function
+
+Public Function TraceQueueCount() As Long
+    Dim tmpCount As Long
+    If Not TraceQueue Is Nothing Then
+        tmpCount = TraceQueue.Count
+    End If
+    TraceQueueCount = tmpCount
+End Function
+
+Public Function DumpTraceQueue()
+On Error GoTo E:
+    Dim failed As Boolean
+
+    pbPerf.Check
+
+    Dim newArr() As Variant
+
+    If TraceQueue Is Nothing Then Exit Function
+    If TraceQueue.Count = 0 Then Exit Function
+    Dim newIdx As Long, colIDX As Long
+    Dim ky As Variant, nextRow As Long
+    Dim trc As Variant
+    
+    nextRow = LastRowWithData(wsDebug, 2) + 1
+    If nextRow < 8 Then nextRow = 8
+    
+    Dim checkTraceArray As ArrInformation
+    If TraceQueue.Count > 0 Then
+        checkTraceArray = ArrayInfo(TraceQueue(1))
+        If checkTraceArray.Dimensions > 0 Then
+            ReDim newArr(1 To TraceQueue.Count, 1 To checkTraceArray.Ubound_first)
+            Dim tcIDX As Long
+            For tcIDX = 1 To TraceQueue.Count
+                trc = TraceQueue(tcIDX)
+                For colIDX = 1 To checkTraceArray.Ubound_first
+                    newArr(tcIDX, colIDX) = trc(colIDX)
+                Next colIDX
+            Next tcIDX
+            
+            With wsDebug
+                .Range("B" & nextRow & ":D" & nextRow).Resize(rowSize:=TraceQueue.Count).Value2 = newArr
+            End With
+        End If
+    End If
+
+Finalize:
+    On Error Resume Next
+        
+    ClearTraceQueue
+    If ArrDimensions(newArr) > 0 Then Erase newArr
+          
+    
+    If Err.Number <> 0 Then Err.Clear
+    Exit Function
+E:
+    failed = True
+    ErrorCheck
+    Resume Finalize
+
 End Function

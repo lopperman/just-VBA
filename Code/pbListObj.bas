@@ -34,7 +34,7 @@ Public Function ReplaceFormulasWithStatic(lstObj As ListObject) As Boolean
 '   REPLACES ALL FORMULAS IN LIST COLUMS, WITH THE VALUES
 '   Helpful for situations like creating static copies of tables/listobjects
     If lstObj.listRows.Count = 0 Then Exit Function
-    Dim lc As ListColumn
+    Dim lc As listColumn
     For Each lc In lstObj.ListColumns
         If lc.DataBodyRange(1, 1).HasFormula Then
             ReplaceListColFormulaWithStatic lstObj, lc.Index
@@ -46,7 +46,7 @@ End Function
 Public Function ReplaceListColFormulaWithStatic(lstObj As ListObject, column As Variant)
 '   Replaces listColumn formula with static values
 '   Column = Name of ListColumn or Index of ListColumn
-    Dim uis As UiState: uis = SuspendState
+    
     
     Dim tARR As Variant
     If Not lstObj.ListColumns(column).DataBodyRange Is Nothing Then
@@ -61,7 +61,7 @@ Public Function ReplaceListColFormulaWithStatic(lstObj As ListObject, column As 
     
     If ArrDimensions(tARR) > 0 Then Erase tARR
     
-    RestoreState uis
+    
 End Function
 
 Public Function PopulateStaticFromFormula(lstObj As ListObject, lstColName As String, r1c1Formula As String, Optional createIfMissing As Boolean = True, Optional numberFormat As String = vbNullString) As Boolean
@@ -72,7 +72,7 @@ On Error GoTo E:
     If lstObj.listRows.Count = 0 Then
         Exit Function
     End If
-    Dim uis As UiState: uis = SuspendState
+    
     
     Dim tmpColArr As Variant
     If ListColumnExists(lstObj, lstColName) = False And createIfMissing = True Then
@@ -107,7 +107,7 @@ Finalize:
     If ArrDimensions(tmpColArr) > 0 Then Erase tmpColArr
     PopulateStaticFromFormula = Not failed
     
-    RestoreState uis
+    
     If Err.Number <> 0 Then Err.Clear
     Exit Function
 E:
@@ -154,11 +154,11 @@ End Function
 Public Function AddColumnIfMissing(lstObj As ListObject, colName As String, Optional position As Long = -1, Optional numberFormat As String = vbNullString) As Boolean
 '   Add column 'colName' to 'lstObj', if missing. Optionally provide ListColumn position, and NumberFormat for data display
 On Error Resume Next
-    Dim uis As UiState: uis = SuspendState
+    
     
     Dim retV As Boolean
     If Not ListColumnExists(lstObj, colName) Then
-        Dim nc As ListColumn
+        Dim nc As listColumn
         If position > 0 Then
             Set nc = lstObj.ListColumns.add(position:=position)
         Else
@@ -172,6 +172,34 @@ On Error Resume Next
     AddColumnIfMissing = (Err.Number = 0)
     If Err.Number <> 0 Then Err.Clear
     Set nc = Nothing
-    RestoreState uis
+    
     If Err.Number <> 0 Then Err.Clear
 End Function
+
+Public Function CountBlanks(lstObj As ListObject, listColumn As Variant) As Long
+On Error Resume Next
+    Dim rng As Range
+    If HasData(lstObj) = False Then
+        CountBlanks = 0
+        Exit Function
+    End If
+    Set rng = lstObj.ListColumns(listColumn).DataBodyRange.SpecialCells(xlCellTypeBlanks)
+    If Not rng Is Nothing Then
+        CountBlanks = rng.Rows.Count
+    End If
+    Set rng = Nothing
+    If Err.Number <> 0 Then Err.Clear
+
+End Function
+
+Public Function HasData(lstObj As Variant) As Boolean
+On Error Resume Next
+    If TypeName(lstObj) = "ListObject" Then
+        HasData = lstObj.listRows.Count > 0
+    ElseIf TypeName(lstObj) = "String" Then
+        HasData = wt(CStr(lstObj)).listRows.Count > 0
+    End If
+    If Err.Number <> 0 Then Err.Clear
+End Function
+
+
