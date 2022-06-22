@@ -1,3 +1,5 @@
+## I also post to r/VBA on Reddit (https://www.reddit.com/user/ITFuture)
+
 # VBA-pbUtil
 VBA Utility and Helper Function - MAC and PC Compatiable
 Note - Some Functions Require O365 Version of Excel
