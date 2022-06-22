@@ -1,4 +1,4 @@
-## I also post to r/VBA on Reddit (https://www.reddit.com/user/ITFuture)
+#### Also check out r/VBA on Reddit (https://www.reddit.com/user/ITFuture)
 
 # VBA-pbUtil
 VBA Utility and Helper Function - MAC and PC Compatiable
