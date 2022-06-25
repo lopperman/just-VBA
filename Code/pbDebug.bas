@@ -152,7 +152,23 @@ Public Function TraceSessionEnd()
 End Function
 
 Public Function TrcSysInfo() As String
-    TrcSysInfo = " ( E-" & IIf(Events, "*ON*", "off") & ", S-" & IIf(Application.ScreenUpdating, "*ON*", "off") & ", I-" & IIf(Application.Interactive, "*ON*", "off") & ", C-" & IIf(Application.Calculation = xlCalculationAutomatic, "auto", "man") & ")"
+    Dim tEv As String, tSc As String, tIn As String, tCa As String, retV As String
+    tEv = IIf(Events, "Evts=ON  ", "")
+    tSc = IIf(Application.ScreenUpdating, "Scrn=ON  ", "")
+    tIn = IIf(Application.Interactive, "Inter=ON  ", "")
+    tCa = IIf(Application.Calculation = xlCalculationAutomatic, "Calc: AUTO  ", "")
+    retV = Concat(tEv, tSc, tIn, tCa)
+    If Len(retV) = 0 Then
+        retV = "SysStates: (ALL OFF)"
+    Else
+        retV = Concat("SysStates: ( ", retV, ")")
+    End If
+    TrcSysInfo = retV
+    
+    
+    
+'    TrcSysInfo =  & ", S-" & IIf(Application.ScreenUpdating, "*ON*", "off") & ", I-" & IIf(Application.Interactive, "*ON*", "off") & ", C-" & IIf(Application.Calculation = xlCalculationAutomatic, "auto", "man") & ")"
+
 End Function
 
 Public Function NowWithMS() As String
@@ -171,6 +187,13 @@ Public Function Trace(ByVal msg As String, Optional ByVal forceWrite As Boolean 
     End If
     l_lastTraceMsg = msg
     
+    If wsBusy.visible = xlSheetVisible Then
+        wsBusy.UpdateMsg msg & " " & vbNewLine & TrcSysInfo, forceDoEvents
+        forceDoEvents = False
+    ElseIf forceDoEvents Then
+        DoEvents
+    End If
+    
     If DebugInfo Or DebugMode Or forceWrite Or forceDebug Then
         Dim nw As String
         nw = NowWithMS
@@ -180,12 +203,6 @@ Public Function Trace(ByVal msg As String, Optional ByVal forceWrite As Boolean 
         If DebugMode Then Debug.Print Join(Array(nw & " -- " & msg, IIf(InStr(1, msg, "BusyWait", vbTextCompare) > 0, "", TrcSysInfo)), ", ")
     End If
     
-    If wsBusy.visible = xlSheetVisible Then
-        wsBusy.UpdateMsg msg & " " & TrcSysInfo, forceDoEvents
-        forceDoEvents = False
-    ElseIf forceDoEvents Then
-        DoEvents
-    End If
     
 Finalize:
     If Err.Number <> 0 Then

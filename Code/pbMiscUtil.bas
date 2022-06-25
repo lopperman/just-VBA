@@ -20,6 +20,15 @@ Public Const TEMP_DIRECTORY_NAME As String = "FinToolTemp"
 Public Const LOG_DIRECTORY_NAME As String = "Logs"
 
 Private l_listObjDict As Dictionary
+Private lBypassOnCloseCheck As Boolean
+
+Public Property Get byPassOnCloseCheck() As Boolean
+    byPassOnCloseCheck = lBypassOnCloseCheck
+End Property
+Public Property Let byPassOnCloseCheck(bypassCheck As Boolean)
+    lBypassOnCloseCheck = bypassCheck
+End Property
+
 
 Public Function pbProtectSheet(ws As Worksheet) As Boolean
     'Replace with you own implementation
@@ -33,6 +42,17 @@ Public Function pbUnprotectSheet(ws As Worksheet) As Boolean
     pbUnprotectSheet = UnprotectSHT(ws)
 End Function
 
+Public Function StringsMatch(str1 As String, str2 As String, smEnum As StringMatch) As Boolean
+
+    Select Case smEnum
+        Case StringMatch.smEqual
+        Case StringMatch.smNotEqualTo
+        Case StringMatch.smContains
+        Case StringMatch.smStartsWithStr
+        Case StringMatch.smEndWithStr
+    End Select
+
+End Function
 
 Public Function DeleteFolderFiles(folderPath As String, Optional patternMatch As String = vbNullString)
 On Error Resume Next
@@ -781,5 +801,16 @@ End Function
 '       outputs: Hello There today's date is: 5/24/22
 Public Function Concat(ParamArray items() As Variant) As String
     Concat = Join(items, "")
+End Function
+
+Public Function ftCreateWorkbook(Optional tmplPath As Variant) As Workbook
+    Dim retWB As Workbook
+    If IsMissing(tmplPath) Then
+        Set retWB = Workbooks.add
+    Else
+        Set retWB = Workbooks.add(Template:=CStr(tmplPath))
+    End If
+    Set ftCreateWorkbook = retWB
+    Set retWB = Nothing
 End Function
 

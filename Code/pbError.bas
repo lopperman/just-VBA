@@ -48,6 +48,8 @@ Public Const ERR_NOT_IMPLEMENTED_YET = vbObjectError + 1021
 Public Const ERR_CONTROL_STATE = vbObjectError + 1023
 Public Const ERR_PREVIOUS_PerfState_EXISTS = vbObjectError + 1024
 Public Const ERR_FORCED_WORKSHEET_NOT_FOUND = vbObjectError + 1025
+Public Const ERR_CANNOT_CHANGE_PACKAGE_PROPERTY = vbObjectError + 1026
+Public Const ERR_INVALID_PACKAGE_OPERATION = vbObjectError + 1027
 
 'If you have a method to close a 'wait' screen, put the name here, otherwise should be ""
 Private Const CLOSE_WAIT_SCREEN_METHOD As String = "CloseBusy"
@@ -65,6 +67,7 @@ Public Enum ErrorOptionsEnum
     ftERR_MessageIgnore = 2 ^ 3
     ftERR_NoBeeper = 2 ^ 4
     ftERR_IGNORE_TREAT_AS_NO_ERR = 2 ^ 5
+    ftERR_DoNotCloseBusy = 2 ^ 6
 End Enum
 
 Public Function ErrorCheck(Optional Source As String, Optional options As ErrorOptionsEnum, Optional customErrorMsg As String) As Long
@@ -108,8 +111,10 @@ Public Function ErrorCheck(Optional Source As String, Optional options As ErrorO
     On Error Resume Next
     
     ignoreError = EnumCompare(options, ftERR_IGNORE_TREAT_AS_NO_ERR)
-    If Not ignoreError And ThisWorkbook.ActiveSheet Is wsBusy Then
-        If Len(CLOSE_WAIT_SCREEN_METHOD) > 0 Then Application.Run CLOSE_WAIT_SCREEN_METHOD
+    If EnumCompare(options, ftERR_DoNotCloseBusy) = False Then
+        If Not ignoreError And ThisWorkbook.ActiveSheet Is wsBusy Then
+            If Len(CLOSE_WAIT_SCREEN_METHOD) > 0 Then Application.Run CLOSE_WAIT_SCREEN_METHOD
+        End If
     End If
     
     Dim cancelMsg As String:

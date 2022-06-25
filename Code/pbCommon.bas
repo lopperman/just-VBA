@@ -16,6 +16,10 @@ Option Base 1
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
 '   GENERALIZED CONSTANTS
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
+Public Const CFG_PROTECT_PASSWORD As String = "00000"
+Public Const CFG_PROTECT_PASSWORD_EXPORT As String = "000001"
+Public Const CFG_PROTECT_PASSWORD_MISC As String = "0000015"
+Public Const CFG_P_LOG As String = "0000016"
 
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
 '   GENERALIZED TYPES
@@ -23,6 +27,29 @@ Option Base 1
 Public Enum ecComparisonType
     ecOR = 0 'default
     ecAnd
+End Enum
+
+Public Enum InitActionEnum
+    [_DefaultInvalid] = 0
+    iaAutoCode
+    iaEventResponse
+    iaButtonClick
+    iaManual
+End Enum
+
+Public Enum ReportPeriod
+    frpDay = 1
+    frpWeek = 2
+    frpGLPeriod = 3
+    frpCalMonth = 4
+End Enum
+
+Public Enum StringMatch
+    smEqual = 0
+    smNotEqualTo = 1
+    smContains = 2
+    smStartsWithStr = 3
+    smEndWithStr = 4
 End Enum
 
 Public Type ArrInformation
@@ -57,46 +84,46 @@ End Type
 '           Flag Enum Items that are used when calling
 '           SetPerf(options as ftPerStates)
 '           FlagEnums can be 'added' (like how the Msgbox arguments work)
-        Public Enum ftPerfOption
-            poINVALID = 0
-            ' CLEAR Control -- returns to default user interaction mode
-                    poClearControl = 2 ^ 0
-                ' Use any combination of these option with 'poClearControl'
-                ' E.g.:    SetPerf poClearControl + poForeFinalSheet + poKeepTraceQueued
-                    poIgnoreSheetProtect = 2 ^ 1 ' Do not Protect Active Sheet
-                    poKeepTraceQueued = 2 ^ 2 ' Do not write out queued Trace Info
-                    poForceFinalSheet = 2 ^ 3 ' For User to 'Land' On Specific Sheet
-                    poBypassCloseChecks = 2 ^ 4 ' Disable Any 'OnClosing' Checking (In case of Error 51 -- Internal Error)
+Public Enum ftPerfOption
+    poINVALID = 0
+    ' CLEAR Control -- returns to default user interaction mode
+            poClearControl = 2 ^ 0
+        ' Use any combination of these option with 'poClearControl'
+        ' E.g.:    SetPerf poClearControl + poForeFinalSheet + poKeepTraceQueued
+            poIgnoreSheetProtect = 2 ^ 1 ' Do not Protect Active Sheet
+            poKeepTraceQueued = 2 ^ 2 ' Do not write out queued Trace Info
+            poForceFinalSheet = 2 ^ 3 ' For User to 'Land' On Specific Sheet
+            poBypassCloseChecks = 2 ^ 4 ' Disable Any 'OnClosing' Checking (In case of Error 51 -- Internal Error)
+    
+    ' SUSPEND Control -- Default 'turns everything off, but you can
+    ' selective adjust if needed
+            poSuspendControl = 2 ^ 5
+     ' Use any combination of these options with 'poSuspendControl'
+     ' E.g.:    SetPerf poSuspendControl + poCalcModeManual + poDoNotDisable_Alerts
+            poCalcModeManual = 2 ^ 6 ' Keep Calculation (Defaults to Automantic) on Manual Mode on next 'poClearControl' is called
+            poDoNotDisable_Screen = 2 ^ 7 ' Do Not Disable Screen During 'SuspendControl'
+            poDoNotDisable_Interaction = 2 ^ 8 ' Do Not Disable User Interaction During 'SuspendControl'
+            poDoNotDisable_Alerts = 2 ^ 9 ' Do Not Disable Alerts During 'Suspend Control
             
-            ' SUSPEND Control -- Default 'turns everything off, but you can
-            ' selective adjust if needed
-                    poSuspendControl = 2 ^ 5
-             ' Use any combination of these options with 'poSuspendControl'
-             ' E.g.:    SetPerf poSuspendControl + poCalcModeManual + poDoNotDisable_Alerts
-                    poCalcModeManual = 2 ^ 6 ' Keep Calculation (Defaults to Automantic) on Manual Mode on next 'poClearControl' is called
-                    poDoNotDisable_Screen = 2 ^ 7 ' Do Not Disable Screen During 'SuspendControl'
-                    poDoNotDisable_Interaction = 2 ^ 8 ' Do Not Disable User Interaction During 'SuspendControl'
-                    poDoNotDisable_Alerts = 2 ^ 9 ' Do Not Disable Alerts During 'Suspend Control
-                    
-            ' CHECK/VALIDATE SuspendControl -- This ensures all the Application 'Performance' properties
-            '   are set to the  values applied during the last ' SetPerf poSuspendControl'
-            '   It's common to need to change a performance property while code is running -- for example there may
-            '   be a screen update you wish to perform. After the code requiring manual adjustments to these properties
-            '   rather than needing to remember what to set everything back to , simply call ' SetPerf poCheckControl '
-            '   poCheckControl can be used as often as needed while the Default 'SuspendControl' or
-            '   custom 'SuspendControl' values are being used. (Returns to 'Default User Control' any time the 'SetPerf poClearControl' is called
-                    poCheckControl = 2 ^ 10
-            
-            ' MISC. Control Operation
-            '   The 'Performance' State Only has 2 'modes':
-            '    - Default User Interaction mode (Events ON, Screen Updating ON, etc)
-            '    - SuspendControl mode (Using either the Default SuspendControl configuration (Which allows tweaking some properties), or
-            '    - a custom ftPerfStates Type that you have set. (See the 'SetPerfCustom' Function for more into on that
-            '  The the current Performance Mode is in 'SuspendControl', an error will be raised if you try to set a new 'SuspendControl' configuration
-            '  In the vent you need to change the performance options in the middle of your code, you can call 'SetPerf poOverride' to clear
-            '  the current PerfState before applying a new one.
-                    poOverride = 2 ^ 11
-        End Enum
+    ' CHECK/VALIDATE SuspendControl -- This ensures all the Application 'Performance' properties
+    '   are set to the  values applied during the last ' SetPerf poSuspendControl'
+    '   It's common to need to change a performance property while code is running -- for example there may
+    '   be a screen update you wish to perform. After the code requiring manual adjustments to these properties
+    '   rather than needing to remember what to set everything back to , simply call ' SetPerf poCheckControl '
+    '   poCheckControl can be used as often as needed while the Default 'SuspendControl' or
+    '   custom 'SuspendControl' values are being used. (Returns to 'Default User Control' any time the 'SetPerf poClearControl' is called
+            poCheckControl = 2 ^ 10
+    
+    ' MISC. Control Operation
+    '   The 'Performance' State Only has 2 'modes':
+    '    - Default User Interaction mode (Events ON, Screen Updating ON, etc)
+    '    - SuspendControl mode (Using either the Default SuspendControl configuration (Which allows tweaking some properties), or
+    '    - a custom ftPerfStates Type that you have set. (See the 'SetPerfCustom' Function for more into on that
+    '  The the current Performance Mode is in 'SuspendControl', an error will be raised if you try to set a new 'SuspendControl' configuration
+    '  In the vent you need to change the performance options in the middle of your code, you can call 'SetPerf poOverride' to clear
+    '  the current PerfState before applying a new one.
+            poOverride = 2 ^ 11
+End Enum
         
 Public Type ftPerfStates
     IsPerfState As Boolean
@@ -108,6 +135,14 @@ Public Type ftPerfStates
     Cursor As XlMousePointer
     calc As XlCalculation
 End Type
+Public Enum ModifySuspendState
+    EnableEvents = 2 ^ 0
+    EnableInteractive = 2 ^ 1
+    EnableScreenUpdate = 2 ^ 2
+    EnableAlerts = 2 ^ 3
+    CalculationAuto = 2 ^ 4
+    CalculationManual = 2 ^ 5
+End Enum
 
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
 '   GENERALIZED ENUMS
@@ -122,7 +157,39 @@ Public Enum ftOperatingState
     ftImporting = 5
 End Enum
 
+Public Enum ProtectionTemplate
+    ptDefault = 0
+    ptAllowFilterSort = 1
+    ptDenyFilterSort = 2
+    ptCustom = 3
+End Enum
 
+Public Enum ProtectionPWD
+    pwStandard = 1
+    pwExport = 2
+    pwMisc = 3
+    pwLog = 4
+End Enum
+
+Public Enum SheetProtection
+    psContents = 2 ^ 0
+    psUsePassword = 2 ^ 1
+    psDrawingObjects = 2 ^ 2
+    psScenarios = 2 ^ 3
+    psUserInterfaceOnly = 2 ^ 4
+    psAllowFormattingCells = 2 ^ 5
+    psAllowFormattingColumns = 2 ^ 6
+    psAllowFormattingRows = 2 ^ 7
+    psAllowInsertingColumns = 2 ^ 8
+    psAllowInsertingRows = 2 ^ 9
+    psAllowInsertingHyperlinks = 2 ^ 10
+    psAllowDeletingColumns = 2 ^ 11
+    psAllowDeletingRows = 2 ^ 12
+    psAllowSorting = 2 ^ 13
+    psAllowFiltering = 2 ^ 14
+    psAllowUsingPivotTables = 2 ^ 15
+    
+End Enum
 
 Public Enum RangeFunctionOperator
     Min = 1
@@ -308,7 +375,7 @@ Public Property Get PreventProtection() As Boolean
     PreventProtection = l_preventProtection
 End Property
 
-' BEGIN ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~    OPERATING STATE    ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+' BEGIN ~~~ ~~~ OPERATING STATE    ~~~ ~~~
     Public Function IsFTClosing() As Variant
         IsFTClosing = (l_OperatingState = ftClosing)
     End Function
@@ -318,9 +385,108 @@ End Property
     
     Public Property Get ftState() As ftOperatingState
         ftState = l_OperatingState
-        wsOpenClose.Calculate
     End Property
     Public Property Let ftState(ftsVal As ftOperatingState)
         l_OperatingState = ftsVal
     End Property
-' END ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~    OPERATING STATE    ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+' END ~~~ ~~~ OPERATING STATE    ~~~ ~~~
+
+' BEGIN ~~~ ~~~ SHEET PROTECTION    ~~~ ~~~
+
+Public Function ProtectWS(ws As Worksheet _
+    , Optional protOpt As ProtectionTemplate = ProtectionTemplate.ptDefault _
+    , Optional pwdOption As ProtectionPWD = ProtectionPWD.pwStandard _
+    , Optional customTemplate As SheetProtection) As Boolean
+    
+    Dim pwd As String
+    Select Case pwdOption
+        Case ProtectionPWD.pwStandard
+            pwd = CFG_PROTECT_PASSWORD
+        Case ProtectionPWD.pwExport
+            pwd = CFG_PROTECT_PASSWORD_EXPORT
+        Case ProtectionPWD.pwMisc
+            pwd = CFG_PROTECT_PASSWORD_MISC
+        Case ProtectionPWD.pwLog
+            'Most Secure
+            pwd = CFG_P_LOG
+    End Select
+    
+    Dim prt As SheetProtection
+    Select Case protOpt
+        Case ProtectionTemplate.ptDefault
+            prt = ProtectShtDefault
+        Case ProtectionTemplate.ptDenyFilterSort
+            prt = ProtectShtCustom(False)
+        Case ProtectionTemplate.ptAllowFilterSort
+            prt = ProtectShtCustom(True)
+        Case ProtectionTemplate.ptCustom
+            prt = customTemplate
+    End Select
+
+End Function
+
+Public Function ProtectShtCustom(allowFilterSort As Boolean) As SheetProtection
+    Dim protSht As SheetProtection
+    protSht = ProtectShtDefault
+    If allowFilterSort = False Then
+        If EnumCompare(protSht, SheetProtection.psAllowFiltering) Then
+            protSht = protSht - SheetProtection.psAllowFiltering
+        End If
+        If EnumCompare(protSht, SheetProtection.psAllowSorting) Then
+            protSht = protSht - SheetProtection.psAllowSorting
+        End If
+    Else
+        If Not EnumCompare(protSht, SheetProtection.psAllowFiltering) Then
+            protSht = protSht + SheetProtection.psAllowFiltering
+        End If
+        If Not EnumCompare(protSht, SheetProtection.psAllowSorting) Then
+            protSht = protSht + SheetProtection.psAllowSorting
+        End If
+    End If
+    
+    ProtectShtCustom = protSht
+    
+End Function
+
+Public Function ProtectShtDefault( _
+    Optional pContents As Boolean = True, _
+    Optional pUsePassword As Boolean = True, _
+    Optional pDrawingObjects As Boolean = False, _
+    Optional pScenarios As Boolean = False, _
+    Optional pUserInterfaceOnly As Boolean = True, _
+    Optional pAllowFormattingCells As Boolean = True, _
+    Optional pAllowFormattingColumns As Boolean = True, _
+    Optional pAllowFormattingRows As Boolean = True, _
+    Optional pAllowInsertingColumns As Boolean = False, _
+    Optional pAllowInsertingRows As Boolean = False, _
+    Optional pAllowInsertingHyperlinks As Boolean = False, _
+    Optional pAllowDeletingColumns As Boolean = False, _
+    Optional pAllowDeletingRows As Boolean = False, _
+    Optional pAllowSorting As Boolean = True, _
+    Optional pAllowFiltering As Boolean = True, _
+    Optional pAllowUsingPivotTables As Boolean = False) As SheetProtection
+
+    Dim protSht As SheetProtection
+    protSht = protSht + IIf(pContents, SheetProtection.psContents, 0)
+    protSht = protSht + IIf(pUsePassword, SheetProtection.psUsePassword, 0)
+    protSht = protSht + IIf(pDrawingObjects, SheetProtection.psDrawingObjects, 0)
+    protSht = protSht + IIf(pScenarios, SheetProtection.psScenarios, 0)
+    protSht = protSht + IIf(pUserInterfaceOnly, SheetProtection.psUserInterfaceOnly, 0)
+    protSht = protSht + IIf(pAllowFormattingCells, SheetProtection.psAllowFormattingCells, 0)
+    protSht = protSht + IIf(pAllowFormattingColumns, SheetProtection.psAllowFormattingColumns, 0)
+    protSht = protSht + IIf(pAllowFormattingRows, SheetProtection.psAllowFormattingRows, 0)
+    protSht = protSht + IIf(pAllowInsertingColumns, SheetProtection.psAllowInsertingColumns, 0)
+    protSht = protSht + IIf(pAllowInsertingRows, SheetProtection.psAllowInsertingRows, 0)
+    protSht = protSht + IIf(pAllowInsertingHyperlinks, SheetProtection.psAllowInsertingHyperlinks, 0)
+    protSht = protSht + IIf(pAllowDeletingColumns, SheetProtection.psAllowDeletingColumns, 0)
+    protSht = protSht + IIf(pAllowDeletingRows, SheetProtection.psAllowDeletingRows, 0)
+    protSht = protSht + IIf(pAllowSorting, SheetProtection.psAllowSorting, 0)
+    protSht = protSht + IIf(pAllowFiltering, SheetProtection.psAllowFiltering, 0)
+    protSht = protSht + IIf(pAllowUsingPivotTables, SheetProtection.psAllowUsingPivotTables, 0)
+    
+    ProtectShtDefault = protSht
+End Function
+
+
+' END ~~~ ~~~ SHEET PROTECTION    ~~~ ~~~
+

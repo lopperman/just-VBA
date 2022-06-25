@@ -581,9 +581,17 @@ Private Function ConvertArrToRCArr(ByVal arr As Variant, Optional zeroBasedAsCol
             End If
             For arrIDX = LBound(arr) To UBound(arr)
                 If isBase0 Then
-                    retV(arrIDX + 1, 1) = arr(arrIDX)
+                    If IsObject(arr(arrIDX)) Then
+                        Set retV(arrIDX + 1, 1) = arr(arrIDX)
+                    Else
+                        retV(arrIDX + 1, 1) = arr(arrIDX)
+                    End If
                 Else
-                    retV(arrIDX, 1) = arr(arrIDX)
+                    If IsObject(arr(arrIDX)) Then
+                        Set retV(arrIDX, 1) = arr(arrIDX)
+                    Else
+                        retV(arrIDX, 1) = arr(arrIDX)
+                    End If
                 End If
             Next arrIDX
             ConvertArrToRCArr = retV
@@ -597,9 +605,17 @@ Private Function ConvertArrToRCArr(ByVal arr As Variant, Optional zeroBasedAsCol
             End If
             For arrIDX = LBound(arr) To UBound(arr)
                 If isBase0 Then
-                    retV(1, arrIDX + 1) = arr(arrIDX)
+                    If IsObject(arr(arrIDX)) Then
+                        Set retV(1, arrIDX + 1) = arr(arrIDX)
+                    Else
+                        retV(1, arrIDX + 1) = arr(arrIDX)
+                    End If
                 Else
-                    retV(1, arrIDX) = arr(arrIDX)
+                    If IsObject(arr(arrIDX)) Then
+                        Set retV(1, arrIDX) = arr(arrIDX)
+                    Else
+                        retV(1, arrIDX) = arr(arrIDX)
+                    End If
                 End If
             Next arrIDX
             ConvertArrToRCArr = retV

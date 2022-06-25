@@ -10,7 +10,6 @@ Attribute VB_Name = "pbListObj"
 ' @license GNU General Public License v3.0
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
 '
-'
 '   KEY FUNCTIONS IN THIS MODULE
 '
 '   ** FORMULA RELATED **
@@ -30,6 +29,96 @@ Option Explicit
 Option Compare Text
 Option Base 1
 
+
+'   ~~~ ~~~ Resize ListObject (Rows) ~~~ ~~~
+Public Function ResizeListObjectRows(lstObj As ListObject, Optional totalRowCount As Long = 0, Optional addRowCount As Long = 0) As Range
+'   Resize the DataBodyRange area of a ListObject By resizing over existing sheet area (must faster than adding inserting/pushing down)
+    
+On Error GoTo E:
+    Dim failed                              As Boolean
+    Dim newRowCount             As Long
+    Dim nonBodyRowCount     As Long
+    Dim lastRealDataRow         As Long
+    Dim newRowRange             As Range
+    
+    If totalRowCount <= 0 And addRowCount <= 0 Then Exit Function
+    
+    '   Confirm both rowcount parameters were not used (totalRowCount, addRowCount)
+    If totalRowCount > 0 And totalRowCount < lstObj.listRows.Count Then
+        Err.Raise 17
+        'RaiseError ERR_LIST_OBJECT_RESIZE_CANNOT_DELETE, "Resizing Failed because new 'totalRowCount' is less than existing row count"
+    End If
+    If totalRowCount > 0 And addRowCount > 0 Then
+        Err.Raise 17
+        'RaiseError ERR_LIST_OBJECT_RESIZE_INVALID_ARGUMENTS, "Resizing Failed, cannot set totalRowCount AND addRowCount"
+    End If
+        
+    If addRowCount > 0 Then
+        newRowCount = lstObj.listRows.Count + addRowCount
+    Else
+        addRowCount = totalRowCount - lstObj.listRows.Count
+        newRowCount = totalRowCount
+    End If
+    '   Include Header range and TotalsRange (if applicable) in overall ListObject Range Size
+    nonBodyRowCount = HeaderRangeRows(lstObj) + TotalsRangeRows(lstObj)
+        
+    lastRealDataRow = lstObj.HeaderRowRange.Row + lstObj.HeaderRowRange.Rows.Count - 1
+    If lstObj.listRows.Count > 0 Then lastRealDataRow = lastRealDataRow + lstObj.listRows.Count
+    
+    '   Resize ListObject Range with new range
+    lstObj.Resize lstObj.Range.Resize(rowSize:=newRowCount + nonBodyRowCount)
+    
+    Set newRowRange = lstObj.Range.Worksheet.Cells(lastRealDataRow + 1, lstObj.Range.column)
+    Set newRowRange = newRowRange.Resize(rowSize:=addRowCount, ColumnSize:=lstObj.ListColumns.Count)
+
+Finalize:
+    On Error Resume Next
+    
+    If Not failed Then
+        Set ResizeListObjectRows = newRowRange
+    End If
+    
+    Set newRowRange = Nothing
+    
+    Exit Function
+E:
+    failed = True
+    '   add your own error handline rules here
+    MsgBox "Error: " & Err.Number & ", " & Err.Description
+    'ErrorCheck
+    If Err.Number <> 0 Then Err.Clear
+    Resume Finalize:
+
+End Function
+
+
+    Public Function HeaderRangeRows(lstObj As ListObject) As Long
+    ' *** Returns -1 for Error, other Num Rows in HeaderRowRange
+    On Error Resume Next
+        HeaderRangeRows = lstObj.HeaderRowRange.Rows.Count
+        If Err.Number <> 0 Then
+            HeaderRangeRows = -1
+        End If
+        If Err.Number <> 0 Then Err.Clear
+    End Function
+    
+    Public Function TotalsRangeRows(lstObj As ListObject) As Long
+    ' *** Returns -1 for Error, other Num Rows in HeaderRowRange
+    On Error Resume Next
+        If Not lstObj.TotalsRowRange Is Nothing Then
+            If lstObj.ShowTotals Then
+                TotalsRangeRows = lstObj.TotalsRowRange.Rows.Count
+            End If
+        End If
+        If Err.Number <> 0 Then
+            TotalsRangeRows = -1
+        End If
+        If Err.Number <> 0 Then Err.Clear
+    End Function
+
+
+
+
 Public Function ReplaceFormulasWithStatic(lstObj As ListObject) As Boolean
 '   REPLACES ALL FORMULAS IN LIST COLUMS, WITH THE VALUES
 '   Helpful for situations like creating static copies of tables/listobjects
@@ -47,19 +136,18 @@ Public Function ReplaceListColFormulaWithStatic(lstObj As ListObject, column As 
 '   Replaces listColumn formula with static values
 '   Column = Name of ListColumn or Index of ListColumn
     
-    
-    Dim tARR As Variant
+    Dim tArr As Variant
     If Not lstObj.ListColumns(column).DataBodyRange Is Nothing Then
         If lstObj.ListColumns(column).DataBodyRange(1, 1).HasFormula Then
-            tARR = ListColumnAsArray(lstObj, lstObj.ListColumns(column).Name)
-            If ArrDimensions(tARR) = 2 Then
+            tArr = ListColumnAsArray(lstObj, lstObj.ListColumns(column).Name)
+            If ArrDimensions(tArr) = 2 Then
                 lstObj.ListColumns(column).DataBodyRange.ClearContents
-                lstObj.ListColumns(column).DataBodyRange.value = tARR
+                lstObj.ListColumns(column).DataBodyRange.value = tArr
             End If
         End If
     End If
     
-    If ArrDimensions(tARR) > 0 Then Erase tARR
+    If ArrDimensions(tArr) > 0 Then Erase tArr
     
     
 End Function
@@ -203,3 +291,81 @@ On Error Resume Next
 End Function
 
 
+Public Function ListColumnRange(srcListObj As ListObject, lstColumn As Variant, Optional includeHeaderRow As Boolean = False, Optional includeTotalsRow As Boolean = False) As Range
+
+    Dim tmpRange As Range, tmpRowCount As Long
+    
+    With srcListObj
+        tmpRowCount = .listRows.Count
+        If includeHeaderRow Then tmpRowCount = tmpRowCount + HeaderRangeRows(srcListObj)
+        If includeTotalsRow And .ShowTotals Then tmpRowCount = tmpRowCount + TotalsRangeRows(srcListObj)
+        
+        If tmpRowCount = 0 Then Exit Function
+        
+        Set tmpRange = srcListObj.ListColumns(lstColumn).Range
+    
+        If includeHeaderRow = False Then
+            Set tmpRange = tmpRange.offset(rowOffset:=HeaderRangeRows(srcListObj)).Resize(rowSize:=tmpRange.Rows.Count - HeaderRangeRows(srcListObj))
+        End If
+        
+        If includeTotalsRow = False And .ShowTotals Then
+            Set tmpRange = tmpRange.Resize(rowSize:=tmpRange.Rows.Count - TotalsRangeRows(srcListObj))
+        End If
+    End With
+
+    Set ListColumnRange = tmpRange
+    
+    Set tmpRange = Nothing
+
+End Function
+
+' *** GET NEW RANGE AREA OF RESIZED LIST OBJECT
+Public Function NewRowsRange(ByRef lstObj As ListObject, addRowCount As Long) As Range
+On Error GoTo E:
+    
+    Dim evts As Boolean, prot As Boolean
+    evts = Application.EnableEvents
+    prot = lstObj.Range.Worksheet.ProtectContents
+    
+    
+    If addRowCount <= 0 Then Exit Function
+    
+    Application.EnableEvents = False
+    If prot Then
+        pbUnprotectSheet lstObj.Range.Worksheet
+    End If
+    
+    pbRange.ClearFilter lstObj
+    
+    Dim hdrRngRows As Long, totRngRows As Long, listRows As Long
+    hdrRngRows = lstObj.HeaderRowRange.Rows.Count
+    If lstObj.TotalsRowRange Is Nothing Then
+        totRngRows = 0
+    Else
+        totRngRows = lstObj.TotalsRowRange.Rows.Count
+    End If
+    listRows = lstObj.listRows.Count
+    
+    lstObj.Resize lstObj.Range.Resize(rowSize:=(hdrRngRows + totRngRows + listRows) + addRowCount)
+    
+    If lstObj.listRows.Count = 0 And addRowCount = 1 Then
+        lstObj.listRows.add
+        Set NewRowsRange = lstObj.listRows(1).Range
+    Else
+        Set NewRowsRange = lstObj.listRows(listRows + 1).Range.Resize(rowSize:=addRowCount)
+    End If
+    
+Finalize:
+    On Error Resume Next
+        If prot Then
+            pbProtectSheet lstObj.Range.Worksheet
+        End If
+        Application.EnableEvents = evts
+    If Err.Number <> 0 Then Err.Clear
+    Exit Function
+E:
+    ErrorCheck
+    Resume Finalize:
+    
+
+End Function

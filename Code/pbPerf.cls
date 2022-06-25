@@ -60,10 +60,8 @@ Attribute VB_Exposed = False
 '                       Optional forceSheet As Boolean = False, _
 '                       Optional enableCloseBypass As Boolean = False
 '            - This method return Application to DefaultMode (Events On, User Interacation Restored)
-'
-'
-'
-' @module pbDebug
+
+' @module pbPerf
 ' @author Paul Brower
 ' @license GNU General Public License v3.0
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
@@ -73,24 +71,74 @@ Option Base 1
 
 Private lPerfState As ftPerfStates
 Private Const PRIVATE_ERR_CLASS_INSTANCE_PROHIBITED = vbObjectError + 1022
-Private Const PRIVATE_ERR_FORCED_WORKSHEET_NOT_FOUND = vbObjectError + 1025
 
-' If the 'poForceFinalSheet' Enum Option is included with 'PerfState' call to ClearState, it will Navigate to
-' this worksheet nme (FORCED_WORKSHEET_NAME)
+'~~~ ~~~ A 'Home Worksheet' Is Required! ~~~ ~~~'
+'   * Set the Homesheet Worksheet Name by assigning it to the FORCED_WORKSHEET_NAME constant
+'       underneath these comments *
+'   This Module (pbPerf) is Configured as a Singleton (Attribute VB_PredeclaredId = True) and may
+'       not be manually instantiated.  To use it, you just access by 'pbPerf.[whatever]'
+'   The Private 'Configure' Method will Run the first time this module is accessed, and an Error
+'       will occur if the homesheet is not able to be set to a valid worksheet.
+'   This module will ensure the 'Homesheet' Is Visible And
+'   is the ActiveWorksheet under the following conditions:
+'   1. When Updating To the DefaultState (by calling 'pbPerf.DefaultMode' and including 'forceSheet:=True')
+'   2. When Updating To the DefaultState (by calling 'pbPerf.PerfState' AND include 'poClearControl' and
+'       'poForceFinalSheet' in the options)
+'   3. If, when finished restoring to Default State, the ActiveWorksheet is a sheet name listed
+'       in the l_hideSheetsOnDefault collection.  (a collection of 0 or more worksheets that should
+'       only be visible to users while code is running and app is busy (like a wait screen)
 
 Private Const FORCED_WORKSHEET_NAME As String = "Dashboard"
 Private l_homeSheet As Worksheet
-Private Property Get homeSheet()
-    If Len(FORCED_WORKSHEET_NAME) > 0 Then
-        If l_homeSheet Is Nothing Then
-            Set l_homeSheet = ThisWorkbook.Worksheets(FORCED_WORKSHEET_NAME)
-        End If
-        Set homeSheet = l_homeSheet
+
+'   ~~~ ~~~ Hide Sheets On Default State ~~~ ~~~'
+'   ** IF ** you have Sheets that should always be hidden when in DefaultMode, Add those
+'       ** Worksheet Names As the Key to the l_HideSheets HashList **
+'       ** See the 'Configure' Method For Usage Example **
+'   When returning to DefaultMode (user can interact with app), if any Worksheets listed in the
+'       l_hideSheets HashList Are Visible, they will be automatically hidden. (These would typically
+'       be 'please wait' or 'busy' sheets that are show to users when they must wait for processing
+'       to complete.
+'   If any Worksheet in the l_hideSheets HashList are the ACTIVE Worksheet when restoring to
+'       DefaultMode, then the FORCED_WORKSHEET_NAME Worksheet will be made Active
+
+Private l_hideSheets As New cHashList
+
+Private Function Configure()
+On Error GoTo E:
+    Dim failed As Boolean
+    
+'   ~~~ ~~~ REQUIRED ~~~ ~~~
+'   Set the HomeSheet Worksheet
+    If Not WorksheetExists(FORCED_WORKSHEET_NAME) Then
+        RaiseError ERR_FORCED_WORKSHEET_NOT_FOUND, errorDesc:="'pbPerf.FORCED_WORKSHEET_NAME' " & _
+            "is invalid."
+    Else
+        Set l_homeSheet = ThisWorkbook.Worksheets(FORCED_WORKSHEET_NAME)
     End If
-End Property
-Private Property Get HasHomeSheet() As Boolean
-    HasHomeSheet = Not homeSheet Is Nothing
-End Property
+    
+    l_hideSheets.CompareMode = vbTextCompare
+
+'   ~~~ ~~~ OPTIONAL ~~~ ~~~
+'   Set the name/s of Sheets to Hide when returning to DefaultMode
+    'EXAMPLE
+    l_hideSheets.add "FinTool", key:="FinTool"
+    l_hideSheets.add "Busy", key:="Busy"
+
+Finalize:
+    On Error Resume Next
+    If failed Then
+        RestoreDefaultAppSettingsOnly
+    End If
+            
+    Exit Function
+E:
+    failed = True
+    ErrorCheck "pbPerf.Configure"
+    Resume Finalize:
+    
+End Function
+
 
 ' ________________________________________
 '  ~~~~ ~~~~ ~~~ ~~~ EASY MODE ~~~ ~~~ ~~~ ~~~
@@ -237,14 +285,14 @@ Private Function PerfStateClear(Optional doNotProtect As Boolean = False, _
 '   ~~~ ~~~ THIS FUNCTION CLEARS THE EXISTING 'SUSPEND' CONTROL
 '                   AND THEN APPLIES THE 'DEFAULT (User Mode) ' PERFORMANCE SETTINGS
     '   NOTE, THIS METHOD IS NOT INTENDED TO NAVIGATE SHEETS.
-    '   IT IS INTENDED TO ** CLOSE ** wsBusy and wsOpenClose, IF they are visible and the App is not Closing
+    '   IT IS INTENDED TO ** CLOSE ** any sheets listed in l_HiddenSheets, IF they are visible and the App is not Closing
     '   IT IS INTENDED TO NAVIGATE TO ** homeSheet in the event that **:
-    '    - This Function is runnning after an Error Has been raised, and Sheet desination may no longer be known
+    '    - This Function is running after an Error Has been raised, and Sheet desination may no longer be known
     '    - For an abnormal reason, there is no valid visble Sheet to navigate to
     
-    Dim failed As Boolean, actSht As String
+    Dim failed As Boolean, mustHide As Boolean
     'normally, actSht should be the last sheet that was navigated to, and will be the sheet the user see when the Control State is cleared
-    actSht = ActiveSheetName
+    mustHide = MustHideSheets
     CheckState
     
 '   ~~~ ~~~ ~~~ ~~~    GENERAL ACTIONS   ~~~ ~~~ ~~~ ~~~
@@ -253,32 +301,29 @@ Private Function PerfStateClear(Optional doNotProtect As Boolean = False, _
         End If
     
     
-'   ~~~ ~~~ ~~~ ~~~   TODO - POSSIBLE RAISE ERROR   ~~~ ~~~ ~~~ ~~~
-        ''TODO: NEED TO ABSTRACT PackageMgr. OUT OF pbCommon Modules
-        If PackageMgr.PackageIsExecuting Then
-            '   WE SHOULDN'T EVER BE CALLING THIS IF A PACKAGE IS RUNNING
-            '   TODO: FIGURE OUT HOW TO DO SIMILAR CHECK IF AN EVENT TRIGGERED PROCESS IS RUNNING (E.G. DOUBLE CLICK)
-            If IsDEV Then
-                Beep
-                DebugPrint "PerfStateClear called while package is executing. SHOULD PROBABLY MAKE THIS RAISE ERROR"
-                'Stop
-            End If
-        End If
-
-
+''   ~~~ ~~~ ~~~ ~~~   TODO - POSSIBLE RAISE ERROR   ~~~ ~~~ ~~~ ~~~
+'        ''TODO: NEED TO ABSTRACT PackageMgr. OUT OF pbCommon Modules
+'        If PackageMgr.PackageIsExecuting Then
+'            '   WE SHOULDN'T EVER BE CALLING THIS IF A PACKAGE IS RUNNING
+'            '   TODO: FIGURE OUT HOW TO DO SIMILAR CHECK IF AN EVENT TRIGGERED PROCESS IS RUNNING (E.G. DOUBLE CLICK)
+'            If IsDEV Then
+'                Beep
+'                DebugPrint "PerfStateClear called while package is executing. SHOULD PROBABLY MAKE THIS RAISE ERROR"
+'                'Stop
+'            End If
+'        End If
+'
+'
     
     '   APP IS ** NOT ** CLOSING
     If Not ftState = ftClosing Then
         '   MAKE SURE WE HAVE A VALID ACTIVE SHEET
         If ThisWorkbook.ActiveSheet Is Nothing Then
-            If Not homeSheet.visible = xlSheetVisible Then homeSheet.visible = xlSheetVisible
-            homeSheet.Activate
+            If Not HomeSheet.visible = xlSheetVisible Then HomeSheet.visible = xlSheetVisible
+            HomeSheet.Activate
         End If
-        If ThisWorkbook.ActiveSheet Is wsBusy Or ThisWorkbook.ActiveSheet Is wsOpenClose Then
-            If Not homeSheet.visible = xlSheetVisible Then homeSheet.visible = xlSheetVisible
-            homeSheet.Activate
-            If Not wsBusy.visible = xlSheetVeryHidden Then wsBusy.visible = xlSheetVeryHidden
-            If Not wsOpenClose.visible = xlSheetVeryHidden Then wsOpenClose.visible = xlSheetVeryHidden
+        If mustHide Then
+            HideSheets
         End If
     End If
     
@@ -293,15 +338,15 @@ Finalize:
     On Error Resume Next
     
     If forceSheet Then
-        With ThisWorkbook.Worksheets(FORCED_WORKSHEET_NAME)
-            If Not .visible = xlSheetVisible Then .visible = xlSheetVisible
-            .Activate
-        End With
+        If Not l_homeSheet.visible = xlSheetVisible Then
+            l_homeSheet.visible = xlSheetVisible
+        End If
+        If Not l_homeSheet Is ThisWorkbook.ActiveSheet Then
+            l_homeSheet.Activate
+        End If
     End If
     
-    ''ButtonPause = False
     PackageRunning = False
-    
     lPerfState = DefaultState
     SetState lPerfState
     
@@ -415,7 +460,6 @@ Public Function RestoreDefaultAppSettingsOnly()
         Application.Calculation = xlCalculationAutomatic
         Application.EnableAnimations = True
         Application.EnableMacroAnimations = True
-        ''ButtonPause = False
 
 End Function
 
@@ -423,7 +467,55 @@ Private Sub Class_Initialize()
     'If you have the pbError Module from https://github.com/lopperman/VBA-pbUtil
     ' Then you can change the const used for the error to: ERR_CLASS_INSTANCE_PROHIBITED
     If Not Me Is pbPerf Then RaiseError PRIVATE_ERR_CLASS_INSTANCE_PROHIBITED, errorDesc:="pbPerf may not be created as a new Class Instance outside it's PredeclaredId 'pbPerf'"
+    Configure
 End Sub
 
+Private Property Get HomeSheet() As Worksheet
+    Set l_homeSheet = ThisWorkbook.Worksheets(FORCED_WORKSHEET_NAME)
+End Property
 
+Private Property Get MustHideSheets() As Boolean
+    Dim hideIDX As Long
+    If l_hideSheets.Count = 0 Then
+        MustHideSheets = False
+        Exit Property
+    End If
+    For hideIDX = 1 To l_hideSheets.Count
+        If ThisWorkbook.Worksheets(l_hideSheets.KeyByIndex(hideIDX)).visible = xlSheetVisible Then
+                MustHideSheets = True
+                Exit For
+        End If
+    Next hideIDX
+End Property
+Private Property Get MustActivateHomeSheet() As Boolean
+    Dim hideIDX As Long
+    If l_hideSheets.Count = 0 Then
+        MustActivateHomeSheet = False
+        Exit Property
+    End If
+    For hideIDX = 1 To l_hideSheets.Count
+        If ThisWorkbook.Worksheets(l_hideSheets.KeyByIndex(hideIDX)) Is ThisWorkbook.ActiveSheet Then
+            MustActivateHomeSheet = True
+            Exit For
+        End If
+    Next hideIDX
+End Property
+Private Function HideSheets()
+    If MustActivateHomeSheet Then
+        If Not HomeSheet.visible = xlSheetVisible Then HomeSheet.visible = xlSheetVisible
+        HomeSheet.Activate
+    End If
+        
+    Dim hideIDX As Long
+    If l_hideSheets.Count > 0 Then
+        For hideIDX = 1 To l_hideSheets.Count
+            If Not ThisWorkbook.Worksheets(l_hideSheets.KeyByIndex(hideIDX)).visible = _
+                xlSheetVeryHidden Then
+                ThisWorkbook.Worksheets(l_hideSheets.KeyByIndex(hideIDX)).visible = _
+                    xlSheetVeryHidden
+            End If
+        Next hideIDX
+    End If
+
+End Function
 
