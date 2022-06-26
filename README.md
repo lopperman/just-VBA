@@ -1,4 +1,4 @@
-# View the WIKI for this repo for more informatoin and documentation
+# View the WIKI for this repo for more information and documentation
 
 https://github.com/lopperman/VBA-pbUtil/wiki
 
