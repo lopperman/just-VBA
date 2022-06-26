@@ -1,10 +1,8 @@
-# View the WIKI for this repo for more information and documentation
+## [Click Here For WIKI](https://github.com/lopperman/VBA-pbUtil/wiki)
 
-https://github.com/lopperman/VBA-pbUtil/wiki
+### Also check out r/VBA on Reddit (https://www.reddit.com/user/ITFuture)
 
-#### Also check out r/VBA on Reddit (https://www.reddit.com/user/ITFuture)
-
-(Wiki Preview)
+(Preview - See Wiki for additional detail)
 ## pbPackage
 Part of a custom framework that enables:
 1. **Running Code** - When, and Where
