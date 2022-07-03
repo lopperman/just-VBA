@@ -1,7 +1,8 @@
-## [Click Here For WIKI](https://github.com/lopperman/VBA-pbUtil/wiki)
-### Also check out r/VBA on Reddit (https://www.reddit.com/user/ITFuture)
+![](https://github.com/lopperman/just-VBA/blob/main/Misc/haveYouSeen.png?raw=true)
 ***
+### [Click Here For WIKI](https://github.com/lopperman/VBA-pbUtil/wiki)
 ***
-## Questions?  Comments?  Found a Bug?  Please [start a discussion here.](https://github.com/lopperman/VBA-pbUtil/discussions/1#discussion-4166784)
+#### Also check out r/VBA on Reddit (https://www.reddit.com/user/ITFuture)
+#### Questions?  Comments?  Found a Bug?  Please [start a discussion here.](https://github.com/lopperman/VBA-pbUtil/discussions/1#discussion-4166784)
 ***
 
