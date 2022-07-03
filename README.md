@@ -1,12 +1,7 @@
 ## [Click Here For WIKI](https://github.com/lopperman/VBA-pbUtil/wiki)
-
 ### Also check out r/VBA on Reddit (https://www.reddit.com/user/ITFuture)
+***
+***
+## Questions?  Comments?  Found a Bug?  Please [start a discussion here.](https://github.com/lopperman/VBA-pbUtil/discussions/1#discussion-4166784)
+***
 
-(Preview - See Wiki for additional detail)
-## pbPackage
-Part of a custom framework that enables:
-1. **Running Code** - When, and Where
-2. **Navigation** - Support for autoted worksheet protect, and visibility
-3. **System State - Automated Management** with override for ensuring clean and fast code execution, navigation, and user experience.
-
-![](https://github.com/lopperman/VBA-pbUtil/blob/main/pbPackage/pbPackageR1.png)
