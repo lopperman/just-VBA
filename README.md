@@ -1,5 +1,8 @@
 ![](https://github.com/lopperman/just-VBA/blob/main/Misc/haveYouSeen.png?raw=true)
 ***
+### VBA CopyRight 
+Currently working on a library for all things 'copy/paste', check out the [Wiki page](https://github.com/lopperman/just-VBA/wiki/VBA-CopyRight)
+***
 ### [Click Here For WIKI](https://github.com/lopperman/VBA-pbUtil/wiki)
 ***
 #### Also check out r/VBA on Reddit (https://www.reddit.com/user/ITFuture)
