@@ -16,11 +16,45 @@ Option Base 1
 
 Public Const TEMP_DIRECTORY_NAME2 As String = "VBATemp"
 
-Public Function SaveCopyToUserDocFolder(ByVal wb As Workbook, Optional fileName As Variant)
-
-    SaveWBCopy wb, Application.DefaultFilePath, IIf(IsMissing(fileName), wb.Name, CStr(fileName))
+Public Function CopySheetToNewWB(ByVal ws As Worksheet, Optional filepath As Variant, Optional fileName As Variant)
+On Error Resume Next
+    Application.EnableEvents = False
+    Dim newWB As Workbook
+    Set newWB = Application.Workbooks.add
+    With ws
+        .Copy Before:=newWB.Worksheets(1)
+        DoEvents
+    End With
+    If IsMissing(filepath) Then filepath = Application.DefaultFilePath
+    If IsMissing(fileName) Then fileName = ReplaceIllegalCharacters2(ws.Name, vbEmpty) & ".xlsx"
+    newWB.SaveAs fileName:=PathCombine(False, filepath, fileName), FileFormat:=xlOpenXMLStrictWorkbook
+    Application.EnableEvents = True
+    If Not Err.Number = 0 Then
+        MsgBox "CopySheetToNewWB Error: " & Err.Number & ", " & Err.Description
+        Err.Clear
+    End If
 
 End Function
+
+Function ReplaceIllegalCharacters2(strIn As String, strChar As String, Optional padSingleQuote As Boolean = True) As String
+    Dim strSpecialChars As String
+    Dim i As Long
+    strSpecialChars = "~""#%&*:<>?{|}/\[]" & Chr(10) & Chr(13)
+
+    For i = 1 To Len(strSpecialChars)
+        strIn = Replace(strIn, Mid$(strSpecialChars, i, 1), strChar)
+    Next
+    
+    If padSingleQuote And InStr(1, strIn, "''") = 0 Then
+        strIn = CleanSingleTicks(strIn)
+    End If
+    
+    ReplaceIllegalCharacters2 = strIn
+End Function
+
+    Public Function SaveCopyToUserDocFolder(ByVal wb As Workbook, Optional fileName As Variant)
+        SaveWBCopy wb, Application.DefaultFilePath, IIf(IsMissing(fileName), wb.Name, CStr(fileName))
+    End Function
 
 Public Function SaveWBCopy(ByVal wb As Workbook, dirPath As String, fileName As String)
 On Error Resume Next
