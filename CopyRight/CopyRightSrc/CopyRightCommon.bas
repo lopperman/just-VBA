@@ -17,17 +17,15 @@ Option Compare Text
 Option Base 1
 
 Public Const ERR_CANNOT_ACCESS_PROTECTED_OBJECT As Long = vbObjectError + 1028
-Public Const ERR_COPY_RIGHT_SOURCE_TYPE_CONFLICT As Long = vbObjectError + 1029
-Public Const ERR_COPY_RIGHT_SOURCE_NOT_VALID As Long = vbObjectError + 1030
+Public Const ERR_COPY_RIGHT_OBJECT_TYPE_CONFLICT As Long = vbObjectError + 1029
+Public Const ERR_COPY_RIGHT_OBJECT_NOT_VALID As Long = vbObjectError + 1030
 
-Public Enum crSourceType
+Public Enum crObjectType
     [_Unknown] = 0
     crRangeSingleArea
     crRangeMultipleAreas
     crListObject
     crListObjectColumns
-    crSheetColumns
-    crSheetRows
 End Enum
 
 Public Enum crRangeAreas
