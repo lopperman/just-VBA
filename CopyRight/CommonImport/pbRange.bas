@@ -608,8 +608,7 @@ Public Function MatchFirst(crit As Variant, ByRef rng As Range, matchmode As XMa
 On Error GoTo E:
     Dim fnd As Variant
     If Len(crit & vbNullString) = 0 Then
-        'We're looking for Blanks, use RangeSys("BlankCell")
-        crit = RangeSYS(srBlankCell)
+        crit = vbEmpty
         'crit now equals EMPTY, which will pass numeric validation.  we don't want to look for a '0' value, so set secondPass = true
         secondPass = True
     End If
@@ -645,7 +644,7 @@ On Error GoTo E:
     Dim fnd As Variant
     If Len(crit & vbNullString) = 0 Then
         'We're looking for Blanks, use RangeSys("BlankCell")
-        crit = RangeSYS(srBlankCell)
+        crit = vbEmpty
         'crit now equals EMPTY, which will pass numeric validation.  we don't want to look for a '0' value, so set secondPass = true
         secondPass = True
     End If

@@ -1,15 +1,15 @@
-Attribute VB_Name = "pbCopyRight"
+Attribute VB_Name = "CopyRightCommon"
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ' NOTE: THIS CLASS REQUIRES VB_PredeclaredId = True
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ' pbCopyRight v1.0.0
-' (c) Paul Brower - https://github.com/lopperman/VBA-pbUtil
+' (c) Paul Brower - https://github.com/lopperman/just-VBA
 '
 '   Copy & "Paste" Without the .Paste.   EVER.
 '   ** This is the Way **
 '
 ' @module pbCopyRight
-' @author Paul Brower
+' @author Paul Brower (lopperman)
 ' @license GNU General Public License v3.0
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
 Option Explicit
@@ -17,6 +17,33 @@ Option Compare Text
 Option Base 1
 
 Public Const ERR_CANNOT_ACCESS_PROTECTED_OBJECT As Long = vbObjectError + 1028
+Public Const ERR_COPY_RIGHT_SOURCE_TYPE_CONFLICT As Long = vbObjectError + 1029
+Public Const ERR_COPY_RIGHT_SOURCE_NOT_VALID As Long = vbObjectError + 1030
+
+Public Enum crSourceType
+    [_Unknown] = 0
+    crRangeSingleArea
+    crRangeMultipleAreas
+    crListObject
+    crListObjectColumns
+    crSheetColumns
+    crSheetRows
+End Enum
+
+Public Enum crRangeAreas
+    crRetainGaps
+    crStackVerticalAll
+    crStackHorizontalAll
+    crStackVerticalOnSheetChange
+    crStackHorizontalOnSheetChange
+End Enum
+
+Public Enum crCopyOptions
+    coFormulasToValues = 2 ^ 0
+    coKeepFormulas = 2 ^ 1
+    coVisibleOnly = 2 ^ 2
+    coIncludeListObjectHeaders = 2 ^ 3
+End Enum
 
 'Public Enum CopyOptions
 '    [_coError] = 0

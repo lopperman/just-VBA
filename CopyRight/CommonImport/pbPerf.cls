@@ -108,13 +108,11 @@ Private Function Configure()
 On Error GoTo E:
     Dim failed As Boolean
     
-'   ~~~ ~~~ REQUIRED ~~~ ~~~
 '   Set the HomeSheet Worksheet
-    If Not WorksheetExists(FORCED_WORKSHEET_NAME) Then
-        RaiseError ERR_FORCED_WORKSHEET_NOT_FOUND, errorDesc:="'pbPerf.FORCED_WORKSHEET_NAME' " & _
-            "is invalid."
-    Else
-        Set l_homeSheet = ThisWorkbook.Worksheets(FORCED_WORKSHEET_NAME)
+    If Len(FORCED_WORKSHEET_NAME) > 0 Then
+        If WorksheetExists(FORCED_WORKSHEET_NAME) Then
+            Set l_homeSheet = ThisWorkbook.Worksheets(FORCED_WORKSHEET_NAME)
+        End If
     End If
     
     l_hideSheets.CompareMode = vbTextCompare
@@ -122,8 +120,8 @@ On Error GoTo E:
 '   ~~~ ~~~ OPTIONAL ~~~ ~~~
 '   Set the name/s of Sheets to Hide when returning to DefaultMode
     'EXAMPLE
-    l_hideSheets.add "FinTool", key:="FinTool"
-    l_hideSheets.add "Busy", key:="Busy"
+    AddHideSheet "FinTool"
+    AddHideSheet "Busy"
 
 Finalize:
     On Error Resume Next
@@ -139,6 +137,13 @@ E:
     
 End Function
 
+Private Function AddHideSheet(wsName As String)
+    If Len(wsName) > 0 Then
+        If WorksheetExists(wsName) Then
+            l_hideSheets.add wsName, key:=wsName
+        End If
+    End If
+End Function
 
 ' ________________________________________
 '  ~~~~ ~~~~ ~~~ ~~~ EASY MODE ~~~ ~~~ ~~~ ~~~
@@ -322,8 +327,10 @@ Private Function PerfStateClear(Optional doNotProtect As Boolean = False, _
     If Not ftState = ftClosing Then
         '   MAKE SURE WE HAVE A VALID ACTIVE SHEET
         If ThisWorkbook.ActiveSheet Is Nothing Then
-            If Not HomeSheet.visible = xlSheetVisible Then HomeSheet.visible = xlSheetVisible
-            HomeSheet.Activate
+            If Not l_homeSheet Is Nothing Then
+                If Not HomeSheet.visible = xlSheetVisible Then HomeSheet.visible = xlSheetVisible
+                HomeSheet.Activate
+            End If
         End If
         If mustHide Then
             HideSheets
@@ -340,7 +347,7 @@ Private Function PerfStateClear(Optional doNotProtect As Boolean = False, _
 Finalize:
     On Error Resume Next
     
-    If forceSheet Then
+    If forceSheet And Not l_homeSheet Is Nothing Then
         If Not l_homeSheet.visible = xlSheetVisible Then
             l_homeSheet.visible = xlSheetVisible
         End If
@@ -349,7 +356,7 @@ Finalize:
         End If
     End If
     
-    PackageRunning = False
+    pbPackageRunning = False
     lPerfState = DefaultState
     If failed Then
         RestoreDefaultAppSettingsOnly
@@ -482,7 +489,11 @@ Private Sub Class_Initialize()
 End Sub
 
 Private Property Get HomeSheet() As Worksheet
-    Set l_homeSheet = ThisWorkbook.Worksheets(FORCED_WORKSHEET_NAME)
+    If l_homeSheet Is Nothing And Len(FORCED_WORKSHEET_NAME) > 0 Then
+        If WorksheetExists(FORCED_WORKSHEET_NAME, ThisWorkbook) Then
+            Set l_homeSheet = ThisWorkbook.Worksheets(FORCED_WORKSHEET_NAME)
+        End If
+    End If
 End Property
 
 Private Property Get MustHideSheets() As Boolean
@@ -500,6 +511,10 @@ Private Property Get MustHideSheets() As Boolean
 End Property
 Private Property Get MustActivateHomeSheet() As Boolean
     Dim hideIDX As Long
+    If Len(FORCED_WORKSHEET_NAME) = 0 Then
+        MustActivateHomeSheet = False
+        Exit Property
+    End If
     If l_hideSheets.Count = 0 Then
         MustActivateHomeSheet = False
         Exit Property
