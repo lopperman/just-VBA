@@ -46,7 +46,7 @@ Function ReplaceIllegalCharacters2(strIn As String, strChar As String, Optional 
     Next
     
     If padSingleQuote And InStr(1, strIn, "''") = 0 Then
-        strIn = CleanSingleTicks(strIn)
+        strIn = CleanSingleTicks2(strIn)
     End If
     
     ReplaceIllegalCharacters2 = strIn
@@ -59,7 +59,7 @@ End Function
 Public Function SaveWBCopy(ByVal wb As Workbook, dirPath As String, fileName As String)
 On Error Resume Next
     Application.EnableEvents = False
-    wb.SaveCopyAs PathCombine(False, dirPath, fileName)
+    wb.SaveCopyAs PathCombine2(False, dirPath, fileName)
     Application.EnableEvents = True
     If Not Err.Number = 0 Then
         MsgBox "SaveWBCopy Error: " & Err.Number & ", " & Err.Description
@@ -68,13 +68,13 @@ On Error Resume Next
 End Function
 
 Public Property Get StartupPath2() As String
-    StartupPath2 = PathCombine(True, Application.StartupPath)
+    StartupPath2 = PathCombine2(True, Application.StartupPath)
 End Property
 
 Public Function FullPathExcludingFileName2(fullFileName As String) As String
 On Error Resume Next
     Dim tPath As String, tFileName As String, fNameStarts As Long
-    tFileName = FileNameFromFullPath(fullFileName)
+    tFileName = FileNameFromFullPath2(fullFileName)
     fNameStarts = InStr(fullFileName, tFileName)
     tPath = Mid(fullFileName, 1, fNameStarts - 1)
     FullPathExcludingFileName2 = tPath
@@ -265,21 +265,21 @@ End Function
 
 Public Function DeleteFolderFiles2(folderPath As String, Optional patternMatch As String = vbNullString)
 On Error Resume Next
-    folderPath = PathCombine(True, folderPath)
+    folderPath = PathCombine2(True, folderPath)
     
     If DirectoryFileCount(folderPath) > 0 Then
         Dim myPath As Variant
-        myPath = PathCombine(True, folderPath)
+        myPath = PathCombine2(True, folderPath)
         ChDir folderPath
         Dim myFile, MyName As String
         MyName = Dir(myPath, vbNormal)
         Do While MyName <> ""
-            If (GetAttr(PathCombine(False, myPath, MyName)) And vbNormal) = vbNormal Then
+            If (GetAttr(PathCombine2(False, myPath, MyName)) And vbNormal) = vbNormal Then
                 If patternMatch = vbNullString Then
-                    Kill PathCombine(False, myPath, MyName)
+                    Kill PathCombine2(False, myPath, MyName)
                 Else
                     If LCase(MyName) Like LCase(patternMatch) Then
-                        Kill PathCombine(False, myPath, MyName)
+                        Kill PathCombine2(False, myPath, MyName)
                     End If
                 End If
             End If
@@ -293,10 +293,10 @@ Public Function DirectoryFileCount2(tmpDirPath As String) As Long
 On Error Resume Next
 
     Dim myFile, myPath, MyName As String, retV As Long
-    myPath = PathCombine(True, tmpDirPath)
+    myPath = PathCombine2(True, tmpDirPath)
     MyName = Dir(myPath, vbNormal)
     Do While MyName <> ""
-        If (GetAttr(PathCombine(False, myPath, MyName)) And vbNormal) = vbNormal Then
+        If (GetAttr(PathCombine2(False, myPath, MyName)) And vbNormal) = vbNormal Then
             retV = retV + 1
         End If
         MyName = Dir()
@@ -309,10 +309,10 @@ Public Function DirectoryDirectoryCount2(tmpDirPath As String) As Long
 On Error Resume Next
 
     Dim myFile, myPath, MyName As String, retV As Long
-    myPath = PathCombine(True, tmpDirPath)
+    myPath = PathCombine2(True, tmpDirPath)
     MyName = Dir(myPath, vbDirectory)
     Do While MyName <> ""
-        If (GetAttr(PathCombine(False, myPath, MyName)) And vbDirectory) = vbDirectory Then
+        If (GetAttr(PathCombine2(False, myPath, MyName)) And vbDirectory) = vbDirectory Then
             retV = retV + 1
         End If
         MyName = Dir()
