@@ -1,14 +1,3 @@
-Attribute VB_Name = "pbFileSys"
-' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
-' pbFileSys v1.0.0
-' (c) Paul Brower - https://github.com/lopperman/VBA-pbUtil
-'
-' General File Utilities for MAC or PC
-'
-' @module pbFileSys
-' @author Paul Brower
-' @license GNU General Public License v3.0
-' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
 Option Explicit
 Option Compare Text
 Option Base 1
@@ -20,14 +9,14 @@ Public Function CopySheetToNewWB(ByVal ws As Worksheet, Optional filepath As Var
 On Error Resume Next
     Application.EnableEvents = False
     Dim newWB As Workbook
-    Set newWB = Application.Workbooks.add
+    Set newWB = Application.Workbooks.Add
     With ws
         .Copy Before:=newWB.Worksheets(1)
         DoEvents
     End With
     If IsMissing(filepath) Then filepath = Application.DefaultFilePath
     If IsMissing(fileName) Then fileName = ReplaceIllegalCharacters2(ws.Name, vbEmpty) & ".xlsx"
-    newWB.SaveAs fileName:=PathCombine(False, filepath, fileName), FileFormat:=xlOpenXMLStrictWorkbook
+    newWB.SaveAs fileName:=PathCombine2(False, filepath, fileName), FileFormat:=xlOpenXMLStrictWorkbook
     Application.EnableEvents = True
     If Not Err.Number = 0 Then
         MsgBox "CopySheetToNewWB Error: " & Err.Number & ", " & Err.Description
@@ -51,6 +40,17 @@ Function ReplaceIllegalCharacters2(strIn As String, strChar As String, Optional 
     
     ReplaceIllegalCharacters2 = strIn
 End Function
+
+Public Function CleanSingleTicks2(wbName As String) As String
+    Dim retV As String
+    If InStr(wbName, "'") > 0 And InStr(wbName, "''") = 0 Then
+        retV = Replace(wbName, "'", "''")
+    Else
+        retV = wbName
+    End If
+    CleanSingleTicks2 = retV
+End Function
+
 
     Public Function SaveCopyToUserDocFolder(ByVal wb As Workbook, Optional fileName As Variant)
         SaveWBCopy wb, Application.DefaultFilePath, IIf(IsMissing(fileName), wb.Name, CStr(fileName))
@@ -109,7 +109,7 @@ On Error Resume Next
         Dim sItem As String
         Set fldr = Application.FileDialog(msoFileDialogFolderPicker)
         With fldr
-            .title = choosePrompt
+            .Title = choosePrompt
             .AllowMultiSelect = False
             .InitialFileName = Application.DefaultFilePath
             If .Show <> -1 Then GoTo NextCode
@@ -139,10 +139,10 @@ On Error Resume Next
         Dim sItem As String
         Set fldr = Application.FileDialog(msoFileDialogFilePicker)
         With fldr
-            .title = choosePrompt
+            .Title = choosePrompt
             If Not fileExt = vbNullString Then
                 .Filters.Clear
-                .Filters.add "Files", fileExt & "?", 1
+                .Filters.Add "Files", fileExt & "?", 1
             End If
             .AllowMultiSelect = False
             If .Show <> -1 Then GoTo NextCode
@@ -189,7 +189,7 @@ Public Function URLEncode2(ByRef txt As String) As String
                 Mid$(buffer, n - 1) = Hex$(128 + (c Mod 64))
         End Select
     Next
-    URLEncode2 = left$(buffer, n)
+    URLEncode2 = Left$(buffer, n)
 End Function
 
 ' ~~~~~~~~~~   Create Valid File or Directory Path (for PC or Mac, local, or internet) from 1 or more arguments  ~~~~~~~~~~'
@@ -267,7 +267,7 @@ Public Function DeleteFolderFiles2(folderPath As String, Optional patternMatch A
 On Error Resume Next
     folderPath = PathCombine2(True, folderPath)
     
-    If DirectoryFileCount(folderPath) > 0 Then
+    If DirectoryFileCount2(folderPath) > 0 Then
         Dim myPath As Variant
         myPath = PathCombine2(True, folderPath)
         ChDir folderPath
@@ -325,7 +325,3 @@ End Function
 Public Function TempDirName2(Optional dirName As String = vbNullString) As String
     TempDirName2 = IIf(Not dirName = vbNullString, dirName, TEMP_DIRECTORY_NAME2)
 End Function
-
-
-
-
