@@ -29,6 +29,51 @@ Option Explicit
 Option Compare Text
 Option Base 1
 
+'   ~~~ ~~~ Sort's a List Object by [lstColIdx] Ascending.  If already
+'                   sorted Ascending, sorts Descending
+Public Function UserSort(lstObj As ListObject, lstColIdx As Long)
+        If lstObj.listRows.Count = 0 Then Exit Function
+        If lstObj.Range.Worksheet.Protection.AllowSorting = False Then
+            MsgBox_FT "This table does not allow custom sorting", vbOKOnly + vbInformation, "SORRY"
+            Exit Function
+        End If
+        Dim clearPreviousSort As Boolean, hdrCol As Long
+        Dim orderBy As XlSortOrder
+        orderBy = xlAscending
+        hdrCol = lstObj.HeaderRowRange.column
+        If lstObj.Sort.SortFields.Count > 1 Then
+            clearPreviousSort = True
+        Else
+            If lstObj.Sort.SortFields.Count = 1 Then
+                If lstObj.Sort.SortFields(1).key.column - hdrCol + 1 <> lstColIdx Then
+                    clearPreviousSort = True
+                End If
+            End If
+        End If
+        If clearPreviousSort Then
+            lstObj.Sort.SortFields.Clear
+        End If
+        With lstObj.Sort
+            If .SortFields.Count = 1 Then
+                If Not .SortFields(1).SortOn = xlSortOnValues Then .SortFields(1).SortOn = xlSortOnValues
+                If .SortFields(1).Order = xlAscending Then
+                    .SortFields(1).Order = xlDescending
+                Else
+                    .SortFields(1).Order = xlAscending
+                End If
+            Else
+                .SortFields.Add lstObj.ListColumns(lstColIdx).DataBodyRange, SortOn:=XlSortOn.xlSortOnValues, Order:=XlSortOrder.xlAscending
+            End If
+            .Apply
+        End With
+Finalize:
+    On Error Resume Next
+    If Err.Number <> 0 Then Err.Clear
+    Exit Function
+E:
+    ErrorCheck
+    Resume Finalize:
+End Function
 
 '   ~~~ ~~~ Resize ListObject (Rows) ~~~ ~~~
 Public Function ResizeListObjectRows(lstObj As ListObject, Optional totalRowCount As Long = 0, Optional addRowCount As Long = 0) As Range
@@ -152,8 +197,13 @@ Public Function ReplaceListColFormulaWithStatic(lstObj As ListObject, column As 
     
 End Function
 
-Public Function PopulateStaticFromFormula(lstObj As ListObject, lstColName As String, r1c1Formula As String, Optional createIfMissing As Boolean = True, Optional numberFormat As String = vbNullString) As Boolean
-'   Create a formula in ListColumn, and then replace the ListColumn contents with the values from the Formula
+Public Function CreateListColumnFormula(lstObj As ListObject, lstColName As String, _
+    r1c1Formula As String, _
+    Optional createColumnIfMissing As Boolean = True, _
+    Optional convertToValues As Boolean = False, _
+    Optional numberFormat As String = vbNullString) As Boolean
+
+'   Create a formula in ListColumn, and then optionally replace the ListColumn contents with the values from the Formula
 '   Note: Sets the 'Formula2R1C1' Formula Property.
 On Error GoTo E:
     Dim failed As Boolean
@@ -161,12 +211,10 @@ On Error GoTo E:
         Exit Function
     End If
     
-    
     Dim tmpColArr As Variant
-    If ListColumnExists(lstObj, lstColName) = False And createIfMissing = True Then
+    If ListColumnExists(lstObj, lstColName) = False And createColumnIfMissing = True Then
         AddColumnIfMissing lstObj, lstColName
     End If
-
     If Not ListColumnExists(lstObj, lstColName) Then
         failed = True
         GoTo Finalize:
@@ -176,25 +224,29 @@ On Error GoTo E:
     lstObj.ListColumns(lstColName).DataBodyRange.numberFormat = "General"
     lstObj.ListColumns(lstColName).DataBodyRange.Formula2R1C1 = r1c1Formula
      
-    ReplaceFormulasWithStatic lstObj
-     
-    tmpColArr = ListColumnAsArray(lstObj, lstColName)
-    lstObj.ListColumns(lstColName).DataBodyRange.ClearContents
     If Len(numberFormat) > 0 Then
         lstObj.ListColumns(lstColName).DataBodyRange.numberFormat = numberFormat
     End If
-    If ArrDimensions(tmpColArr) = 2 Then
-        lstObj.ListColumns(lstColName).DataBodyRange.value = tmpColArr
-    Else
-        failed = True
+     
+    If convertToValues Then
+        ReplaceListColFormulaWithStatic lstObj, lstColName
+'        tmpColArr = ListColumnAsArray(lstObj, lstColName)
+'        lstObj.ListColumns(lstColName).DataBodyRange.ClearContents
+'        If Len(numberFormat) > 0 Then
+'            lstObj.ListColumns(lstColName).DataBodyRange.numberFormat = numberFormat
+'        End If
+'        If ArrDimensions(tmpColArr) = 2 Then
+'            lstObj.ListColumns(lstColName).DataBodyRange.value = tmpColArr
+'        Else
+'            failed = True
+'        End If
     End If
-    
+
 Finalize:
     On Error Resume Next
     
     If ArrDimensions(tmpColArr) > 0 Then Erase tmpColArr
-    PopulateStaticFromFormula = Not failed
-    
+    CreateListColumnFormula = Not failed
     
     If Err.Number <> 0 Then Err.Clear
     Exit Function
@@ -203,6 +255,58 @@ E:
     ErrorCheck
     Resume Finalize:
 End Function
+
+'Public Function PopulateStaticFromFormula(lstObj As ListObject, lstColName As String, r1c1Formula As String, Optional createIfMissing As Boolean = True, Optional numberFormat As String = vbNullString) As Boolean
+''   Create a formula in ListColumn, and then replace the ListColumn contents with the values from the Formula
+''   Note: Sets the 'Formula2R1C1' Formula Property.
+'On Error GoTo E:
+'    Dim failed As Boolean
+'    If lstObj.listRows.Count = 0 Then
+'        Exit Function
+'    End If
+'
+'
+'    Dim tmpColArr As Variant
+'    If ListColumnExists(lstObj, lstColName) = False And createIfMissing = True Then
+'        AddColumnIfMissing lstObj, lstColName
+'    End If
+'
+'    If Not ListColumnExists(lstObj, lstColName) Then
+'        failed = True
+'        GoTo Finalize:
+'    End If
+'
+'    lstObj.ListColumns(lstColName).DataBodyRange.ClearContents
+'    lstObj.ListColumns(lstColName).DataBodyRange.numberFormat = "General"
+'    lstObj.ListColumns(lstColName).DataBodyRange.Formula2R1C1 = r1c1Formula
+'
+'    ReplaceFormulasWithStatic lstObj
+'
+'    tmpColArr = ListColumnAsArray(lstObj, lstColName)
+'    lstObj.ListColumns(lstColName).DataBodyRange.ClearContents
+'    If Len(numberFormat) > 0 Then
+'        lstObj.ListColumns(lstColName).DataBodyRange.numberFormat = numberFormat
+'    End If
+'    If ArrDimensions(tmpColArr) = 2 Then
+'        lstObj.ListColumns(lstColName).DataBodyRange.value = tmpColArr
+'    Else
+'        failed = True
+'    End If
+'
+'Finalize:
+'    On Error Resume Next
+'
+'    If ArrDimensions(tmpColArr) > 0 Then Erase tmpColArr
+'    PopulateStaticFromFormula = Not failed
+'
+'
+'    If Err.Number <> 0 Then Err.Clear
+'    Exit Function
+'E:
+'    failed = True
+'    ErrorCheck
+'    Resume Finalize:
+'End Function
 Public Function ListColumnAsArray(lstObj As ListObject, colName As String) As Variant
 '   Get's the **DATABODYRANGE** Of ListObject column 'colName' into a 2D array
 '   (states already dealt with)
@@ -248,9 +352,9 @@ On Error Resume Next
     If Not ListColumnExists(lstObj, colName) Then
         Dim nc As listColumn
         If position > 0 Then
-            Set nc = lstObj.ListColumns.add(position:=position)
+            Set nc = lstObj.ListColumns.Add(position:=position)
         Else
-            Set nc = lstObj.ListColumns.add
+            Set nc = lstObj.ListColumns.Add
         End If
         nc.Name = colName
         If lstObj.listRows.Count > 0 And numberFormat <> vbNullString Then
@@ -291,25 +395,25 @@ On Error Resume Next
 End Function
 
 
-Public Function ListColumnRange(srcListObj As ListObject, lstColumn As Variant, Optional includeHeaderRow As Boolean = False, Optional includeTotalsRow As Boolean = False) As Range
+Public Function ListColumnRange(srcListobj As ListObject, lstColumn As Variant, Optional includeHeaderRow As Boolean = False, Optional includeTotalsRow As Boolean = False) As Range
 
     Dim tmpRange As Range, tmpRowCount As Long
     
-    With srcListObj
+    With srcListobj
         tmpRowCount = .listRows.Count
-        If includeHeaderRow Then tmpRowCount = tmpRowCount + HeaderRangeRows(srcListObj)
-        If includeTotalsRow And .ShowTotals Then tmpRowCount = tmpRowCount + TotalsRangeRows(srcListObj)
+        If includeHeaderRow Then tmpRowCount = tmpRowCount + HeaderRangeRows(srcListobj)
+        If includeTotalsRow And .ShowTotals Then tmpRowCount = tmpRowCount + TotalsRangeRows(srcListobj)
         
         If tmpRowCount = 0 Then Exit Function
         
-        Set tmpRange = srcListObj.ListColumns(lstColumn).Range
+        Set tmpRange = srcListobj.ListColumns(lstColumn).Range
     
         If includeHeaderRow = False Then
-            Set tmpRange = tmpRange.offset(rowOffset:=HeaderRangeRows(srcListObj)).Resize(rowSize:=tmpRange.Rows.Count - HeaderRangeRows(srcListObj))
+            Set tmpRange = tmpRange.offset(rowOffset:=HeaderRangeRows(srcListobj)).Resize(rowSize:=tmpRange.Rows.Count - HeaderRangeRows(srcListobj))
         End If
         
         If includeTotalsRow = False And .ShowTotals Then
-            Set tmpRange = tmpRange.Resize(rowSize:=tmpRange.Rows.Count - TotalsRangeRows(srcListObj))
+            Set tmpRange = tmpRange.Resize(rowSize:=tmpRange.Rows.Count - TotalsRangeRows(srcListobj))
         End If
     End With
 
@@ -346,14 +450,20 @@ On Error GoTo E:
     End If
     listRows = lstObj.listRows.Count
     
-    lstObj.Resize lstObj.Range.Resize(rowSize:=(hdrRngRows + totRngRows + listRows) + addRowCount)
+    Dim endCount As Long
+    endCount = lstObj.listRows.Count + addRowCount
     
-    If lstObj.listRows.Count = 0 And addRowCount = 1 Then
-        lstObj.listRows.add
-        Set NewRowsRange = lstObj.listRows(1).Range
-    Else
-        Set NewRowsRange = lstObj.listRows(listRows + 1).Range.Resize(rowSize:=addRowCount)
-    End If
+    lstObj.Resize lstObj.Range.Resize(rowSize:=(hdrRngRows + totRngRows + listRows) + addRowCount)
+    Do While lstObj.listRows.Count < endCount
+        lstObj.listRows.Add
+    Loop
+    
+    Dim firstNewRow As Long, lastNewRow As Long
+    firstNewRow = lstObj.listRows.Count - addRowCount + 1
+    lastNewRow = firstNewRow + (addRowCount - 1)
+        
+    Set NewRowsRange = lstObj.listRows(firstNewRow).Range.Resize(rowSize:=addRowCount)
+    
     
 Finalize:
     On Error Resume Next
@@ -368,4 +478,76 @@ E:
     Resume Finalize:
     
 
+End Function
+
+'Obtain the first row given a set of headers and values
+'@param {ListObject} The listobject to search within.
+'@param {Array<String>} Headers to look in
+'@param {Array<Variant>} Key to lookup
+'@returns {Long} Row index containing the key data
+Function getFirstRow(ByVal lo As ListObject, headers, values) As Long
+Stop
+'fix this
+   Dim chi As Long
+   For chi = LBound(headers) To UBound(headers)
+    If IsNumeric(headers(chi)) Then headers(chi) = lo.ListColumns(headers(chi)).Name
+   Next chi
+  
+  Static sID As String: If sID = "" Then sID = lo.Name & "|" & Join(headers, "|")
+ 
+  Static oIndex As Object: If oIndex Is Nothing Or sID <> (lo.Name & "|" & Join(headers, "|")) Then Set oIndex = getIndex(lo, headers)
+'  Dim oIndex As Dictionary: If oIndex Is Nothing Or sID <> (lo.Name & "|" & Join(headers, "|")) Then Set oIndex = getIndex(lo, headers)
+  
+  getFirstRow = oIndex(Join(values, "|") & "|").Item(1)
+End Function
+
+'Obtain a lookup dictionary which helps you find rows matching a set of headers.
+'@param {ListObject} The listobject to search within.
+'@param {Array<String>} Headers to create a lookup for
+'@returns {Dictionary<string, Collection<Long>>} Lookup to find rows matching criteria
+'Private Function getIndex(ByVal lo As ListObject, headers As Variant) As Object
+Private Function getIndex(ByVal lo As ListObject, headers As Variant) As Dictionary
+On Error GoTo E:
+  Dim v: v = lo.Range.value
+  Dim iLB As Long: iLB = LBound(headers)
+  Dim iUB As Long: iUB = UBound(headers)
+  
+  'Create field indices
+  Dim iHeaders() As Long: ReDim iHeaders(iLB To iUB)
+  Dim iUBH As Long: iUBH = UBound(v, 2)
+  Dim i As Long
+  For i = iLB To iUB
+    Dim j As Long
+    For j = 1 To iUBH
+      If headers(i) = v(1, j) Then
+        iHeaders(i) = j
+        Exit For
+      End If
+    Next
+  Next
+  
+  'Create indexer
+    Dim oDict As Dictionary
+'    #If Mac Then
+        ' if needed, get Dictionary Class from: ' (c) Tim Hall - https://github.com/timhall/VBA-Dictionary
+        ' (Can be used on Mac and PC)
+        Set oDict = New Dictionary
+'    #Else
+'        Set oDict = CreateObject("Scripting.Dictionary")
+'    #End If
+  For i = 1 To UBound(v, 1)
+    Dim sID As String: sID = ""
+    For j = iLB To iUB
+      sID = sID & v(i, iHeaders(j)) & "|"
+    Next
+    If Not oDict.Exists(sID) Then Set oDict(sID) = New Collection
+'    Call oDict(sID).Add(i - 1)
+    oDict(sID).Add (i - 1)
+  Next
+  Set getIndex = oDict
+  Exit Function
+E:
+    Beep
+    Stop
+  Resume
 End Function

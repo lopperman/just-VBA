@@ -50,7 +50,7 @@ Public Function IndexByKey(key As String) As Long
   IndexByKey = FindIndex(key, CalcHash(key))
 End Function
 
-Public Sub add(Item, Optional key As String)
+Public Sub Add(Item, Optional key As String)
 Dim HashValue As Long, UB As Long
   HashValue = CalcHash(key)
   If UniqueKeys Then If FindIndex(key, HashValue) Then Err.Raise 457

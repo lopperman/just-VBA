@@ -13,14 +13,26 @@ Option Explicit
 Option Base 1
 Option Compare Text
 
+Private l_dynamicPvt As pbDynamicPVT
+Public Property Get DynamicPivot() As pbDynamicPVT
+    If l_dynamicPvt Is Nothing Then
+        Set l_dynamicPvt = New pbDynamicPVT
+    End If
+    Set DynamicPivot = l_dynamicPvt
+End Property
+Public Function ClearDynamicPivot()
+    Set l_dynamicPvt = Nothing
+End Function
+
+
     
-Public Function BuildPivot(srcListObj As ListObject, _
+Public Function BuildPivot(srcListobj As ListObject, _
     destRng As Range, pvtName As String) As Boolean
 On Error GoTo E:
         Dim failed As Boolean
 
         Dim pvt As PivotTable
-        Set pvt = CreateTempPivot(srcListObj, destRng, pvtName)
+        Set pvt = CreateTempPivot(srcListobj, destRng, pvtName)
         
         'There are 4 types of Pivot Fields (RowField and DataField are the most common - There's also ColumnField and PageField)
         'Add Row Fields
@@ -49,7 +61,7 @@ Public Function CreateTempPivot(tmpLO As ListObject, destRng As Range, pvtName A
     
     'Create a new empty PivotTable
     ThisWorkbook.PivotCaches.Create( _
-        SourceType:=xlDatabase, SourceData:=tmpLO.Name, Version:=6) _
+        sourceType:=xlDatabase, SourceData:=tmpLO.Name, Version:=6) _
         .CreatePivotTable TableDestination:=destRng, _
         tableName:=pvtName, DefaultVersion:=6
         
@@ -128,3 +140,23 @@ Public Function RemoveSubtotals(pvt As PivotTable, showColumnGrandTotal As Boole
     pvt.ColumnGrand = showColumnGrandTotal
 
 End Function
+
+'Public Function InitializeDynamic(srcLstObj As ListObject)
+'
+'
+'    With New pdbPivot
+'        Set .PivotSourceListObject = wt(tblDynPvtSrc)
+'
+'        pbPivotUtil.UpdateRowField .PvtTable, "Type", True, 1
+'
+'
+'       ' Refresh
+'
+'    End With
+'
+'    DynamicPvtTable.NullString = ""
+'
+'    wsDynamicPivot.visible = xlSheetVisible
+'    wsDynamicPivot.Activate
+'
+'End Function

@@ -108,13 +108,11 @@ Private Function Configure()
 On Error GoTo E:
     Dim failed As Boolean
     
-'   ~~~ ~~~ REQUIRED ~~~ ~~~
 '   Set the HomeSheet Worksheet
-    If Not WorksheetExists(FORCED_WORKSHEET_NAME) Then
-        RaiseError ERR_FORCED_WORKSHEET_NOT_FOUND, errorDesc:="'pbPerf.FORCED_WORKSHEET_NAME' " & _
-            "is invalid."
-    Else
-        Set l_homeSheet = ThisWorkbook.Worksheets(FORCED_WORKSHEET_NAME)
+    If Len(FORCED_WORKSHEET_NAME) > 0 Then
+        If WorksheetExists(FORCED_WORKSHEET_NAME) Then
+            Set l_homeSheet = ThisWorkbook.Worksheets(FORCED_WORKSHEET_NAME)
+        End If
     End If
     
     l_hideSheets.CompareMode = vbTextCompare
@@ -122,8 +120,8 @@ On Error GoTo E:
 '   ~~~ ~~~ OPTIONAL ~~~ ~~~
 '   Set the name/s of Sheets to Hide when returning to DefaultMode
     'EXAMPLE
-    l_hideSheets.add "FinTool", key:="FinTool"
-    l_hideSheets.add "Busy", key:="Busy"
+    AddHideSheet "FinTool"
+    AddHideSheet "Busy"
 
 Finalize:
     On Error Resume Next
@@ -139,6 +137,13 @@ E:
     
 End Function
 
+Private Function AddHideSheet(wsName As String)
+    If Len(wsName) > 0 Then
+        If WorksheetExists(wsName) Then
+            l_hideSheets.Add wsName, key:=wsName
+        End If
+    End If
+End Function
 
 ' ________________________________________
 '  ~~~~ ~~~~ ~~~ ~~~ EASY MODE ~~~ ~~~ ~~~ ~~~
@@ -263,13 +268,13 @@ End Function
 Private Function CheckState()
     'CheckState ** always ** implies the Fin Tool is doing something and user should not be interacting
     If lPerfState.IsPerfState Then
-        If IsDEV And DebugMode Then
-            'make a note of which properties have been fiddled with somewhere
-            If Not Application.EnableEvents = lPerfState.Events Then DebugPrint "*CheckState, EVENTS did not match*"
-            If Not Application.Interactive = lPerfState.Interactive Then DebugPrint "*CheckState, INTERACTIVE did not match*"
-            If Not Application.ScreenUpdating = lPerfState.Screen Then DebugPrint "*CheckState, SCREEN UPDATING did not match*"
-            If Not Application.Calculation = lPerfState.calc Then DebugPrint "*CheckState, CALCULATION did not match*"
-        End If
+'        If IsDEV And DebugMode Then
+'            'make a note of which properties have been fiddled with somewhere
+'            If Not Application.EnableEvents = lPerfState.Events Then DebugPrint "*CheckState, EVENTS did not match*"
+'            If Not Application.Interactive = lPerfState.Interactive Then DebugPrint "*CheckState, INTERACTIVE did not match*"
+'            If Not Application.ScreenUpdating = lPerfState.Screen Then DebugPrint "*CheckState, SCREEN UPDATING did not match*"
+'            If Not Application.Calculation = lPerfState.calc Then DebugPrint "*CheckState, CALCULATION did not match*"
+'        End If
         SetState lPerfState
     Else
         SuspendState
@@ -299,6 +304,9 @@ Private Function PerfStateClear(Optional doNotProtect As Boolean = False, _
         If Not doNotDumpTrace Then
             If TraceQueueCount > 100 Then DumpTraceIfAvail
         End If
+        If ThisWorkbook.Windows(1).DisplayWorkbookTabs = False Then
+                ThisWorkbook.Windows(1).DisplayWorkbookTabs = True
+        End If
     
     
 ''   ~~~ ~~~ ~~~ ~~~   TODO - POSSIBLE RAISE ERROR   ~~~ ~~~ ~~~ ~~~
@@ -319,15 +327,17 @@ Private Function PerfStateClear(Optional doNotProtect As Boolean = False, _
     If Not ftState = ftClosing Then
         '   MAKE SURE WE HAVE A VALID ACTIVE SHEET
         If ThisWorkbook.ActiveSheet Is Nothing Then
-            If Not HomeSheet.visible = xlSheetVisible Then HomeSheet.visible = xlSheetVisible
-            HomeSheet.Activate
+            If Not l_homeSheet Is Nothing Then
+                If Not HomeSheet.visible = xlSheetVisible Then HomeSheet.visible = xlSheetVisible
+                HomeSheet.Activate
+            End If
         End If
         If mustHide Then
             HideSheets
         End If
     End If
     
-    If Not doNotProtect Then ProtectSHT ThisWorkbook.ActiveSheet
+    If Not doNotProtect Then pbProtectSheet ThisWorkbook.ActiveSheet
     
     '   APP ** IS ** CLOSING
     If ftState = ftClosing Then
@@ -337,7 +347,7 @@ Private Function PerfStateClear(Optional doNotProtect As Boolean = False, _
 Finalize:
     On Error Resume Next
     
-    If forceSheet Then
+    If forceSheet And Not l_homeSheet Is Nothing Then
         If Not l_homeSheet.visible = xlSheetVisible Then
             l_homeSheet.visible = xlSheetVisible
         End If
@@ -346,14 +356,22 @@ Finalize:
         End If
     End If
     
-    PackageRunning = False
+    pbPackageRunning = False
     lPerfState = DefaultState
-    SetState lPerfState
+    If failed Then
+        RestoreDefaultAppSettingsOnly
+    Else
+        SetState lPerfState
+    End If
     
    Exit Function
 E:
    failed = True
-   ErrorCheck options:=ftERR_NoBeeper
+   Debug.Print "PerfStateClear Error: ", Err.Number, Err.Description
+   Beep
+   Err.Clear
+   Resume Finalize:
+   'ErrorCheck options:=ftERR_NoBeeper
     
 End Function
 
@@ -471,7 +489,11 @@ Private Sub Class_Initialize()
 End Sub
 
 Private Property Get HomeSheet() As Worksheet
-    Set l_homeSheet = ThisWorkbook.Worksheets(FORCED_WORKSHEET_NAME)
+    If l_homeSheet Is Nothing And Len(FORCED_WORKSHEET_NAME) > 0 Then
+        If WorksheetExists(FORCED_WORKSHEET_NAME, ThisWorkbook) Then
+            Set l_homeSheet = ThisWorkbook.Worksheets(FORCED_WORKSHEET_NAME)
+        End If
+    End If
 End Property
 
 Private Property Get MustHideSheets() As Boolean
@@ -489,6 +511,10 @@ Private Property Get MustHideSheets() As Boolean
 End Property
 Private Property Get MustActivateHomeSheet() As Boolean
     Dim hideIDX As Long
+    If Len(FORCED_WORKSHEET_NAME) = 0 Then
+        MustActivateHomeSheet = False
+        Exit Property
+    End If
     If l_hideSheets.Count = 0 Then
         MustActivateHomeSheet = False
         Exit Property

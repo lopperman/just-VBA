@@ -24,11 +24,71 @@ Public Const CFG_P_LOG As String = "0000016"
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
 '   GENERALIZED TYPES
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
+Public Enum CopyOptions
+    [_coError] = 0
+    'Modifies What's Being Copied
+    coFormulas = 2 ^ 0
+    coVisibleCellsOnly = 2 ^ 1
+    coUniqueRows = 2 ^ 2
+    coUniqueCols = 2 ^ 3
+    
+    'Modifies Target Structure
+    coIncludeListObjHeaders = 2 ^ 4 'Valid LstObj, and LstObjCols only
+    coCreateListObj = 2 ^ 5
+    coPullRowsTogether = 2 ^ 6 'Only Valid Range w/multiple disparate areas
+    coPullColsTogether = 2 ^ 7 'Only ValidRange w/multiple disparate areas, OR LstCols with disparate cols
+    
+    'Modifies Format
+    coMatchFontStyle = 2 ^ 8
+    coMatchInterior = 2 ^ 9
+    coMatchRowColSize = 2 ^ 10
+    coMatchMergeAreas = 2 ^ 11
+    coMatchLockedCells = 2 ^ 12
+    
+    coDROPUnmatchedLstObjCols = 2 ^ 13
+    coClearTargetLstObj = 2 ^ 14
+    coManualLstObjMap = 2 ^ 15
+    
+    'Create Destination
+    coNewWorkbook = 2 ^ 16
+End Enum
+Public Enum CopyTo
+    ftRange
+    ftListObj
+    ftListObjCols
+    toNewWorksheet
+    toNewWorkbook
+End Enum
+
+Public Enum PicklistMode
+    plSingle = 0
+    plMultiple_MinimumNone = -1
+    plMultiple_MinimumOne = 1
+End Enum
+
 Public Enum ecComparisonType
     ecOR = 0 'default
     ecAnd
 End Enum
 
+Public Enum MergeRangeEnum
+    mrDefault_MergeAll = 0
+    mrUnprotect = 2 ^ 0
+    mrClearFormatting = 2 ^ 1
+    mrClearContents = 2 ^ 2
+    mrMergeAcrossOnly = 2 ^ 3
+End Enum
+
+Public Type ftFound
+    matchExactFirstIDX As Long
+    matchExactLastIDX As Long
+    matchSmallerIDX As Long
+    matchLargerIDX As Long
+    realRowFirst As Long
+    realRowLast As Long
+    realRowSmaller As Long
+    realRowLarger As Long
+End Type
 Public Enum InitActionEnum
     [_DefaultInvalid] = 0
     iaAutoCode
@@ -359,134 +419,4 @@ Public Enum HolidayEnum
     holidayDt = 2
 End Enum
 
-
-Private l_preventProtection As Boolean
-Private l_OperatingState As ftOperatingState
-
-
-Public Property Get StartupPath() As String
-    StartupPath = PathCombine(True, Application.StartupPath)
-End Property
-
-Public Property Let PreventProtection(preventProtect As Boolean)
-    l_preventProtection = preventProtect
-End Property
-Public Property Get PreventProtection() As Boolean
-    PreventProtection = l_preventProtection
-End Property
-
-' BEGIN ~~~ ~~~ OPERATING STATE    ~~~ ~~~
-    Public Function IsFTClosing() As Variant
-        IsFTClosing = (l_OperatingState = ftClosing)
-    End Function
-    Public Function IsFTOpening() As Variant
-        IsFTOpening = (l_OperatingState = ftOpening)
-    End Function
-    
-    Public Property Get ftState() As ftOperatingState
-        ftState = l_OperatingState
-    End Property
-    Public Property Let ftState(ftsVal As ftOperatingState)
-        l_OperatingState = ftsVal
-    End Property
-' END ~~~ ~~~ OPERATING STATE    ~~~ ~~~
-
-' BEGIN ~~~ ~~~ SHEET PROTECTION    ~~~ ~~~
-
-Public Function ProtectWS(ws As Worksheet _
-    , Optional protOpt As ProtectionTemplate = ProtectionTemplate.ptDefault _
-    , Optional pwdOption As ProtectionPWD = ProtectionPWD.pwStandard _
-    , Optional customTemplate As SheetProtection) As Boolean
-    
-    Dim pwd As String
-    Select Case pwdOption
-        Case ProtectionPWD.pwStandard
-            pwd = CFG_PROTECT_PASSWORD
-        Case ProtectionPWD.pwExport
-            pwd = CFG_PROTECT_PASSWORD_EXPORT
-        Case ProtectionPWD.pwMisc
-            pwd = CFG_PROTECT_PASSWORD_MISC
-        Case ProtectionPWD.pwLog
-            'Most Secure
-            pwd = CFG_P_LOG
-    End Select
-    
-    Dim prt As SheetProtection
-    Select Case protOpt
-        Case ProtectionTemplate.ptDefault
-            prt = ProtectShtDefault
-        Case ProtectionTemplate.ptDenyFilterSort
-            prt = ProtectShtCustom(False)
-        Case ProtectionTemplate.ptAllowFilterSort
-            prt = ProtectShtCustom(True)
-        Case ProtectionTemplate.ptCustom
-            prt = customTemplate
-    End Select
-
-End Function
-
-Public Function ProtectShtCustom(allowFilterSort As Boolean) As SheetProtection
-    Dim protSht As SheetProtection
-    protSht = ProtectShtDefault
-    If allowFilterSort = False Then
-        If EnumCompare(protSht, SheetProtection.psAllowFiltering) Then
-            protSht = protSht - SheetProtection.psAllowFiltering
-        End If
-        If EnumCompare(protSht, SheetProtection.psAllowSorting) Then
-            protSht = protSht - SheetProtection.psAllowSorting
-        End If
-    Else
-        If Not EnumCompare(protSht, SheetProtection.psAllowFiltering) Then
-            protSht = protSht + SheetProtection.psAllowFiltering
-        End If
-        If Not EnumCompare(protSht, SheetProtection.psAllowSorting) Then
-            protSht = protSht + SheetProtection.psAllowSorting
-        End If
-    End If
-    
-    ProtectShtCustom = protSht
-    
-End Function
-
-Public Function ProtectShtDefault( _
-    Optional pContents As Boolean = True, _
-    Optional pUsePassword As Boolean = True, _
-    Optional pDrawingObjects As Boolean = False, _
-    Optional pScenarios As Boolean = False, _
-    Optional pUserInterfaceOnly As Boolean = True, _
-    Optional pAllowFormattingCells As Boolean = True, _
-    Optional pAllowFormattingColumns As Boolean = True, _
-    Optional pAllowFormattingRows As Boolean = True, _
-    Optional pAllowInsertingColumns As Boolean = False, _
-    Optional pAllowInsertingRows As Boolean = False, _
-    Optional pAllowInsertingHyperlinks As Boolean = False, _
-    Optional pAllowDeletingColumns As Boolean = False, _
-    Optional pAllowDeletingRows As Boolean = False, _
-    Optional pAllowSorting As Boolean = True, _
-    Optional pAllowFiltering As Boolean = True, _
-    Optional pAllowUsingPivotTables As Boolean = False) As SheetProtection
-
-    Dim protSht As SheetProtection
-    protSht = protSht + IIf(pContents, SheetProtection.psContents, 0)
-    protSht = protSht + IIf(pUsePassword, SheetProtection.psUsePassword, 0)
-    protSht = protSht + IIf(pDrawingObjects, SheetProtection.psDrawingObjects, 0)
-    protSht = protSht + IIf(pScenarios, SheetProtection.psScenarios, 0)
-    protSht = protSht + IIf(pUserInterfaceOnly, SheetProtection.psUserInterfaceOnly, 0)
-    protSht = protSht + IIf(pAllowFormattingCells, SheetProtection.psAllowFormattingCells, 0)
-    protSht = protSht + IIf(pAllowFormattingColumns, SheetProtection.psAllowFormattingColumns, 0)
-    protSht = protSht + IIf(pAllowFormattingRows, SheetProtection.psAllowFormattingRows, 0)
-    protSht = protSht + IIf(pAllowInsertingColumns, SheetProtection.psAllowInsertingColumns, 0)
-    protSht = protSht + IIf(pAllowInsertingRows, SheetProtection.psAllowInsertingRows, 0)
-    protSht = protSht + IIf(pAllowInsertingHyperlinks, SheetProtection.psAllowInsertingHyperlinks, 0)
-    protSht = protSht + IIf(pAllowDeletingColumns, SheetProtection.psAllowDeletingColumns, 0)
-    protSht = protSht + IIf(pAllowDeletingRows, SheetProtection.psAllowDeletingRows, 0)
-    protSht = protSht + IIf(pAllowSorting, SheetProtection.psAllowSorting, 0)
-    protSht = protSht + IIf(pAllowFiltering, SheetProtection.psAllowFiltering, 0)
-    protSht = protSht + IIf(pAllowUsingPivotTables, SheetProtection.psAllowUsingPivotTables, 0)
-    
-    ProtectShtDefault = protSht
-End Function
-
-
-' END ~~~ ~~~ SHEET PROTECTION    ~~~ ~~~
 

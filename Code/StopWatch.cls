@@ -46,15 +46,15 @@ Public Function Result() As String
 End Function
 Public Function ResultAsTime() As String
     Dim retV As String
-        Dim startTime As Single, timeElapsed As Single, hours As Long, mins As Long, seconds As Single
+        Dim startTime As Single, timeElapsed As Single, Hours As Long, mins As Long, seconds As Single
         timeElapsed = totalSeconds
-        hours = timeElapsed / 3600
-        timeElapsed = timeElapsed - hours * 3600
+        Hours = timeElapsed / 3600
+        timeElapsed = timeElapsed - Hours * 3600
         mins = timeElapsed / 60
         timeElapsed = timeElapsed - mins * 60
         seconds = timeElapsed
-        If hours > 0 Then
-            retV = Concat(Format(hours, "00"), ":", Format(mins, "00"), ":", Format(seconds, "00.00"), " (hours)")
+        If Hours > 0 Then
+            retV = Concat(Format(Hours, "00"), ":", Format(mins, "00"), ":", Format(seconds, "00.00"), " (hours)")
         ElseIf mins > 0 Then
             retV = Concat(Format(mins, "00"), ":", Format(seconds, "00.00"), " (minutes)")
         Else

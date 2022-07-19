@@ -124,7 +124,7 @@ Private Function QueueTrace(trcInfo As Variant)
         Set l_trcQueue = New Collection
     End If
     
-    TraceQueue.add trcInfo
+    TraceQueue.Add trcInfo
 End Function
 
 Public Property Get IsDEV() As Boolean
@@ -188,10 +188,9 @@ Public Function Trace(ByVal msg As String, Optional ByVal forceWrite As Boolean 
     l_lastTraceMsg = msg
     
     If wsBusy.visible = xlSheetVisible Then
-        wsBusy.UpdateMsg msg & " " & vbNewLine & TrcSysInfo, forceDoEvents
-        forceDoEvents = False
-    ElseIf forceDoEvents Then
-        DoEvents
+        If forceDoEvents Then
+            BusyWait msg & vbCrLf & TrcSysInfo, waitSeconds:=0, ignoreBeep:=True, ignoreIfHidden:=True
+        End If
     End If
     
     If DebugInfo Or DebugMode Or forceWrite Or forceDebug Then

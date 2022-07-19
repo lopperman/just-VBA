@@ -13,25 +13,28 @@ Option Explicit
 Option Compare Text
 Option Base 1
 
-Public Enum MergeRangeEnum
-    mrDefault_MergeAll = 0
-    mrUnprotect = 2 ^ 0
-    mrClearFormatting = 2 ^ 1
-    mrClearContents = 2 ^ 2
-    mrMergeAcrossOnly = 2 ^ 3
-End Enum
+Public Function IsSorted(rng As Range) As Boolean
+    If rng.Rows.Count > 1 Then
+        Dim rng1 As Range, rng2 As Range
+        Set rng1 = rng.Resize(rowSize:=rng.Rows.Count - 1)
+        Set rng2 = rng1.offset(rowOffset:=1)
+        Dim expr As String
+        expr = "AND(" & "'[" & ThisWorkbook.Name & "]" & rng1.Worksheet.Name & "'!" & rng1.Address & "<='[" & ThisWorkbook.Name & "]" & rng2.Worksheet.Name & "'!" & rng2.Address & ")"
+        Debug.Print expr
+        '=AND('[RangeFindBenchmark.xlsm]TableA'!$C$2:$C$12<='[RangeFindBenchmark.xlsm]TableA'!$C$3:$C$13)
+        IsSorted = Evaluate(expr)
+    Else
+        IsSorted = True
+    End If
+End Function
 
-Public Type ftFound
-    matchExactFirstIDX As Long
-    matchExactLastIDX As Long
-    matchSmallerIDX As Long
-    matchLargerIDX As Long
-    realRowFirst As Long
-    realRowLast As Long
-    realRowSmaller As Long
-    realRowLarger As Long
-End Type
-
+Public Function IsListColSorted(lstObj As ListObject, lstCol As Variant) As Boolean
+    If lstObj.listRows.Count <= 1 Then
+        IsListColSorted = True
+    Else
+        IsListColSorted = IsSorted(lstObj.ListColumns(lstCol).DataBodyRange)
+    End If
+End Function
 
 Public Function FindDuplicateRows(rng As Range, ParamArray checkRangeCols() As Variant) As Dictionary
     'EXAMPLE CALL:   set  [myDictionary] = FindDuplicateRows(Worksheets(1).Range("B5:C100"))
@@ -299,8 +302,8 @@ Finalize:
     
 End Function
 
+' This could return the wrong result
 Public Function CheckSort(lstObj As ListObject, col As Variant, sortPosition As Long, sortOrder As XlSortOrder) As Boolean
-
     Dim retV As Boolean
     Dim colcount As Long
     Dim sidx As Long
@@ -322,9 +325,7 @@ Public Function CheckSort(lstObj As ListObject, col As Variant, sortPosition As 
             Exit Function
         End If
     End If
-
     CheckSort = retV
-
 End Function
 
 Public Function GetRangeMultipleCrit(lstObj As ListObject, Columns As Variant, crit As Variant) As Range
@@ -459,7 +460,7 @@ Private Function FormatSearchCriteria(lstObj As ListObject, colArray As Variant,
     'FORMAT CRIT
     Dim critIdx As Long
     For critIdx = LBound(critArray) To UBound(critArray)
-        If TypeName(critArray(critIdx)) <> "Boolean" Then
+        If TypeName(critArray(critIdx)) <> "Boolean" And lstObj.ListColumns(colArray(critIdx)).DataBodyRange(1, 1).numberFormat <> "General" Then
             critArray(critIdx) = Format(critArray(critIdx), lstObj.ListColumns(colArray(critIdx)).DataBodyRange(1, 1).numberFormat)
         End If
     Next critIdx
@@ -470,72 +471,161 @@ Finalize:
 
 End Function
 
+Public Function FindFirstListObjectRow(lstObj As ListObject, Columns As Variant, crit As Variant) As Long
+    FindFirstListObjectRow = pbListObj.getFirstRow(lstObj, Columns, crit)
+End Function
+
+'   ~~~ ~~~ Very Fast Function to find the first row of a ListObject where EXACT MATCH filters can be applied for up to ALL the columns in the list object
+'   ~~~ ~~~ Recommend at a minimum the List Object be sorted Ascending by the First Column in the [Columns] Array
+'   ~~~ ~~~
+'   ~~~ ~~~ Arguments:
+'   ~~~ ~~~ [lstObj] = Reference to list object being searched
+'   ~~~ ~~~ [Columns] = An Array of ListColumn Names or ListColumn Indexes
+'   ~~~ ~~~ [Crit] = An Array of Search Criteria - 1 criteria for each ListObject Column in the [Columns] Array
+'   ~~~ ~~~ Example: lstObjRowIndex = FindFirstListObjectRow([myListObject], Array("LastName","DOB"), Array("Smith",CDate("12/28/80"))
+'Public Function FindFirstListObjectRow(lstObj As ListObject, Columns As Variant, crit As Variant) As Long
+'On Error GoTo E:
+'
+'
+'    Dim failed As Boolean
+'
+'    '   If no rows, no play
+'    If lstObj.listRows.Count = 0 Then Exit Function
+'
+'    '   Get reference to worksheet. Cutting out the 'middle man (list object)' for the Range.Find calls, to save even a few clock ticks
+'    Dim ws As Worksheet
+'    Set ws = lstObj.Range.Worksheet
+'
+'    Dim matchedListObjIdx As Long, matchedWSRow As Long
+'    Dim firstRow As Long, lastRow As Long, rowOffset As Long, colOffset As Long
+'
+'    '   get worksheet first/last row for possible ListObject range that can be searched
+'    firstRow = lstObj.listRows(1).Range.Row
+'    lastRow = lstObj.HeaderRowRange.Row + lstObj.listRows.Count
+'
+'    '   Since we're searching columns based on ListObject Column Index, and since were returning the ListObject RowIndex if found,
+'    '   get the offset of the ListObject to the Worksheet, so we can search the right worksheet columns, and return the right ListObject row
+'     colOffset = lstObj.ListColumns(1).Range.column - 1
+'     rowOffset = lstObj.listRows(1).Range.Row - 1
+'
+'    '   this reformats the search criteria so it can find results based on the Range.NumberFormat of the list columns.
+'    '   you may want to tweak for your own purposes as this will allow you to find, for example "$100.50" even though the actual value
+'    '   might be something like 100.5012
+'    Dim critIdx As Long
+'    For critIdx = LBound(crit) To UBound(crit)
+'        If TypeName(crit(critIdx)) <> "Boolean" And TypeName(crit(critIdx)) <> "String" And lstObj.ListColumns(Columns(critIdx)).DataBodyRange(1, 1).numberFormat <> "General" Then
+'            'crit(critIdx) = Format(crit(critIdx), lstObj.ListColumns(Columns(critIdx)).DataBodyRange(1, 1).numberFormat)
+'        End If
+'    Next critIdx
+'
+'    Dim startLooking As Range
+'    Dim lastCheckedRow As Long, colsArrIDX As Long, matched As Boolean, finalMatch As Boolean
+'    Dim evalCol As Long, evalRow As Long
+'    Dim arrLB As Long, arrUB As Long
+'    arrLB = LBound(Columns)
+'    arrUB = UBound(Columns)
+'
+'    '   Search for the First matched filter for the first Column
+'
+''    Set startLooking = Nothing
+''    DoEvents
+'
+'
+'    Set startLooking = lstObj.ListColumns(Columns(arrLB)).Range.find(crit(arrLB), LookIn:=xlValues, LookAt:=xlWhole, SearchOrder:=xlByRows, SearchDirection:=xlNext, MatchCase:=False)
+'    If startLooking Is Nothing Then
+'        GoTo Finalize:
+'    End If
+'    '   If only 1 column is being search, we're done
+'    If arrUB - arrLB = 0 Then
+'        matchedWSRow = startLooking.Row
+'        finalMatch = True
+'        GoTo Finalize:
+''        lastCheckedRow = startLooking.Row
+'    Else
+'        '   Matched first column, but need to match addtional columns
+''        matchedWSRow = startLooking.Row
+'        lastCheckedRow = startLooking.Row
+'    End If
+'
+'    '   Go through the remaining columns (we already matched the first) to see if the row matches
+'    Do While lastCheckedRow <= lastRow
+'        finalMatch = False
+'        For colsArrIDX = arrLB + 1 To arrUB
+'            evalCol = lstObj.ListColumns(Columns(colsArrIDX)).Index + colOffset
+'            If IsDEV Then Debug.Print "Looking For " & lstObj.ListColumns(Columns(colsArrIDX)).Name & " = " & crit(colsArrIDX)
+'            If IsDEV Then Debug.Print " -- Value to Compare Against Is:  " & ws.Cells(lastCheckedRow, evalCol)
+'            evalRow = lastCheckedRow
+'            matched = False
+'            If TypeName(crit(colsArrIDX)) = "String" Then
+'                matched = StrComp(ws.Cells(evalRow, evalCol).Text, CStr(crit(colsArrIDX)), vbTextCompare) = 0
+'            Else
+'                If TypeName(crit(colsArrIDX)) = "Date" Then
+'                    matched = CLng(ws.Cells(evalRow, evalCol).value) = CLng(CDate(crit(colsArrIDX)))
+'                Else
+'                    If IsNumeric(crit(colsArrIDX)) Then
+'                        matched = CDbl(ws.Cells(evalRow, evalCol).value) = CDbl(crit(colsArrIDX))
+'                    Else
+'                        matched = ws.Cells(evalRow, evalCol) = crit(colsArrIDX)
+'                    End If
+'                End If
+'            End If
+'            If IsDEV Then Debug.Print "Matched: " & matched & " on col: " & colsArrIDX & " of " & UBound(crit)
+'
+'            If colsArrIDX = arrUB And matched Then
+'                    matchedWSRow = lastCheckedRow
+'                    finalMatch = True
+'                '   positive row match
+'                    GoTo Finalize:
+'            End If
+'            If matched = False Then
+'                Exit For
+'            End If
+'        Next colsArrIDX
+'        'lastCheckedRow was Not a match, look for the next row to check
+'        If lastCheckedRow < lastRow Then
+'            Dim adjRange As Range
+'            If startLooking.Row >= lastRow Then GoTo Finalize:
+'            Set adjRange = ws.Cells(startLooking.Row, lstObj.ListColumns(Columns(arrLB)).Range.column)
+'            Set adjRange = adjRange.Resize(rowSize:=(lastRow - startLooking.Row + 1))
+'            Set startLooking = adjRange.find(crit(arrLB), LookIn:=xlValues, LookAt:=xlWhole, SearchOrder:=xlByRows, SearchDirection:=xlNext, MatchCase:=False)
+'            Set adjRange = Nothing
+'            DoEvents
+'            If startLooking Is Nothing Then GoTo Finalize:
+'            If startLooking.Row <= lastCheckedRow Then GoTo Finalize:
+'            lastCheckedRow = startLooking.Row
+'        Else
+'            Exit Do
+'        End If
+'    Loop
+'
+'
+'Finalize:
+'    On Error Resume Next
+'    Set ws = Nothing
+'    Set startLooking = Nothing
+'    If failed Then
+'        matchedListObjIdx = 0
+'    ElseIf finalMatch And matchedWSRow > 0 Then
+'        '   Adjust result to reflect the ListObjectRowIndex
+'        matchedListObjIdx = matchedWSRow - rowOffset
+'    End If
+'    FindFirstListObjectRow = matchedListObjIdx
+'
+'    Exit Function
+'E:
+'    failed = True
+'    'MsgBox "(Implement your own error handling) An error occured in FindFirstListRowMultCriteria: " & Err.Number & ", " & Err.Description
+'    ErrorCheck
+'    Resume Finalize:
+'
+'End Function
+
+
+
+
+
 Public Function FindFirstListRowMatchingMultCrit(lstObj As ListObject, Columns As Variant, crit As Variant) As Long
-On Error GoTo E:
-
-    If lstObj.listRows.Count = 0 Then Exit Function
-    
-    Dim startLooking As Range
-    Dim lastCheckedRow As Long
-    Dim lstObjRowIdx As Long
-    
-    crit = FormatSearchCriteria(lstObj, Columns, crit)
-    
-    Set startLooking = ListColumnRange(lstObj, Columns(1), includeHeaderRow:=True).find(crit(1), LookIn:=xlValues, Lookat:=xlWhole, SearchOrder:=xlByRows, SearchDirection:=xlNext, MatchCase:=False)
-    If Not startLooking Is Nothing Then
-        Dim matched As Boolean
-        Do
-            lastCheckedRow = startLooking.Row
-            lstObjRowIdx = lastCheckedRow - lstObj.HeaderRowRange.Row
-            Dim colArrAI As ArrInformation
-            colArrAI = ArrayInfo(Columns)
-            If colArrAI.Rows > 0 Then
-                Dim idx As Long
-                For idx = LBound(Columns) To UBound(Columns)
-                    If TypeName(crit(idx)) = "String" Then
-                        matched = (StrComp(CStr(lstObj.ListColumns(Columns(idx)).DataBodyRange(RowIndex:=lstObjRowIdx).value), crit(idx), vbTextCompare) = 0)
-                    Else
-                        If TypeName(crit(idx)) = "Date" Then
-                            matched = CLng(lstObj.ListColumns(Columns(idx)).DataBodyRange(RowIndex:=lstObjRowIdx).value) = CLng(crit(idx))
-                        Else
-                            If IsNumeric(crit(idx)) Then
-                                matched = CDbl(lstObj.ListColumns(Columns(idx)).DataBodyRange(RowIndex:=lstObjRowIdx).value) = CDbl(crit(idx))
-                            Else
-                                matched = lstObj.ListColumns(Columns(idx)).DataBodyRange(RowIndex:=lstObjRowIdx).value = crit(idx)
-                            End If
-                        End If
-                    End If
-                    If matched = False Then Exit For
-                Next idx
-                If matched = True Then
-                    'we matched everything
-                    FindFirstListRowMatchingMultCrit = lstObjRowIdx
-                    GoTo Finalize:
-                   Exit Do
-                End If
-            Else
-                FindFirstListRowMatchingMultCrit = lstObjRowIdx
-                Exit Do
-            End If
-            
-            Set startLooking = ListColumnRange(lstObj, Columns(1), includeHeaderRow:=True).FindNext(startLooking)
-            If startLooking.Row <= lastCheckedRow Then
-                Exit Do
-            End If
-        
-        Loop While Not startLooking Is Nothing
-    End If
-    
-Finalize:
-    On Error Resume Next
-    
-    Set startLooking = Nothing
-If Err.Number <> 0 Then Err.Clear
-    Exit Function
-E:
-    ErrorCheck
-    Resume Finalize:
-
+    FindFirstListRowMatchingMultCrit = FindFirstListObjectRow(lstObj, Columns, crit)
 End Function
 
 Public Function GetOffsetRange(ByRef listObjCell As Range, returnCol As Variant) As Range
@@ -625,8 +715,7 @@ Public Function MatchFirst(crit As Variant, ByRef rng As Range, matchmode As XMa
 On Error GoTo E:
     Dim fnd As Variant
     If Len(crit & vbNullString) = 0 Then
-        'We're looking for Blanks, use RangeSys("BlankCell")
-        crit = RangeSYS(srBlankCell)
+        crit = vbEmpty
         'crit now equals EMPTY, which will pass numeric validation.  we don't want to look for a '0' value, so set secondPass = true
         secondPass = True
     End If
@@ -662,7 +751,7 @@ On Error GoTo E:
     Dim fnd As Variant
     If Len(crit & vbNullString) = 0 Then
         'We're looking for Blanks, use RangeSys("BlankCell")
-        crit = RangeSYS(srBlankCell)
+        crit = vbEmpty
         'crit now equals EMPTY, which will pass numeric validation.  we don't want to look for a '0' value, so set secondPass = true
         secondPass = True
     End If
@@ -1239,6 +1328,7 @@ Public Function GetRangeMultipleCriteria(lo As ListObject, Columns As Variant, c
 End Function
 
 
+
 Public Function AddSortMultipleColumns(lstObj As ListObject, clearFilters As Boolean, sortOrder As XlSortOrder, ParamArray cols() As Variant) As Boolean
 On Error GoTo E:
 
@@ -1248,7 +1338,6 @@ On Error GoTo E:
             Exit Function
         End If
     End If
-
     If lstObj.Range.Worksheet.ProtectContents = True And lstObj.Range.Worksheet.Protection.AllowSorting = False Then
         If pbUnprotectSheet(lstObj.Range.Worksheet) = False Then
             Err.Raise 419, Description:="Protected sheet does not allow filtering"
@@ -1256,36 +1345,43 @@ On Error GoTo E:
     End If
     
     
-    
-    
     If clearFilters Then ClearFilter lstObj
     Dim colIDX As Long
     Dim needsSort As Boolean
     Dim tCols As Variant
     
-    tCols = ArrParams(cols)
-    
-    For colIDX = LBound(tCols) To UBound(tCols)
-        If CheckSort(lstObj, tCols(colIDX, 1), colIDX, sortOrder) = False Then
-            needsSort = True
-            Exit For
+   If LBound(cols) = UBound(cols) Then
+        If IsArray(cols(LBound(cols))) Then
+            tCols = ArrArray(cols(LBound(cols)), aoNone)
+        Else
+            tCols = ArrParams(cols)
         End If
-    Next colIDX
+    Else
+        tCols = ArrParams(cols)
+    End If
     
+    needsSort = True
+    
+    Dim evts As Boolean
+    evts = Application.EnableEvents
+    Application.EnableEvents = False
     If needsSort Then
-    
+        
+     
         With lstObj.Sort
             .SortFields.Clear
             For colIDX = LBound(tCols) To UBound(tCols)
-                .SortFields.add lstObj.ListColumns(tCols(colIDX, 1)).DataBodyRange, SortOn:=xlSortOnValues, Order:=sortOrder
+                .SortFields.Add lstObj.ListColumns(tCols(colIDX, 1)).DataBodyRange, SortOn:=xlSortOnValues, Order:=sortOrder
             Next colIDX
             .Apply
+            DoEvents
         End With
     
     End If
    
    AddSortMultipleColumns = True
 Finalize:
+    Application.EnableEvents = evts
    
    Exit Function
 E:
@@ -1322,7 +1418,7 @@ On Error GoTo E:
                 .SortFields.Clear
             Else
             End If
-            .SortFields.add listObj.ListColumns(field).DataBodyRange, SortOn:=xlSortOnValues, Order:=Order
+            .SortFields.Add listObj.ListColumns(field).DataBodyRange, SortOn:=xlSortOnValues, Order:=Order
             .Apply
         End With
     End If

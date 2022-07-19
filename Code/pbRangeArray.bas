@@ -47,12 +47,13 @@ Option Compare Text
 Option Base 1
 
 Private Const TMP_RANGE_UTIL_WORKSHEET As String = "pbTmpUtilSheet"
+
 Private Function TmpUtilSheet() As Worksheet
     
     If WorksheetExists(TMP_RANGE_UTIL_WORKSHEET) = False Then
         Dim retWS As Worksheet
         
-        Set retWS = Excel.Application.Worksheets.add(After:=Worksheets(Worksheets.Count))
+        Set retWS = Excel.Application.Worksheets.Add(After:=Worksheets(Worksheets.Count))
         retWS.Name = TMP_RANGE_UTIL_WORKSHEET
         retWS.visible = xlSheetVeryHidden
         Set TmpUtilSheet = retWS
@@ -121,9 +122,6 @@ Public Function ArrListObj(lstObj As ListObject, flags As ArrayOptionFlags) As V
 End Function
 
 Public Function RangeInfo(rg As Range) As RngInfo
-
-    
-
     Dim retV As RngInfo
     If rg Is Nothing Then
         retV.Rows = 0
@@ -138,10 +136,7 @@ Public Function RangeInfo(rg As Range) As RngInfo
         retV.AreasSameColumns = ContiguousColumns(rg)
         retV.Areas = rg.Areas.Count
     End If
-    
     RangeInfo = retV
-    
-    
 End Function
 
 Public Function RangeArea(rg As Range) As AreaStruct
@@ -188,7 +183,7 @@ Public Function GetUniqueSortedListCol(lstObj As ListObject, lstCol As Variant, 
     If lstObj.listRows.Count = 0 Then Exit Function
     
     
-    Dim tdic As Dictionary
+    Dim tDic As Dictionary
     Dim tCol As Collection
     
     Dim aIDX As Long, arr As Variant
@@ -199,21 +194,21 @@ Public Function GetUniqueSortedListCol(lstObj As ListObject, lstCol As Variant, 
             GetUniqueSortedListCol = arr
         
         Case ListReturnType.lrtDictionary
-            Set tdic = New Dictionary
+            Set tDic = New Dictionary
             For aIDX = LBound(arr) To UBound(arr)
-                tdic(arr(aIDX, 1)) = arr(aIDX, 1)
+                tDic(arr(aIDX, 1)) = arr(aIDX, 1)
             Next aIDX
-            Set GetUniqueSortedListCol = tdic
+            Set GetUniqueSortedListCol = tDic
         
         Case ListReturnType.lrtCollection
-            Set tdic = New Collection
+            Set tDic = New Collection
             For aIDX = LBound(arr) To UBound(arr)
-                tCol.add arr(aIDX, 1)
+                tCol.Add arr(aIDX, 1)
             Next aIDX
             Set GetUniqueSortedListCol = tCol
     End Select
     
-    Set tdic = Nothing
+    Set tDic = Nothing
     Set tCol = Nothing
     
     If ArrDimensions(arr) > 0 Then

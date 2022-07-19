@@ -1,3 +1,14 @@
+Attribute VB_Name = "pbFileSys"
+' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
+' pbFileSys v1.0.0
+' (c) Paul Brower - https://github.com/lopperman/VBA-pbUtil
+'
+' General File Utilities for MAC or PC
+'
+' @module pbFileSys
+' @author Paul Brower
+' @license GNU General Public License v3.0
+' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
 Option Explicit
 Option Compare Text
 Option Base 1
@@ -16,7 +27,7 @@ On Error Resume Next
     End With
     If IsMissing(filepath) Then filepath = Application.DefaultFilePath
     If IsMissing(fileName) Then fileName = ReplaceIllegalCharacters2(ws.Name, vbEmpty) & ".xlsx"
-    newWB.SaveAs fileName:=PathCombine2(False, filepath, fileName), FileFormat:=xlOpenXMLStrictWorkbook
+    newWB.SaveAs fileName:=PathCombine(False, filepath, fileName), FileFormat:=xlOpenXMLStrictWorkbook
     Application.EnableEvents = True
     If Not Err.Number = 0 Then
         MsgBox "CopySheetToNewWB Error: " & Err.Number & ", " & Err.Description
@@ -35,22 +46,11 @@ Function ReplaceIllegalCharacters2(strIn As String, strChar As String, Optional 
     Next
     
     If padSingleQuote And InStr(1, strIn, "''") = 0 Then
-        strIn = CleanSingleTicks2(strIn)
+        strIn = CleanSingleTicks(strIn)
     End If
     
     ReplaceIllegalCharacters2 = strIn
 End Function
-
-Public Function CleanSingleTicks2(wbName As String) As String
-    Dim retV As String
-    If InStr(wbName, "'") > 0 And InStr(wbName, "''") = 0 Then
-        retV = Replace(wbName, "'", "''")
-    Else
-        retV = wbName
-    End If
-    CleanSingleTicks2 = retV
-End Function
-
 
     Public Function SaveCopyToUserDocFolder(ByVal wb As Workbook, Optional fileName As Variant)
         SaveWBCopy wb, Application.DefaultFilePath, IIf(IsMissing(fileName), wb.Name, CStr(fileName))
@@ -59,7 +59,7 @@ End Function
 Public Function SaveWBCopy(ByVal wb As Workbook, dirPath As String, fileName As String)
 On Error Resume Next
     Application.EnableEvents = False
-    wb.SaveCopyAs PathCombine2(False, dirPath, fileName)
+    wb.SaveCopyAs PathCombine(False, dirPath, fileName)
     Application.EnableEvents = True
     If Not Err.Number = 0 Then
         MsgBox "SaveWBCopy Error: " & Err.Number & ", " & Err.Description
@@ -68,13 +68,13 @@ On Error Resume Next
 End Function
 
 Public Property Get StartupPath2() As String
-    StartupPath2 = PathCombine2(True, Application.StartupPath)
+    StartupPath2 = PathCombine(True, Application.StartupPath)
 End Property
 
 Public Function FullPathExcludingFileName2(fullFileName As String) As String
 On Error Resume Next
     Dim tPath As String, tFileName As String, fNameStarts As Long
-    tFileName = FileNameFromFullPath2(fullFileName)
+    tFileName = FileNameFromFullPath(fullFileName)
     fNameStarts = InStr(fullFileName, tFileName)
     tPath = Mid(fullFileName, 1, fNameStarts - 1)
     FullPathExcludingFileName2 = tPath
@@ -109,7 +109,7 @@ On Error Resume Next
         Dim sItem As String
         Set fldr = Application.FileDialog(msoFileDialogFolderPicker)
         With fldr
-            .Title = choosePrompt
+            .title = choosePrompt
             .AllowMultiSelect = False
             .InitialFileName = Application.DefaultFilePath
             If .Show <> -1 Then GoTo NextCode
@@ -139,7 +139,7 @@ On Error Resume Next
         Dim sItem As String
         Set fldr = Application.FileDialog(msoFileDialogFilePicker)
         With fldr
-            .Title = choosePrompt
+            .title = choosePrompt
             If Not fileExt = vbNullString Then
                 .Filters.Clear
                 .Filters.Add "Files", fileExt & "?", 1
@@ -189,7 +189,7 @@ Public Function URLEncode2(ByRef txt As String) As String
                 Mid$(buffer, n - 1) = Hex$(128 + (c Mod 64))
         End Select
     Next
-    URLEncode2 = Left$(buffer, n)
+    URLEncode2 = left$(buffer, n)
 End Function
 
 ' ~~~~~~~~~~   Create Valid File or Directory Path (for PC or Mac, local, or internet) from 1 or more arguments  ~~~~~~~~~~'
@@ -265,21 +265,21 @@ End Function
 
 Public Function DeleteFolderFiles2(folderPath As String, Optional patternMatch As String = vbNullString)
 On Error Resume Next
-    folderPath = PathCombine2(True, folderPath)
+    folderPath = PathCombine(True, folderPath)
     
-    If DirectoryFileCount2(folderPath) > 0 Then
+    If DirectoryFileCount(folderPath) > 0 Then
         Dim myPath As Variant
-        myPath = PathCombine2(True, folderPath)
+        myPath = PathCombine(True, folderPath)
         ChDir folderPath
         Dim myFile, MyName As String
         MyName = Dir(myPath, vbNormal)
         Do While MyName <> ""
-            If (GetAttr(PathCombine2(False, myPath, MyName)) And vbNormal) = vbNormal Then
+            If (GetAttr(PathCombine(False, myPath, MyName)) And vbNormal) = vbNormal Then
                 If patternMatch = vbNullString Then
-                    Kill PathCombine2(False, myPath, MyName)
+                    Kill PathCombine(False, myPath, MyName)
                 Else
                     If LCase(MyName) Like LCase(patternMatch) Then
-                        Kill PathCombine2(False, myPath, MyName)
+                        Kill PathCombine(False, myPath, MyName)
                     End If
                 End If
             End If
@@ -293,10 +293,10 @@ Public Function DirectoryFileCount2(tmpDirPath As String) As Long
 On Error Resume Next
 
     Dim myFile, myPath, MyName As String, retV As Long
-    myPath = PathCombine2(True, tmpDirPath)
+    myPath = PathCombine(True, tmpDirPath)
     MyName = Dir(myPath, vbNormal)
     Do While MyName <> ""
-        If (GetAttr(PathCombine2(False, myPath, MyName)) And vbNormal) = vbNormal Then
+        If (GetAttr(PathCombine(False, myPath, MyName)) And vbNormal) = vbNormal Then
             retV = retV + 1
         End If
         MyName = Dir()
@@ -309,10 +309,10 @@ Public Function DirectoryDirectoryCount2(tmpDirPath As String) As Long
 On Error Resume Next
 
     Dim myFile, myPath, MyName As String, retV As Long
-    myPath = PathCombine2(True, tmpDirPath)
+    myPath = PathCombine(True, tmpDirPath)
     MyName = Dir(myPath, vbDirectory)
     Do While MyName <> ""
-        If (GetAttr(PathCombine2(False, myPath, MyName)) And vbDirectory) = vbDirectory Then
+        If (GetAttr(PathCombine(False, myPath, MyName)) And vbDirectory) = vbDirectory Then
             retV = retV + 1
         End If
         MyName = Dir()
@@ -325,3 +325,7 @@ End Function
 Public Function TempDirName2(Optional dirName As String = vbNullString) As String
     TempDirName2 = IIf(Not dirName = vbNullString, dirName, TEMP_DIRECTORY_NAME2)
 End Function
+
+
+
+

@@ -21,6 +21,34 @@ Public Const LOG_DIRECTORY_NAME As String = "Logs"
 
 Private l_listObjDict As Dictionary
 Private lBypassOnCloseCheck As Boolean
+Private l_pbPackageRunning As Boolean
+Private l_preventProtection As Boolean
+Private l_OperatingState As ftOperatingState
+
+Public Function FullWbNameCorrected(Optional wkbk As Workbook) As String
+On Error Resume Next
+    Dim fName As String
+    If wkbk Is Nothing Then
+        fName = ThisWorkbook.FullName
+    Else
+        fName = wkbk.FullName
+    End If
+    If Len(fName) > 0 Then
+        If InStr(1, fName, "http", vbTextCompare) > 0 Then
+            fName = Replace(fName, " ", "%20", Compare:=vbTextCompare)
+        End If
+    End If
+    FullWbNameCorrected = fName
+    If Err.Number <> 0 Then Err.Clear
+End Function
+
+
+Public Property Get pbPackageRunning() As Boolean
+    pbPackageRunning = l_pbPackageRunning
+End Property
+Public Property Let pbPackageRunning(vl As Boolean)
+    l_pbPackageRunning = vl
+End Property
 
 Public Property Get byPassOnCloseCheck() As Boolean
     byPassOnCloseCheck = lBypassOnCloseCheck
@@ -34,7 +62,7 @@ Public Function pbProtectSheet(ws As Worksheet) As Boolean
     'Replace with you own implementation
     'pbProtectSheet = True
     
-    pbProtectSheet = ProtectSHT(ws)
+    pbProtectSheet = protectSht(ws)
 End Function
 Public Function pbUnprotectSheet(ws As Worksheet) As Boolean
     'Replace with you own implementation
@@ -512,13 +540,13 @@ On Error Resume Next
     If Err.Number <> 0 Then Err.Clear
 End Function
 
-Public Function WorkbookIsOpen(wkBkName As String, Optional verifyFullNameURLEncoded As String = vbNullString) As Boolean
+Public Function WorkbookIsOpen(wkBkName As String, Optional verifyFullNameCorrected As String = vbNullString) As Boolean
 
     Dim i As Long, retV As Boolean
     For i = 1 To Application.Workbooks.Count
         If StrComp(LCase(wkBkName), LCase(Application.Workbooks(i).Name), vbTextCompare) = 0 Then
-            If Len(verifyFullNameURLEncoded) > 0 Then
-                If StrComp(LCase(verifyFullNameURLEncoded), LCase(Application.Workbooks(i).FullNameURLEncoded), vbTextCompare) = 0 Then
+            If Len(verifyFullNameCorrected) > 0 Then
+                If StrComp(LCase(verifyFullNameCorrected), LCase(FullWbNameCorrected(Application.Workbooks(i))), vbTextCompare) = 0 Then
                     retV = True
                     Exit For
                 End If
@@ -665,7 +693,7 @@ On Error Resume Next
             .title = choosePrompt
             If Not fileExt = vbNullString Then
                 .Filters.Clear
-                .Filters.add "Files", fileExt & "?", 1
+                .Filters.Add "Files", fileExt & "?", 1
             End If
             .AllowMultiSelect = False
             If .Show <> -1 Then GoTo NextCode
@@ -804,13 +832,202 @@ Public Function Concat(ParamArray items() As Variant) As String
 End Function
 
 Public Function ftCreateWorkbook(Optional tmplPath As Variant) As Workbook
+On Error Resume Next
     Dim retWB As Workbook
     If IsMissing(tmplPath) Then
-        Set retWB = Workbooks.add
+        Set retWB = Workbooks.Add
+        DoEvents
     Else
-        Set retWB = Workbooks.add(Template:=CStr(tmplPath))
+        Dim tFullPath As String
+        tFullPath = PathCombine(False, tmplPath)
+        Set retWB = Workbooks.Add(Template:=tFullPath)
+        DoEvents
     End If
     Set ftCreateWorkbook = retWB
-    Set retWB = Nothing
+    If Not Err.Number = 0 Then
+        If IsDEV Then
+            Beep
+            Stop
+        End If
+        Err.Clear
+    End If
 End Function
 
+' BEGIN ~~~ ~~~ SHEET PROTECTION    ~~~ ~~~
+Public Function ProtectWS(ws As Worksheet _
+    , Optional protOpt As ProtectionTemplate = ProtectionTemplate.ptDefault _
+    , Optional pwdOption As ProtectionPWD = ProtectionPWD.pwStandard _
+    , Optional customTemplate As SheetProtection) As Boolean
+    
+    Dim pwd As String
+    Select Case pwdOption
+        Case ProtectionPWD.pwStandard
+            pwd = CFG_PROTECT_PASSWORD
+        Case ProtectionPWD.pwExport
+            pwd = CFG_PROTECT_PASSWORD_EXPORT
+        Case ProtectionPWD.pwMisc
+            pwd = CFG_PROTECT_PASSWORD_MISC
+        Case ProtectionPWD.pwLog
+            'Most Secure
+            pwd = CFG_P_LOG
+    End Select
+    
+    Dim prt As SheetProtection
+    Select Case protOpt
+        Case ProtectionTemplate.ptDefault
+            prt = ProtectShtDefault
+        Case ProtectionTemplate.ptDenyFilterSort
+            prt = ProtectShtCustom(False)
+        Case ProtectionTemplate.ptAllowFilterSort
+            prt = ProtectShtCustom(True)
+        Case ProtectionTemplate.ptCustom
+            prt = customTemplate
+    End Select
+
+End Function
+
+Public Function ProtectShtCustom(allowFilterSort As Boolean) As SheetProtection
+    Dim protSht As SheetProtection
+    protSht = ProtectShtDefault
+    If allowFilterSort = False Then
+        If EnumCompare(protSht, SheetProtection.psAllowFiltering) Then
+            protSht = protSht - SheetProtection.psAllowFiltering
+        End If
+        If EnumCompare(protSht, SheetProtection.psAllowSorting) Then
+            protSht = protSht - SheetProtection.psAllowSorting
+        End If
+    Else
+        If Not EnumCompare(protSht, SheetProtection.psAllowFiltering) Then
+            protSht = protSht + SheetProtection.psAllowFiltering
+        End If
+        If Not EnumCompare(protSht, SheetProtection.psAllowSorting) Then
+            protSht = protSht + SheetProtection.psAllowSorting
+        End If
+    End If
+    
+    ProtectShtCustom = protSht
+    
+End Function
+
+Public Function ProtectShtDefault( _
+    Optional pContents As Boolean = True, _
+    Optional pUsePassword As Boolean = True, _
+    Optional pDrawingObjects As Boolean = False, _
+    Optional pScenarios As Boolean = False, _
+    Optional pUserInterfaceOnly As Boolean = True, _
+    Optional pAllowFormattingCells As Boolean = True, _
+    Optional pAllowFormattingColumns As Boolean = True, _
+    Optional pAllowFormattingRows As Boolean = True, _
+    Optional pAllowInsertingColumns As Boolean = False, _
+    Optional pAllowInsertingRows As Boolean = False, _
+    Optional pAllowInsertingHyperlinks As Boolean = False, _
+    Optional pAllowDeletingColumns As Boolean = False, _
+    Optional pAllowDeletingRows As Boolean = False, _
+    Optional pAllowSorting As Boolean = True, _
+    Optional pAllowFiltering As Boolean = True, _
+    Optional pAllowUsingPivotTables As Boolean = False) As SheetProtection
+
+    Dim protSht As SheetProtection
+    protSht = protSht + IIf(pContents, SheetProtection.psContents, 0)
+    protSht = protSht + IIf(pUsePassword, SheetProtection.psUsePassword, 0)
+    protSht = protSht + IIf(pDrawingObjects, SheetProtection.psDrawingObjects, 0)
+    protSht = protSht + IIf(pScenarios, SheetProtection.psScenarios, 0)
+    protSht = protSht + IIf(pUserInterfaceOnly, SheetProtection.psUserInterfaceOnly, 0)
+    protSht = protSht + IIf(pAllowFormattingCells, SheetProtection.psAllowFormattingCells, 0)
+    protSht = protSht + IIf(pAllowFormattingColumns, SheetProtection.psAllowFormattingColumns, 0)
+    protSht = protSht + IIf(pAllowFormattingRows, SheetProtection.psAllowFormattingRows, 0)
+    protSht = protSht + IIf(pAllowInsertingColumns, SheetProtection.psAllowInsertingColumns, 0)
+    protSht = protSht + IIf(pAllowInsertingRows, SheetProtection.psAllowInsertingRows, 0)
+    protSht = protSht + IIf(pAllowInsertingHyperlinks, SheetProtection.psAllowInsertingHyperlinks, 0)
+    protSht = protSht + IIf(pAllowDeletingColumns, SheetProtection.psAllowDeletingColumns, 0)
+    protSht = protSht + IIf(pAllowDeletingRows, SheetProtection.psAllowDeletingRows, 0)
+    protSht = protSht + IIf(pAllowSorting, SheetProtection.psAllowSorting, 0)
+    protSht = protSht + IIf(pAllowFiltering, SheetProtection.psAllowFiltering, 0)
+    protSht = protSht + IIf(pAllowUsingPivotTables, SheetProtection.psAllowUsingPivotTables, 0)
+    
+    ProtectShtDefault = protSht
+End Function
+
+
+' END ~~~ ~~~ SHEET PROTECTION    ~~~ ~~~
+
+
+
+Public Property Get StartupPath() As String
+    StartupPath = PathCombine(True, Application.StartupPath)
+End Property
+
+Public Property Let PreventProtection(preventProtect As Boolean)
+    l_preventProtection = preventProtect
+End Property
+Public Property Get PreventProtection() As Boolean
+    PreventProtection = l_preventProtection
+End Property
+
+' BEGIN ~~~ ~~~ OPERATING STATE    ~~~ ~~~
+Public Function IsFTClosing() As Variant
+    IsFTClosing = (l_OperatingState = ftClosing)
+End Function
+Public Function IsFTOpening() As Variant
+    IsFTOpening = (l_OperatingState = ftOpening)
+End Function
+
+Public Property Get ftState() As ftOperatingState
+    ftState = l_OperatingState
+End Property
+Public Property Let ftState(ftsVal As ftOperatingState)
+    l_OperatingState = ftsVal
+End Property
+' END ~~~ ~~~ OPERATING STATE    ~~~ ~~~
+
+Public Function URLEncode(ByRef txt As String) As String
+    Dim buffer As String, i As Long, c As Long, n As Long
+    buffer = String$(Len(txt) * 12, "%")
+ 
+    For i = 1 To Len(txt)
+        c = AscW(Mid$(txt, i, 1)) And 65535
+ 
+        Select Case c
+            Case 48 To 57, 65 To 90, 97 To 122, 45, 46, 95  ' Unescaped 0-9A-Za-z-._ '
+                n = n + 1
+                Mid$(buffer, n) = ChrW(c)
+            Case Is <= 127            ' Escaped UTF-8 1 bytes U+0000 to U+007F '
+                n = n + 3
+                Mid$(buffer, n - 1) = Right$(Hex$(256 + c), 2)
+            Case Is <= 2047           ' Escaped UTF-8 2 bytes U+0080 to U+07FF '
+                n = n + 6
+                Mid$(buffer, n - 4) = Hex$(192 + (c \ 64))
+                Mid$(buffer, n - 1) = Hex$(128 + (c Mod 64))
+            Case 55296 To 57343       ' Escaped UTF-8 4 bytes U+010000 to U+10FFFF '
+                i = i + 1
+                c = 65536 + (c Mod 1024) * 1024 + (AscW(Mid$(txt, i, 1)) And 1023)
+                n = n + 12
+                Mid$(buffer, n - 10) = Hex$(240 + (c \ 262144))
+                Mid$(buffer, n - 7) = Hex$(128 + ((c \ 4096) Mod 64))
+                Mid$(buffer, n - 4) = Hex$(128 + ((c \ 64) Mod 64))
+                Mid$(buffer, n - 1) = Hex$(128 + (c Mod 64))
+            Case Else                 ' Escaped UTF-8 3 bytes U+0800 to U+FFFF '
+                n = n + 9
+                Mid$(buffer, n - 7) = Hex$(224 + (c \ 4096))
+                Mid$(buffer, n - 4) = Hex$(128 + ((c \ 64) Mod 64))
+                Mid$(buffer, n - 1) = Hex$(128 + (c Mod 64))
+        End Select
+    Next
+    URLEncode = left$(buffer, n)
+End Function
+
+Function ReplaceIllegalCharacters(strIn As String, strChar As String, Optional padSingleQuote As Boolean = True) As String
+    Dim strSpecialChars As String
+    Dim i As Long
+    strSpecialChars = "~""#%&*:<>?{|}/\[]" & Chr(10) & Chr(13)
+
+    For i = 1 To Len(strSpecialChars)
+        strIn = Replace(strIn, Mid$(strSpecialChars, i, 1), strChar)
+    Next
+    
+    If padSingleQuote And InStr(1, strIn, "''") = 0 Then
+        strIn = CleanSingleTicks(strIn)
+    End If
+    
+    ReplaceIllegalCharacters = strIn
+End Function
