@@ -19,7 +19,7 @@ Option Base 1
 Public Const TEMP_DIRECTORY_NAME As String = "FinToolTemp"
 Public Const LOG_DIRECTORY_NAME As String = "Logs"
 
-Private l_listObjDict As Dictionary
+
 Private lBypassOnCloseCheck As Boolean
 Private l_pbPackageRunning As Boolean
 Private l_preventProtection As Boolean
@@ -35,7 +35,7 @@ On Error Resume Next
     End If
     If Len(fName) > 0 Then
         If InStr(1, fName, "http", vbTextCompare) > 0 Then
-            fName = Replace(fName, " ", "%20", Compare:=vbTextCompare)
+            fName = Replace(fName, " ", "%20", compare:=vbTextCompare)
         End If
     End If
     FullWbNameCorrected = fName
@@ -70,16 +70,31 @@ Public Function pbUnprotectSheet(ws As Worksheet) As Boolean
     pbUnprotectSheet = UnprotectSHT(ws)
 End Function
 
-Public Function StringsMatch(str1 As String, str2 As String, smEnum As StringMatch) As Boolean
-
+Public Function StringsMatch(str1 As String, str2 As String, Optional smEnum As strMatchEnum = strMatchEnum.smEqual, Optional compMethod As VbCompareMethod = vbTextCompare) As Boolean
+'       PUT THIS ENUM AT TOP OF A STANDARD MODULE COPY OF THE ENUM FROM COMMON
+        'Public Enum strMatchEnum
+        '    smEqual = 0
+        '    smNotEqualTo = 1
+        '    smContains = 2
+        '    smStartsWithStr = 3
+        '    smEndWithStr = 4
+        'End Enum
     Select Case smEnum
-        Case StringMatch.smEqual
-        Case StringMatch.smNotEqualTo
-        Case StringMatch.smContains
-        Case StringMatch.smStartsWithStr
-        Case StringMatch.smEndWithStr
+        Case strMatchEnum.smEqual
+            StringsMatch = StrComp(str1, str2, compMethod) = 0
+        Case strMatchEnum.smNotEqualTo
+            StringsMatch = StrComp(str1, str2, compMethod) <> 0
+        Case strMatchEnum.smContains
+            StringsMatch = InStr(1, str1, str2, compMethod) > 0
+        Case strMatchEnum.smStartsWithStr
+            StringsMatch = InStr(1, str1, str2, compMethod) = 1
+        Case strMatchEnum.smEndWithStr
+            If Len(str2) > Len(str1) Then
+                StringsMatch = False
+            Else
+                StringsMatch = InStr(Len(str1) - Len(str2) + 1, str1, str2, compMethod) = Len(str1) - Len(str2) + 1
+            End If
     End Select
-
 End Function
 
 Public Function DeleteFolderFiles(folderPath As String, Optional patternMatch As String = vbNullString)
@@ -191,15 +206,6 @@ E:
     End If
 End Function
 
-Public Function UnsetWTDict() As Boolean
-'   Clears Dictionary used for storing Global Reference to ListObject in Workbook
-'   See 'wt' Function for more info
-    If Not l_listObjDict Is Nothing Then
-        l_listObjDict.RemoveAll
-    End If
-    Set l_listObjDict = Nothing
-    UnsetWTDict = l_listObjDict Is Nothing
-End Function
 
 Public Function wt(listObjectName As String, ParamArray tempListObjPrefixes() As Variant) As ListObject
 '   Return object reference to ListObject in 'ThisWorkbook' called [listObjectName]
@@ -208,10 +214,8 @@ Public Function wt(listObjectName As String, ParamArray tempListObjPrefixes() As
 '       with the same name, and is not the intended ListObject
 '  If temporary list object mayexists, include the prefixes (e.g. "tmp","temp") to identify and not add to dictionary
 On Error GoTo E:
-    
-    Dim i As Long, t As ListObject, ignoreArr As Variant, ignoreAI As ArrInformation, ignoreIdx As Long, ignore As Boolean
-    Dim sw As StopWatch
-    
+    Static l_listObjDict As Dictionary
+    Dim ws As Worksheet, t As ListObject, ignoreArr As Variant, ignoreAI As ArrInformation, ignoreIdx As Long, ignore As Boolean
     'Force array to 2D
     If IsMissing(tempListObjPrefixes) Then
         ignoreArr = ArrArray(DefaultTempTblPrefixes, aoNone)
@@ -223,12 +227,9 @@ On Error GoTo E:
     If l_listObjDict Is Nothing Then
     '   If th Dictionary is Empty, we're opening file, givea small breather to the app
         DoEvents
-        Set sw = New StopWatch
-        sw.StartTimer
         Set l_listObjDict = New Dictionary
-    
-        For i = 1 To ThisWorkbook.Worksheets.Count
-            For Each t In ThisWorkbook.Worksheets(i).ListObjects
+        For Each ws In ThisWorkbook.Worksheets
+            For Each t In ws.ListObjects
                 ignore = False
                 If ignoreAI.Dimensions > 0 Then
                     For ignoreIdx = ignoreAI.LBound_first To ignoreAI.Ubound_first
@@ -242,29 +243,22 @@ On Error GoTo E:
                     Set l_listObjDict(t.Name) = t
                 End If
            Next t
-        Next i
-        sw.StopTimer
+        Next ws
         DoEvents
-        If IsDEV And DebugMode Then
-            DebugPrint "mdlGlobal.wt - Load All listObjects: " & sw.ResultAsTime
-        End If
-        Set sw = Nothing
     End If
     
     'this covers the temporary listobject which may not always be available
     If Not l_listObjDict.Exists(listObjectName) Then
-        Dim tWS As Worksheet, tLO As ListObject, tIDX As Long, tLOIDX
-        For tIDX = 1 To ThisWorkbook.Worksheets.Count
-            If ThisWorkbook.Worksheets(tIDX).ListObjects.Count > 0 Then
-                For tLOIDX = 1 To ThisWorkbook.Worksheets(tIDX).ListObjects.Count
-                    If ThisWorkbook.Worksheets(tIDX).ListObjects(tLOIDX).Name = listObjectName Then
-                        'DON'T ADD any tmp tables
-                        Set wt = ThisWorkbook.Worksheets(tIDX).ListObjects(tLOIDX)
-                        GoTo Finalize:
-                    End If
-                Next tLOIDX
-            End If
-        Next tIDX
+        Dim tWS As Worksheet, tLO As ListObject
+        For Each tWS In ThisWorkbook.Worksheets
+            For Each tLO In tWS.ListObjects
+                If StrComp(tLO.Name, listObjectName, vbTextCompare) = 0 Then
+                    'DON'T ADD any tmp tables
+                    Set wt = tLO
+                    GoTo Finalize:
+                End If
+            Next tLO
+        Next tWS
     End If
     
 Finalize:
@@ -355,7 +349,7 @@ Public Function GetNextID(table As ListObject, uniqueIdcolumnIdx As Long) As Lon
 '   Use to create next (Long) number for unique ROW id in a Range
 On Error Resume Next
     Dim nextID As Long
-    If table.listRows.Count > 0 Then
+    If table.listRows.count > 0 Then
         nextID = Application.WorksheetFunction.Max(table.ListColumns(uniqueIdcolumnIdx).DataBodyRange)
     End If
     GetNextID = nextID + 1
@@ -395,8 +389,8 @@ Public Function CreateDirectory(fullPath As String) As Boolean
     Else
         Dim lastDirName As String, pathArr As Variant, checkFldrName As String
         fullPath = PathCombine(False, fullPath)
-        If InStrRev(fullPath, Application.PathSeparator, Compare:=vbTextCompare) > InStr(1, fullPath, Application.PathSeparator, vbTextCompare) Then
-            lastDirName = left(fullPath, InStrRev(fullPath, Application.PathSeparator, Compare:=vbTextCompare) - 1)
+        If InStrRev(fullPath, Application.PathSeparator, compare:=vbTextCompare) > InStr(1, fullPath, Application.PathSeparator, vbTextCompare) Then
+            lastDirName = left(fullPath, InStrRev(fullPath, Application.PathSeparator, compare:=vbTextCompare) - 1)
             If DirectoryExists(lastDirName) Then
                 On Error Resume Next
                 DebugPrint ConcatWithDelim(", ", "pbMiscUtil.CreateDirectory", "Creating directory: ", fullPath)
@@ -543,7 +537,7 @@ End Function
 Public Function WorkbookIsOpen(wkBkName As String, Optional verifyFullNameCorrected As String = vbNullString) As Boolean
 
     Dim i As Long, retV As Boolean
-    For i = 1 To Application.Workbooks.Count
+    For i = 1 To Application.Workbooks.count
         If StrComp(LCase(wkBkName), LCase(Application.Workbooks(i).Name), vbTextCompare) = 0 Then
             If Len(verifyFullNameCorrected) > 0 Then
                 If StrComp(LCase(verifyFullNameCorrected), LCase(FullWbNameCorrected(Application.Workbooks(i))), vbTextCompare) = 0 Then
@@ -725,7 +719,7 @@ Public Function IsWorkbookOpen(wName As String, Optional checkCodeName As String
     Dim retV As Boolean
 
     Dim wIDX As Long
-    For wIDX = 1 To Application.Workbooks.Count
+    For wIDX = 1 To Application.Workbooks.count
         If StrComp(LCase(wName), LCase(Application.Workbooks(wIDX).Name), vbTextCompare) = 0 Then
             If checkCodeName <> vbNullString Then
                 If StrComp(LCase(checkCodeName), LCase(Workbooks(wIDX).CodeName), vbTextCompare) = 0 Then

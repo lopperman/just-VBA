@@ -480,7 +480,7 @@ Public Function UpdateArgs(ParamArray args() As Variant)
 End Function
 Public Property Get ArgsCount() As Long
     If Not l_CallArgs Is Nothing Then
-        ArgsCount = l_CallArgs.Count
+        ArgsCount = l_CallArgs.count
     Else
         ArgsCount = 0
     End If

@@ -13,6 +13,7 @@ Option Base 1
 
 Private timerStart As Double
 Private timerStop As Double
+Private lastSplit As Double
 Private l_key As Variant
 
 Public Property Get swKey() As Variant
@@ -29,17 +30,35 @@ Public Sub StartTimer(Optional swKey As Variant)
     End If
     resetTimer
     timerStart = Timer
+    lastSplit = timerStart
 End Sub
 Public Sub StopTimer()
     timerStop = Timer
 End Sub
 
+Public Function GetSplit() As String
+    Dim totalElapsed As Double: totalElapsed = ElapsedSeconds
+    Dim prevSplit As Double: prevSplit = lastSplit
+    lastSplit = Timer
+    Dim splitSeconds As Double
+    splitSeconds = Round(lastSplit - prevSplit, 6)
+    GetSplit = "This Split: " & splitSeconds & " seconds" & vbNewLine & "(Total Elapsed: " & totalElapsed & " seconds)"
+End Function
+
+Public Function NewSplit() As Double
+    Dim prevSplit As Double: prevSplit = lastSplit
+    lastSplit = Timer
+    Dim splitSeconds As Double
+    splitSeconds = Round(lastSplit - prevSplit, 6)
+    NewSplit = splitSeconds
+End Function
+
 Public Property Get ElapsedSeconds() As Double
-    ElapsedSeconds = Round(Timer - timerStart, 3)
+    ElapsedSeconds = Round(Timer - timerStart, 6)
 End Property
 
 Public Property Get totalSeconds() As Double
-    totalSeconds = Round(timerStop - timerStart, 3)
+    totalSeconds = Round(timerStop - timerStart, 6)
 End Property
 Public Function Result() As String
     Result = CStr(totalSeconds) & " seconds"

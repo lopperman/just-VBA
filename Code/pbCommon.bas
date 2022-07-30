@@ -104,13 +104,13 @@ Public Enum ReportPeriod
     frpCalMonth = 4
 End Enum
 
-Public Enum StringMatch
-    smEqual = 0
-    smNotEqualTo = 1
-    smContains = 2
-    smStartsWithStr = 3
-    smEndWithStr = 4
-End Enum
+    Public Enum strMatchEnum
+        smEqual = 0
+        smNotEqualTo = 1
+        smContains = 2
+        smStartsWithStr = 3
+        smEndWithStr = 4
+    End Enum
 
 Public Type ArrInformation
     Rows As Long
@@ -120,6 +120,7 @@ Public Type ArrInformation
     LBound_first As Long
     UBound_second As Long
     LBound_second As Long
+    IsArray As Boolean
 End Type
 Public Type AreaStruct
     RowStart As Long
@@ -255,9 +256,9 @@ Public Enum RangeFunctionOperator
     Min = 1
     Max = 2
     Sum = 3
-    Count = 4
+    count = 4
     CountUnique = 5
-    countBlank = 6
+    CountBlank = 6
 End Enum
 
 Public Enum btnLocationEnum
@@ -390,6 +391,7 @@ Public Enum ArrayOptionFlags
     'implement aoAreaMustMatchRows
     'implement aoAreasMustMatchCols
     aoVisibleRangeOnly = 2 ^ 3
+    aoIncludeListObjHeaderRow = 2 ^ 4
 End Enum
 
 Public Enum CHSuppEnum
@@ -397,6 +399,7 @@ Public Enum CHSuppEnum
     chForceFullUpdate = 2 ^ 0
     chUpdateAllColumns = 2 ^ 1
     chSpecificRange = 2 ^ 2
+    chCalcAllAtOnce = 2 ^ 3
 End Enum
 
 Public Enum TempFolderEnum

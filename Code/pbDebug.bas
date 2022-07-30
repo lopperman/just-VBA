@@ -213,7 +213,7 @@ End Function
 Public Function TraceQueueCount() As Long
     Dim tmpCount As Long
     If Not TraceQueue Is Nothing Then
-        tmpCount = TraceQueue.Count
+        tmpCount = TraceQueue.count
     End If
     TraceQueueCount = tmpCount
 End Function
@@ -227,7 +227,7 @@ On Error GoTo E:
     Dim newArr() As Variant
 
     If TraceQueue Is Nothing Then Exit Function
-    If TraceQueue.Count = 0 Then Exit Function
+    If TraceQueue.count = 0 Then Exit Function
     Dim newIdx As Long, colIDX As Long
     Dim ky As Variant, nextRow As Long
     Dim trc As Variant
@@ -236,12 +236,12 @@ On Error GoTo E:
     If nextRow < 8 Then nextRow = 8
     
     Dim checkTraceArray As ArrInformation
-    If TraceQueue.Count > 0 Then
+    If TraceQueue.count > 0 Then
         checkTraceArray = ArrayInfo(TraceQueue(1))
         If checkTraceArray.Dimensions > 0 Then
-            ReDim newArr(1 To TraceQueue.Count, 1 To checkTraceArray.Ubound_first)
+            ReDim newArr(1 To TraceQueue.count, 1 To checkTraceArray.Ubound_first)
             Dim tcIDX As Long
-            For tcIDX = 1 To TraceQueue.Count
+            For tcIDX = 1 To TraceQueue.count
                 trc = TraceQueue(tcIDX)
                 For colIDX = 1 To checkTraceArray.Ubound_first
                     newArr(tcIDX, colIDX) = trc(colIDX)
@@ -249,7 +249,7 @@ On Error GoTo E:
             Next tcIDX
             
             With wsDebug
-                .Range("B" & nextRow & ":D" & nextRow).Resize(rowSize:=TraceQueue.Count).Value2 = newArr
+                .Range("B" & nextRow & ":D" & nextRow).Resize(rowSize:=TraceQueue.count).Value2 = newArr
             End With
         End If
     End If

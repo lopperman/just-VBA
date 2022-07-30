@@ -69,7 +69,7 @@ Attribute CompareMode.VB_Description = "Set or get the string comparison method.
 End Property
 Public Property Let CompareMode(value As CompareMethod)
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
-    If Me.Count > 0 Then
+    If Me.count > 0 Then
         ' Can't change CompareMode for Dictionary that contains data
         ' http://msdn.microsoft.com/en-us/library/office/gg278481(v=office.15).aspx
         Err.Raise 5 ' Invalid procedure call or argument
@@ -81,12 +81,12 @@ Public Property Let CompareMode(value As CompareMethod)
 #End If
 End Property
 
-Public Property Get Count() As Long
-Attribute Count.VB_Description = "Get the number of items in the dictionary.\n"
+Public Property Get count() As Long
+Attribute count.VB_Description = "Get the number of items in the dictionary.\n"
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
-    Count = dict_pKeyValues.Count
+    count = dict_pKeyValues.count
 #Else
-    Count = dict_pDictionary.Count
+    count = dict_pDictionary.count
 #End If
 End Property
 
@@ -198,7 +198,7 @@ End Function
 Public Function items() As Variant
 Attribute items.VB_Description = "Get an array containing all items in the dictionary."
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
-    If Me.Count > 0 Then
+    If Me.count > 0 Then
         items = dict_pItems
     Else
         ' Split("") creates initialized empty array that matches Dictionary Keys and Items
@@ -217,7 +217,7 @@ End Function
 Public Function Keys() As Variant
 Attribute Keys.VB_Description = "Get an array containing all keys in the dictionary."
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
-    If Me.Count > 0 Then
+    If Me.count > 0 Then
         Keys = dict_pKeys
     Else
         ' Split("") creates initialized empty array that matches Dictionary Keys and Items
@@ -279,7 +279,7 @@ Private Function dict_GetKeyValue(dict_Key As Variant) As Variant
 End Function
 
 Private Sub dict_AddKeyValue(dict_Key As Variant, dict_Value As Variant, Optional dict_Index As Long = -1)
-    If Me.Count = 0 Then
+    If Me.count = 0 Then
         ReDim dict_pKeys(0 To 0)
         ReDim dict_pItems(0 To 0)
     Else
@@ -290,7 +290,7 @@ Private Sub dict_AddKeyValue(dict_Key As Variant, dict_Value As Variant, Optiona
     Dim dict_FormattedKey As String
     dict_FormattedKey = dict_GetFormattedKey(dict_Key)
 
-    If dict_Index >= 0 And dict_Index < dict_pKeyValues.Count Then
+    If dict_Index >= 0 And dict_Index < dict_pKeyValues.count Then
         ' Shift keys/items after + including index into empty last slot
         Dim dict_i As Long
         For dict_i = UBound(dict_pKeys) To dict_Index + 1 Step -1
@@ -417,7 +417,7 @@ End Function
 
 Private Function dict_GetObjectKey(dict_ObjKey As Variant) As String
     Dim dict_i As Integer
-    For dict_i = 1 To dict_pObjectKeys.Count
+    For dict_i = 1 To dict_pObjectKeys.count
         If dict_pObjectKeys.Item(dict_i) Is dict_ObjKey Then
             dict_GetObjectKey = "__object__" & dict_i
             Exit Function
@@ -425,12 +425,12 @@ Private Function dict_GetObjectKey(dict_ObjKey As Variant) As String
     Next dict_i
 
     dict_pObjectKeys.Add dict_ObjKey
-    dict_GetObjectKey = "__object__" & dict_pObjectKeys.Count
+    dict_GetObjectKey = "__object__" & dict_pObjectKeys.count
 End Function
 
 Private Sub dict_RemoveObjectKey(dict_ObjKey As Variant)
     Dim dict_i As Integer
-    For dict_i = 1 To dict_pObjectKeys.Count
+    For dict_i = 1 To dict_pObjectKeys.count
         If dict_pObjectKeys.Item(dict_i) Is dict_ObjKey Then
             dict_pObjectKeys.Remove dict_i
             Exit Sub

@@ -34,7 +34,7 @@ Public Function tstpvt()
 End Function
 
 Public Function tstd()
-    If wsDynamicPivot.PivotTables.Count = 1 Then
+    If wsDynamicPivot.PivotTables.count = 1 Then
         devpvt.TableRange2.Clear
     End If
 End Function
@@ -83,16 +83,16 @@ End Function
 
 
 Private Function RowFieldCount(pvt As PivotTable) As Long
-    RowFieldCount = pvt.rowFields.Count
+    RowFieldCount = pvt.rowFields.count
 End Function
 Private Function ColumnFieldCount(pvt As PivotTable) As Long
-    ColumnFieldCount = pvt.ColumnFields.Count
+    ColumnFieldCount = pvt.ColumnFields.count
 End Function
 Private Function PageFieldCount(pvt As PivotTable) As Long
-    PageFieldCount = pvt.pageFields.Count
+    PageFieldCount = pvt.pageFields.count
 End Function
 Private Function DataFieldCount(pvt As PivotTable) As Long
-    DataFieldCount = pvt.dataFields.Count
+    DataFieldCount = pvt.dataFields.count
 End Function
 
 ' ~~~ ~~~ CREATE NEW PIVOT TABLE ~~~ ~~~
@@ -150,7 +150,7 @@ Private Function FindNumberFormat(ByRef pvt As PivotTable, fldName As Variant) A
     Dim lo As ListObject
     Set lo = wt(pvt.SourceData)
     If Not lo Is Nothing Then
-        If lo.listRows.Count > 0 Then
+        If lo.listRows.count > 0 Then
             If lo.Range.Worksheet.ProtectContents Then pbUnprotectSheet lo.Range.Worksheet
             FindNumberFormat = lo.ListColumns(fldName).DataBodyRange(1, 1).numberFormat
         End If
@@ -172,15 +172,15 @@ Public Function UpdateRowField( _
     If Not pf Is Nothing Then
         With pf
             If .orientation <> xlRowField Then
-                position = pvt.rowFields.Count + 1
+                position = pvt.rowFields.count + 1
                 .orientation = xlRowField
                 .position = position
             Else
                 If Not IsMissing(position) Then
-                    If position <> .position And position <= pvt.rowFields.Count Then
+                    If position <> .position And position <= pvt.rowFields.count Then
                         .position = position
                     Else
-                        .position = pvt.rowFields.Count
+                        .position = pvt.rowFields.count
                     End If
                 End If
             End If
@@ -256,7 +256,7 @@ E:
 End Function
 Private Function CreateNewDynamicPivotSheet() As Worksheet
     Dim tWS As Worksheet
-    Set tWS = Worksheets.Add(After:=Worksheets(Worksheets.Count))
+    Set tWS = Worksheets.Add(After:=Worksheets(Worksheets.count))
     tWS.Name = pbPivot_DYNAMIC_SHEET_NAME
     Set CreateNewDynamicPivotSheet = tWS
     Set tWS = Nothing

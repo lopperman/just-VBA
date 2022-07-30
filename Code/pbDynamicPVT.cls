@@ -37,7 +37,7 @@ End Function
 
 Public Property Get DynamicPvtTable() As PivotTable
     If lPvtTable Is Nothing Then
-        If wsDynamicPivot.PivotTables.Count = 1 Then
+        If wsDynamicPivot.PivotTables.count = 1 Then
             Set lPvtTable = wsDynamicPivot.PivotTables(1)
         End If
     End If
@@ -62,11 +62,11 @@ Public Function FieldNames() As Dictionary
 
     Dim d As Dictionary
     Set d = New Dictionary
-    Dim tmpArr As Variant
-    tmpArr = WorksheetFunction.Sort(SourceTable.HeaderRowRange.value)
+    Dim tmpARR As Variant
+    tmpARR = WorksheetFunction.Sort(SourceTable.HeaderRowRange.value)
     
     Dim idx As Long
-    For idx = 1 To SourceTable.ListColumns.Count
+    For idx = 1 To SourceTable.ListColumns.count
         d.Add SourceTable.ListColumns(idx).Name, SourceTable.ListColumns(idx).Name
     Next idx
     Set FieldNames = d
@@ -164,15 +164,15 @@ Public Function ConfigureDataFields(flds As Variant, Optional summaryType As Var
     End If
     
     If IsArray(flds) Then
-        curFld = flds(LBound(flds) + lDataFieldConsolFunctions.Count)
+        curFld = flds(LBound(flds) + lDataFieldConsolFunctions.count)
     Else
         curFld = flds
     End If
     
     lDataFieldConsolFunctions.Add curFld, summaryType
     
-    If lDataFieldConsolFunctions.Count < fldCount Then
-        curFld = flds(LBound(flds) + lDataFieldConsolFunctions.Count)
+    If lDataFieldConsolFunctions.count < fldCount Then
+        curFld = flds(LBound(flds) + lDataFieldConsolFunctions.count)
         Set pkg = BuildPackage(pbPivotTable.DynamicPivot, "ConfigureDataFields", VbMethod)
         pkg.UpdateArgs flds
         Wom.Picklist.Initialize "Choose Summary Type for: " & curFld, "Choose Function to Summarize Field: " & curFld, GetConsolidationNames, plSingle, pkg
@@ -260,7 +260,7 @@ Public Function Subtotals(Optional flds As Variant)
         For Each pf In DynamicPvtTable.rowFields
             d(pf.SourceName) = pf.SourceName
         Next pf
-        If d.Count > 0 Then
+        If d.count > 0 Then
             Dim pkg As Package
             Set pkg = BuildPackage(pbPivotTable.DynamicPivot, "Subtotals", VbMethod)
             Wom.Picklist.Initialize "Add Subtotals", "Choose fields to display subtotals", d, plMultiple_MinimumNone, pkg

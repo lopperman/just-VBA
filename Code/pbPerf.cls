@@ -102,7 +102,7 @@ Private l_homeSheet As Worksheet
 '   If any Worksheet in the l_hideSheets HashList are the ACTIVE Worksheet when restoring to
 '       DefaultMode, then the FORCED_WORKSHEET_NAME Worksheet will be made Active
 
-Private l_hideSheets As New cHashList
+Private l_hideSheets As New pbHASH
 
 Private Function Configure()
 On Error GoTo E:
@@ -498,11 +498,11 @@ End Property
 
 Private Property Get MustHideSheets() As Boolean
     Dim hideIDX As Long
-    If l_hideSheets.Count = 0 Then
+    If l_hideSheets.count = 0 Then
         MustHideSheets = False
         Exit Property
     End If
-    For hideIDX = 1 To l_hideSheets.Count
+    For hideIDX = 1 To l_hideSheets.count
         If ThisWorkbook.Worksheets(l_hideSheets.KeyByIndex(hideIDX)).visible = xlSheetVisible Then
                 MustHideSheets = True
                 Exit For
@@ -515,11 +515,11 @@ Private Property Get MustActivateHomeSheet() As Boolean
         MustActivateHomeSheet = False
         Exit Property
     End If
-    If l_hideSheets.Count = 0 Then
+    If l_hideSheets.count = 0 Then
         MustActivateHomeSheet = False
         Exit Property
     End If
-    For hideIDX = 1 To l_hideSheets.Count
+    For hideIDX = 1 To l_hideSheets.count
         If ThisWorkbook.Worksheets(l_hideSheets.KeyByIndex(hideIDX)) Is ThisWorkbook.ActiveSheet Then
             MustActivateHomeSheet = True
             Exit For
@@ -533,8 +533,8 @@ Private Function HideSheets()
     End If
         
     Dim hideIDX As Long
-    If l_hideSheets.Count > 0 Then
-        For hideIDX = 1 To l_hideSheets.Count
+    If l_hideSheets.count > 0 Then
+        For hideIDX = 1 To l_hideSheets.count
             If Not ThisWorkbook.Worksheets(l_hideSheets.KeyByIndex(hideIDX)).visible = _
                 xlSheetVeryHidden Then
                 ThisWorkbook.Worksheets(l_hideSheets.KeyByIndex(hideIDX)).visible = _

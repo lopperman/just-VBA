@@ -53,7 +53,7 @@ Private Function TmpUtilSheet() As Worksheet
     If WorksheetExists(TMP_RANGE_UTIL_WORKSHEET) = False Then
         Dim retWS As Worksheet
         
-        Set retWS = Excel.Application.Worksheets.Add(After:=Worksheets(Worksheets.Count))
+        Set retWS = Excel.Application.Worksheets.Add(After:=Worksheets(Worksheets.count))
         retWS.Name = TMP_RANGE_UTIL_WORKSHEET
         retWS.visible = xlSheetVeryHidden
         Set TmpUtilSheet = retWS
@@ -134,7 +134,7 @@ Public Function RangeInfo(rg As Range) As RngInfo
         retV.Columns = RangeColCount(rg)
         retV.AreasSameRows = ContiguousRows(rg)
         retV.AreasSameColumns = ContiguousColumns(rg)
-        retV.Areas = rg.Areas.Count
+        retV.Areas = rg.Areas.count
     End If
     RangeInfo = retV
 End Function
@@ -142,17 +142,17 @@ End Function
 Public Function RangeArea(rg As Range) As AreaStruct
 '   Return info about Range area
 '   Range with 1 Area allowed, otherwise error
-    If rg.Areas.Count <> 1 Then
+    If rg.Areas.count <> 1 Then
         RaiseError ERR_RANGE_AREA_COUNT, "Range Area Count <> 1 (ftRangeArray.RangeArea)"
     End If
     
     Dim retV As AreaStruct
     retV.RowStart = rg.Row
-    retV.RowEnd = rg.Row + rg.Rows.Count - 1
+    retV.RowEnd = rg.Row + rg.Rows.count - 1
     retV.ColStart = rg.column
-    retV.ColEnd = rg.column + rg.Columns.Count - 1
-    retV.rowCount = rg.Rows.Count
-    retV.columnCount = rg.Columns.Count
+    retV.ColEnd = rg.column + rg.Columns.count - 1
+    retV.rowCount = rg.Rows.count
+    retV.columnCount = rg.Columns.count
     
     RangeArea = retV
 
@@ -165,7 +165,7 @@ Public Function RangeTo1DArray(ByVal rng As Range) As Variant()
 '   Return all cells in Range as 1D Array
     Dim retV() As Variant
     ''BASE 1
-    ReDim retV(1 To rng.Count)
+    ReDim retV(1 To rng.count)
     Dim cl As Range, clIDX As Long
     clIDX = 1
     For Each cl In rng.Cells
@@ -180,7 +180,7 @@ End Function
 Public Function GetUniqueSortedListCol(lstObj As ListObject, lstCol As Variant, Optional returnType As ListReturnType = ListReturnType.lrtArray) As Variant
 '   Returns unique 1-based, 2D array from specific ListObject ListColumn
 '   Return Type = Array (default), Dictionary, or Collection
-    If lstObj.listRows.Count = 0 Then Exit Function
+    If lstObj.listRows.count = 0 Then Exit Function
     
     
     Dim tDic As Dictionary
@@ -222,13 +222,27 @@ Public Function ArrListCols(lstObj As ListObject, flags As ArrayOptionFlags, Par
 '   Get Array from specific ListObject listColum(s)
     
 
-    Dim idx As Long, rng As Range
-    If lstObj.listRows.Count > 0 Then
+    Dim idx As Long, rng As Range, inclHeader As Boolean
+    inclHeader = EnumCompare(flags, aoIncludeListObjHeaderRow)
+    If lstObj.listRows.count > 0 Then
         For idx = LBound(listCols) To UBound(listCols)
             If rng Is Nothing Then
-                Set rng = lstObj.ListColumns(listCols(idx)).DataBodyRange
+                If inclHeader Then
+                    Set rng = lstObj.HeaderRowRange(1, lstObj.ListColumns(listCols(idx)).Index)
+                    Set rng = rng.Resize(rowSize:=lstObj.listRows.count + lstObj.HeaderRowRange.Rows.count)
+                Else
+                    Set rng = lstObj.ListColumns(listCols(idx)).DataBodyRange
+                End If
             Else
-                Set rng = Union(rng, lstObj.ListColumns(listCols(idx)).DataBodyRange)
+                If inclHeader Then
+                    Dim tRng As Range
+                    Set tRng = lstObj.HeaderRowRange(1, lstObj.ListColumns(listCols(idx)).Index)
+                    Set tRng = tRng.Resize(rowSize:=lstObj.listRows.count + lstObj.HeaderRowRange.Rows.count)
+                    Set rng = Union(rng, tRng)
+                    Set tRng = Nothing
+                Else
+                    Set rng = Union(rng, lstObj.ListColumns(listCols(idx)).DataBodyRange)
+                End If
             End If
         Next idx
         ArrListCols = ArrRange(rng, flags)
@@ -237,47 +251,57 @@ Public Function ArrListCols(lstObj As ListObject, flags As ArrayOptionFlags, Par
     
     
 End Function
+
 Public Function ArrParams(ParamArray vals() As Variant) As Variant
 '   Build standard array from ParamsArray so it can be passed as Variant() to other functions
-    If IsMissing(vals) Or UBound(vals) = -1 Then
-        'return empty array
-        ArrParams = Array()
-        Exit Function
-    ElseIf LBound(vals) = 0 And UBound(vals) = 0 Then
-        If VarType(vals(0)) = vbArray + vbVariant Then
-            If UBound(vals(0)) = -1 Then
-                ArrParams = Array()
-                Exit Function
+    ArrParams = ArrArray(vals, aoNone)
+    
+'    If IsMissing(vals) Or UBound(vals) = -1 Then
+'        'return empty array
+'        ArrParams = Array()
+'        Exit Function
+'    ElseIf LBound(vals) = 0 And UBound(vals) = 0 Then
+'        If VarType(vals(0)) = vbArray + vbVariant Then
+'            If UBound(vals(0)) = -1 Then
+'                ArrParams = Array()
+'                Exit Function
+'            End If
+'        End If
+'    End If
+'    'NEED TO CHECK FOR ARR(0) = 0 TO -1
+'    Dim tmp As Variant, vIDX As Long, offset As Long
+'    If LBound(vals) = UBound(vals) Then
+'        If ArrDimensions(vals(LBound(vals))) > 0 Then
+'            tmp = ArrArray(vals(LBound(vals)), aoNone)
+'        Else
+'            ReDim tmp(1 To 1, 1 To 1)
+'            tmp(1, 1) = vals(LBound(vals))
+'        End If
+'    Else
+'        If LBound(vals) = 0 Then offset = 1
+'        ReDim tmp(1 To (UBound(vals) - LBound(vals) + 1), 1 To 1)
+'        For vIDX = LBound(vals) To UBound(vals)
+'            tmp(vIDX + offset, 1) = vals(vIDX)
+'        Next vIDX
+'    End If
+'
+'    ArrParams = tmp
+'    If ArrDimensions(tmp) > 0 Then Erase tmp
+
+End Function
+Public Function ArrArray(ByVal arr As Variant, flags As ArrayOptionFlags, Optional zeroBasedAsColumns As Boolean = False) As Variant
+'   By default, a zero-based array will become multiple rows.  Set 'zeroBasedAsColumns' to create 1 row with multiple columns
+    Dim retArray As Variant
+    Dim unique As Boolean
+    
+    '   CHECK TO DETERMINE IF 'ARR' IS FROM A PARAMARRAY -- WHICH MEANS WE SHOULD TAKE 'ARR(0)' AS THE INPUT ARRAY
+    If ValidArray(arr) And LBound(arr) = UBound(arr) Then
+        If EnumCompare(VarType(arr(LBound(arr))), VbVarType.vbArray) Then
+            If UBound(arr) >= LBound(arr) Then
+                arr = arr(LBound(arr))
             End If
         End If
     End If
-    'NEED TO CHECK FOR ARR(0) = 0 TO -1
-    Dim tmp As Variant, vIDX As Long, offset As Long
-    If LBound(vals) = UBound(vals) Then
-        If ArrDimensions(vals(LBound(vals))) > 0 Then
-            tmp = ArrArray(vals(LBound(vals)), aoNone)
-        Else
-            ReDim tmp(1 To 1, 1 To 1)
-            tmp(1, 1) = vals(LBound(vals))
-        End If
-    Else
-        If LBound(vals) = 0 Then offset = 1
-        ReDim tmp(1 To (UBound(vals) - LBound(vals) + 1), 1 To 1)
-        For vIDX = LBound(vals) To UBound(vals)
-            tmp(vIDX + offset, 1) = vals(vIDX)
-        Next vIDX
-    End If
-    
-    ArrParams = tmp
-    If ArrDimensions(tmp) > 0 Then Erase tmp
-
-End Function
-Public Function ArrArray(arr As Variant, flags As ArrayOptionFlags, Optional zeroBasedAsColumns As Boolean = False) As Variant
-'   By default, a zero-based array will become multiple rows.  Set 'zeroBasedAsColumns' to create 1 row with multiple columns
-    
-
-    Dim retArray As Variant
-    Dim unique As Boolean
     
     unique = EnumCompare(flags, ArrayOptionFlags.aoUnique)
 
@@ -286,12 +310,8 @@ Public Function ArrArray(arr As Variant, flags As ArrayOptionFlags, Optional zer
     Else
         retArray = arr
     End If
-    
     Dim ai As ArrInformation
     ai = ArrayInfo(retArray)
-    
-    
-    
     If unique Then
         If ai.Rows = 1 And ai.Columns = 1 Then
             'We're Good
@@ -299,7 +319,6 @@ Public Function ArrArray(arr As Variant, flags As ArrayOptionFlags, Optional zer
             retArray = UniqueRC1Arr(retArray, flags)
         End If
     End If
-    
     If ArrDimensions(retArray) = 1 Then
         retArray = ConvertArrToRCArr(retArray)
     Else
@@ -320,12 +339,44 @@ Public Function ArrArray(arr As Variant, flags As ArrayOptionFlags, Optional zer
     
     
 End Function
-
-
 Public Function IsArrInit(inpt As Variant) As Boolean
 '   Returns True if Array is initialized and has data
     IsArrInit = ArrDimensions(inpt) > 0
 End Function
+
+
+'   ~~~ Test if anything is and ARRAY ~~~
+Public Function ValidArray(tstArr As Variant) As Boolean
+    Dim vt As Long: vt = VarType(tstArr)
+    Dim compare As Long
+    compare = vt And VbVarType.vbArray
+    ValidArray = compare <> 0
+End Function
+    
+'   ~~~ Check if array has been initialized  (can read or set values) ~~~
+'   optionally raise an error if item passed in isn't an array
+Public Function ArrayInitialized(tstArr As Variant, Optional errorIfNotArray As Boolean = False) As Boolean
+On Error Resume Next
+    If Not ValidArray(tstArr) Then
+        If errorIfNotArray Then
+            Err.Raise 427, Description:="ArrayInitialized - 'tstArr' Parameter was not of Type Array"
+        Else
+            ArrayInitialized = False
+        End If
+    Else
+        Dim dimLen As Long
+        dimLen = UBound(tstArr, 1) - LBound(tstArr, 1) + 1
+        If Err.Number <> 0 Then
+            ArrayInitialized = False
+        ElseIf UBound(tstArr, 1) < LBound(tstArr, 1) Then
+            ArrayInitialized = False
+        Else
+            ArrayInitialized = True
+        End If
+    End If
+    If Not Err.Number = 0 Then Err.Clear
+End Function
+    
 
 Public Function ArrayInfo(arr As Variant) As ArrInformation
 '   Returns Information about array dimensions
@@ -333,6 +384,9 @@ Public Function ArrayInfo(arr As Variant) As ArrInformation
 '       are 1-based, 2-dimensional - required for populating worksheet ranges in a 'table style rows/columns' convention
 On Error Resume Next
     Dim tmp As ArrInformation
+    tmp.IsArray = ValidArray(arr)
+    If tmp.IsArray = False Then GoTo Finalize:
+        
     If UBound(arr) = -1 Or LBound(arr) > UBound(arr) Then
         tmp.Dimensions = 0
     Else
@@ -355,6 +409,7 @@ On Error Resume Next
         End If
     End If
     
+Finalize:
     ArrayInfo = tmp
     If Err.Number <> 0 Then Err.Clear
 End Function
@@ -366,6 +421,9 @@ Public Function ArrDimensions(ByRef checkArr As Variant) As Long
 '       If ArrDimensions(myArray) > 0 Then ... 'checkArr' is a valid array
 On Error Resume Next
     Dim dimCount As Long
+    If Not ValidArray(checkArr) Then
+        GoTo Finalize:
+    End If
     Do While Err.Number = 0
         Dim tmp As Variant
         tmp = UBound(checkArr, dimCount + 1)
@@ -381,6 +439,8 @@ On Error Resume Next
             dimCount = 0
         End If
     End If
+    
+Finalize:
     ArrDimensions = dimCount
     If Err.Number <> 0 Then Err.Clear
 End Function
@@ -388,7 +448,7 @@ End Function
 ' ***** PRIVATE FUNCTIONS ***** ' ***** PRIVATE FUNCTIONS ***** ' ***** PRIVATE FUNCTIONS ***** ' ***** PRIVATE FUNCTIONS *****
 ' ***** PRIVATE FUNCTIONS ***** ' ***** PRIVATE FUNCTIONS ***** ' ***** PRIVATE FUNCTIONS ***** ' ***** PRIVATE FUNCTIONS *****
 
-Private Function UniqueRC1Arr(arr As Variant, flags As ArrayOptionFlags) As Variant
+Private Function UniqueRC1Arr(ByVal arr As Variant, flags As ArrayOptionFlags) As Variant
     
     
     
@@ -419,13 +479,13 @@ Private Function UniqueRC1Arr(arr As Variant, flags As ArrayOptionFlags) As Vari
         Set tmpRng = tmpRng.Resize(rowSize:=aInfo.Rows, ColumnSize:=aInfo.Columns)
         tmpRng.value = arr
         If Not EnumCompare(flags, ArrayOptionFlags.aoUniqueNoSort) Then
-            Dim sidx As Long, sRNG As Range
+            Dim sidx As Long, sRng As Range
             .Sort.SortFields.Clear
-            For sidx = 1 To tmpRng.Columns.Count
-                Set sRNG = tmpRng.Resize(ColumnSize:=1).offset(ColumnOffset:=sidx - 1)
-                .Sort.SortFields.add2 key:=.Range(sRNG.Address), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+            For sidx = 1 To tmpRng.Columns.count
+                Set sRng = tmpRng.Resize(ColumnSize:=1).offset(ColumnOffset:=sidx - 1)
+                .Sort.SortFields.add2 key:=.Range(sRng.Address), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
             Next sidx
-            Set sRNG = Nothing
+            Set sRng = Nothing
             With .Sort
                 .SetRange tmpRng
                 .Header = xlNo
@@ -471,7 +531,11 @@ Private Function UniqueRC1Arr(arr As Variant, flags As ArrayOptionFlags) As Vari
 
 End Function
 
+Public Function DEVARR(pARr As Variant) As Variant
 
+    DEVARR = ConvertArrToRCArr(pARr)
+
+End Function
 
 Private Function BuildRC1(rng As Range) As Variant
 On Error GoTo E:

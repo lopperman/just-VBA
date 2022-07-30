@@ -10,15 +10,15 @@ Public Function UpdateRowField(ByRef pvt As PivotTable, fldName As Variant, visi
     If Not pf Is Nothing Then
         With pf
             If .orientation <> xlRowField Then
-                position = pvt.rowFields.Count + 1
+                position = pvt.rowFields.count + 1
                 .orientation = xlRowField
                 .position = position
             Else
                 If Not IsMissing(position) Then
-                    If position <> .position And position <= pvt.rowFields.Count Then
+                    If position <> .position And position <= pvt.rowFields.count Then
                         .position = position
                     Else
-                        .position = pvt.rowFields.Count
+                        .position = pvt.rowFields.count
                     End If
                 End If
             End If
@@ -47,12 +47,12 @@ Public Function UpdateDataField(ByRef pvt As PivotTable, fldName As Variant, vis
             If visible = True Then
             
                 If .orientation <> xlDataField Then
-                    position = pvt.dataFields.Count + 1
+                    position = pvt.dataFields.count + 1
                     .orientation = xlDataField
                     .position = position
                 Else
                     If Not IsMissing(position) Then
-                        If .position <> position And position <= pvt.dataFields.Count Then
+                        If .position <> position And position <= pvt.dataFields.count Then
                             .position = position
                         End If
                     End If
@@ -81,7 +81,7 @@ On Error Resume Next
     Dim lo As ListObject
     Set lo = wt(pvt.SourceData)
     If Not lo Is Nothing Then
-        If lo.listRows.Count > 0 Then
+        If lo.listRows.count > 0 Then
             If lo.Range.Worksheet.ProtectContents Then pbUnprotectSheet lo.Range.Worksheet
             FindNumberFormat = lo.ListColumns(fldName).DataBodyRange(1, 1).numberFormat
         End If
@@ -97,12 +97,12 @@ Public Function UpdatePageField(ByRef pvt As PivotTable, fldName As Variant, vis
         DebugPrint fldName & " previous orientation: " & pf.orientation
         With pf
             If .orientation <> xlPageField Then
-                position = pvt.pageFields.Count + 1
+                position = pvt.pageFields.count + 1
                 .orientation = xlPageField
                 .position = position
             Else
                 If Not IsMissing(position) Then
-                    If position <> .position And position <= pvt.pageFields.Count Then
+                    If position <> .position And position <= pvt.pageFields.count Then
                         .position = position
                     End If
                 End If

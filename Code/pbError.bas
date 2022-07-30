@@ -92,14 +92,14 @@ Public Function ErrorCheck(Optional Source As String, Optional options As ErrorO
     
     ' ~~~ ~~~ ~~~ ~~~ WHAT TO DO IF ERROR 51 (INTERNAL ERROR) ~~~ ~~~ ~~~ ~~~
     '   If you don't want to go to 'FatalEnd', d
-    If errNumber = 51 Then
-        Dim msgFO As String
-        msgFO = "An INTERNAL ERROR (Error 51) has occured.  This error is not specific to the Financial Tool, is is a general EXCEL Error." & vbNewLine
-        msgFO = msgFO & "The suggested course of action is to close ALL excel files and then re-open them. Please do that now to avoid any further issues." & vbCrLf
-        msgFO = msgFO & "An attempt will be made now to save the Fin Tool, and a BYPASS will be created that should allow you to close the file without further problems."
-        MsgBox_FT msgFO, vbOKOnly + vbCritical, "AN INTERNAL MS EXCEL ERROR HAS OCCURED!"
-        
-    End If
+'    If errNumber = 51 Then
+'        Dim msgFO As String
+'        msgFO = "An INTERNAL ERROR (Error 51) has occured.  This error is not specific to the Financial Tool, is is a general EXCEL Error." & vbNewLine
+'        msgFO = msgFO & "The suggested course of action is to close ALL excel files and then re-open them. Please do that now to avoid any further issues." & vbCrLf
+'        msgFO = msgFO & "An attempt will be made now to save the Fin Tool, and a BYPASS will be created that should allow you to close the file without further problems."
+'        MsgBox_FT msgFO, vbOKOnly + vbCritical, "AN INTERNAL MS EXCEL ERROR HAS OCCURED!"
+'
+'    End If
     
     If ThisWorkbook.readOnly Then
         'JUST IN CASE

@@ -52,14 +52,14 @@ Function ReplaceIllegalCharacters2(strIn As String, strChar As String, Optional 
     ReplaceIllegalCharacters2 = strIn
 End Function
 
-    Public Function SaveCopyToUserDocFolder(ByVal wb As Workbook, Optional fileName As Variant)
-        SaveWBCopy wb, Application.DefaultFilePath, IIf(IsMissing(fileName), wb.Name, CStr(fileName))
+    Public Function SaveCopyToUserDocFolder(ByVal Wb As Workbook, Optional fileName As Variant)
+        SaveWBCopy Wb, Application.DefaultFilePath, IIf(IsMissing(fileName), Wb.Name, CStr(fileName))
     End Function
 
-Public Function SaveWBCopy(ByVal wb As Workbook, dirPath As String, fileName As String)
+Public Function SaveWBCopy(ByVal Wb As Workbook, dirPath As String, fileName As String)
 On Error Resume Next
     Application.EnableEvents = False
-    wb.SaveCopyAs PathCombine(False, dirPath, fileName)
+    Wb.SaveCopyAs PathCombine(False, dirPath, fileName)
     Application.EnableEvents = True
     If Not Err.Number = 0 Then
         MsgBox "SaveWBCopy Error: " & Err.Number & ", " & Err.Description
