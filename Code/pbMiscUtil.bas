@@ -70,7 +70,7 @@ Public Function pbUnprotectSheet(ws As Worksheet) As Boolean
     pbUnprotectSheet = UnprotectSHT(ws)
 End Function
 
-Public Function StringsMatch(str1 As String, str2 As String, Optional smEnum As strMatchEnum = strMatchEnum.smEqual, Optional compMethod As VbCompareMethod = vbTextCompare) As Boolean
+Public Function StringsMatch(ByVal str1 As Variant, ByVal str2 As Variant, Optional smEnum As strMatchEnum = strMatchEnum.smEqual, Optional compMethod As VbCompareMethod = vbTextCompare) As Boolean
 '       PUT THIS ENUM AT TOP OF A STANDARD MODULE COPY OF THE ENUM FROM COMMON
         'Public Enum strMatchEnum
         '    smEqual = 0
@@ -79,6 +79,8 @@ Public Function StringsMatch(str1 As String, str2 As String, Optional smEnum As 
         '    smStartsWithStr = 3
         '    smEndWithStr = 4
         'End Enum
+    str1 = CStr(str1)
+    str2 = CStr(str2)
     Select Case smEnum
         Case strMatchEnum.smEqual
             StringsMatch = StrComp(str1, str2, compMethod) = 0

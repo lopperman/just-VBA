@@ -313,6 +313,9 @@ Public Function ArrArray(ByVal arr As Variant, flags As ArrayOptionFlags, Option
     Dim ai As ArrInformation
     ai = ArrayInfo(retArray)
     If unique Then
+        If ai.Dimensions = 0 Then
+            Err.Raise 427, Description:="Array not initialized"
+        End If
         If ai.Rows = 1 And ai.Columns = 1 Then
             'We're Good
         Else
@@ -323,11 +326,16 @@ Public Function ArrArray(ByVal arr As Variant, flags As ArrayOptionFlags, Option
         retArray = ConvertArrToRCArr(retArray)
     Else
         If ArrDimensions(retArray) = 0 Then
-            Dim tmpValue As Variant
-            tmpValue = retArray
-            'a single value was returned, convert to RC1 array
-            ReDim retArray(1 To 1, 1 To 1)
-            retArray(1, 1) = tmpValue
+            If UBound(retArray) >= 0 Then
+                Dim tmpValue As Variant
+                tmpValue = retArray
+                'a single value was returned, convert to RC1 array
+                ReDim retArray(1 To 1, 1 To 1)
+                retArray(1, 1) = tmpValue
+            Else
+                ReDim retArray(1 To 1, 1 To 1)
+                retArray(1, 1) = vbEmpty
+            End If
         End If
     End If
     
@@ -482,8 +490,8 @@ Private Function UniqueRC1Arr(ByVal arr As Variant, flags As ArrayOptionFlags) A
             Dim sidx As Long, sRng As Range
             .Sort.SortFields.Clear
             For sidx = 1 To tmpRng.Columns.count
-                Set sRng = tmpRng.Resize(ColumnSize:=1).offset(ColumnOffset:=sidx - 1)
-                .Sort.SortFields.add2 key:=.Range(sRng.Address), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+                Set sRng = tmpRng.Resize(ColumnSize:=1).Offset(ColumnOffset:=sidx - 1)
+                .Sort.SortFields.add2 Key:=.Range(sRng.Address), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
             Next sidx
             Set sRng = Nothing
             With .Sort

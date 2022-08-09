@@ -232,7 +232,7 @@ On Error GoTo E:
     Dim ky As Variant, nextRow As Long
     Dim trc As Variant
     
-    nextRow = LastRowWithData(wsDebug, 2) + 1
+    nextRow = LastPopulatedRow(wsDebug, 2) + 1
     If nextRow < 8 Then nextRow = 8
     
     Dim checkTraceArray As ArrInformation

@@ -24,6 +24,13 @@ Public Const CFG_P_LOG As String = "0000016"
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
 '   GENERALIZED TYPES
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
+    Public Enum NullableBool
+        [_Default] = 0
+        triNULL = 0
+        triTRUE = 1
+        triFALSE = 2
+    End Enum
+
 Public Enum CopyOptions
     [_coError] = 0
     'Modifies What's Being Copied
@@ -419,7 +426,7 @@ Public Enum ftMinMax
 End Enum
 Public Enum HolidayEnum
     holidayName = 1
-    holidayDt = 2
+    holidayDT = 2
 End Enum
 
 

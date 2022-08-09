@@ -17,7 +17,7 @@ Public Function IsSorted(rng As Range) As Boolean
     If rng.Rows.count > 1 Then
         Dim rng1 As Range, rng2 As Range
         Set rng1 = rng.Resize(rowSize:=rng.Rows.count - 1)
-        Set rng2 = rng1.offset(rowOffset:=1)
+        Set rng2 = rng1.Offset(rowOffset:=1)
         Dim expr As String
         expr = "AND(" & "'[" & ThisWorkbook.Name & "]" & rng1.Worksheet.Name & "'!" & rng1.Address & "<='[" & ThisWorkbook.Name & "]" & rng2.Worksheet.Name & "'!" & rng2.Address & ")"
         Debug.Print expr
@@ -312,11 +312,11 @@ Public Function CheckSort(lstObj As ListObject, col As Variant, sortPosition As 
         retV = True
         Dim sortFld As SortField
         Set sortFld = lstObj.Sort.SortFields(sortPosition)
-        If sortFld.key.Columns.count <> 1 Then
+        If sortFld.Key.Columns.count <> 1 Then
             retV = False
             Exit Function
         End If
-        If StrComp(sortFld.key.Address, lstObj.ListColumns(col).DataBodyRange.Address, vbTextCompare) <> 0 Then
+        If StrComp(sortFld.Key.Address, lstObj.ListColumns(col).DataBodyRange.Address, vbTextCompare) <> 0 Then
             retV = False
             Exit Function
         End If
@@ -341,7 +341,7 @@ Public Function GetRangeMultipleCrit(lstObj As ListObject, Columns As Variant, c
     If sortcols = False Then
         For sidx = LBound(Columns) To UBound(Columns)
             tmpIdx = tmpIdx + 1
-            If StrComp(lstObj.Sort.SortFields(tmpIdx).key.Address, lstObj.ListColumns(Columns(sidx)).DataBodyRange.Address, vbTextCompare) <> 0 Then
+            If StrComp(lstObj.Sort.SortFields(tmpIdx).Key.Address, lstObj.ListColumns(Columns(sidx)).DataBodyRange.Address, vbTextCompare) <> 0 Then
                 sortcols = True
                 Exit For
             End If
@@ -375,9 +375,9 @@ Public Function GetRangeMultipleCrit(lstObj As ListObject, Columns As Variant, c
                 Set curRng = Nothing
                 Exit For
             End If
-            Set curRng = lstObj.ListColumns(currCol).Range.offset(rowOffset:=firstOuter).Resize(rowSize:=lastOuter - firstOuter + 1)
+            Set curRng = lstObj.ListColumns(currCol).Range.Offset(rowOffset:=firstOuter).Resize(rowSize:=lastOuter - firstOuter + 1)
         Else
-            Set curRng = curRng.offset(ColumnOffset:=lstObj.ListColumns(currCol).Range.EntireColumn.column - curRng.column)
+            Set curRng = curRng.Offset(ColumnOffset:=lstObj.ListColumns(currCol).Range.EntireColumn.column - curRng.column)
             firstOuter = FirstRowInRange(curRng, currCrit)
             lastOuter = LastRowInRange(curRng, currCrit)
             If firstOuter = 0 Then
@@ -390,7 +390,7 @@ Public Function GetRangeMultipleCrit(lstObj As ListObject, Columns As Variant, c
             Else
                 rwOffset = 0
             End If
-            Set curRng = curRng.offset(rowOffset:=rwOffset).Resize(rowSize:=lastOuter - firstOuter + 1)
+            Set curRng = curRng.Offset(rowOffset:=rwOffset).Resize(rowSize:=lastOuter - firstOuter + 1)
         End If
     Next cidx
          
@@ -649,7 +649,7 @@ Public Function GetOffsetRange(ByRef listObjCell As Range, returnCol As Variant)
     Dim fromLOCol As Long: fromLOCol = (listObjCell.column - firstLOCol) + 1
     Dim toFldIdx As Long: toFldIdx = GetFieldIndex(listObjCell.ListObject, returnCol)
     If fromLOCol > 0 And toFldIdx > 0 Then
-        Set retRng = listObjCell.offset(ColumnOffset:=(toFldIdx - fromLOCol))
+        Set retRng = listObjCell.Offset(ColumnOffset:=(toFldIdx - fromLOCol))
     End If
 
     Set GetOffsetRange = retRng
@@ -1051,7 +1051,7 @@ On Error GoTo E:
         If (startLooking.Rows.count - rowIDX) = 0 Then
             Exit Do
         End If
-        Set startLooking = startLooking.offset(rowIDX).Resize(startLooking.Rows.count - rowIDX)
+        Set startLooking = startLooking.Offset(rowIDX).Resize(startLooking.Rows.count - rowIDX)
         rowIDX = MatchFirst(criteria, startLooking, ExactMatch)
     Loop
     
@@ -1105,7 +1105,7 @@ On Error GoTo E:
             Exit Do
         End If
         
-        Set startLooking = startLooking.offset(rowIDX).Resize(startLooking.Rows.count - rowIDX)
+        Set startLooking = startLooking.Offset(rowIDX).Resize(startLooking.Rows.count - rowIDX)
         rowIDX = MatchFirst(criteria, startLooking, ExactMatch)
     Loop
 
@@ -1160,7 +1160,7 @@ Public Function GetFoundRange(listObj As ListObject, field As Variant, forceSort
             retColIdx = GetFieldIndex(listObj, returnColumn)
             Dim offsetBy As Long
             offsetBy = retColIdx - fieldIdx
-            Set foundRange = foundRange.offset(ColumnOffset:=offsetBy)
+            Set foundRange = foundRange.Offset(ColumnOffset:=offsetBy)
         End If
     End If
 
@@ -1241,7 +1241,7 @@ Private Function GetRowIndex(ByRef listObj As ListObject, field As Variant, crit
             Else
                 Dim srtField As SortField
                 Set srtField = .Sort.SortFields(1)
-                If srtField.key.column <> .ListColumns(fieldIdx).Range.column Then
+                If srtField.Key.column <> .ListColumns(fieldIdx).Range.column Then
                     AddSort listObj, field, clearPreviousSorts:=True
                 End If
             End If
@@ -1288,7 +1288,7 @@ Public Function GetRangeMultipleCriteria(lo As ListObject, Columns As Variant, c
             Dim lookInRange As Range
             Set lookInRange = lo.ListColumns(Columns(idx)).DataBodyRange
             
-            Set lookInRange = lookInRange.offset(rowOffset:=firstIDX - 1).Resize(rowSize:=lastIDX - firstIDX + 1)
+            Set lookInRange = lookInRange.Offset(rowOffset:=firstIDX - 1).Resize(rowSize:=lastIDX - firstIDX + 1)
             Dim subFirst As Long, subLast As Long
             subFirst = MatchFirst(criteria(idx), lookInRange, ExactMatch)
             subLast = MatchLast(criteria(idx), lookInRange, ExactMatch)
@@ -1303,7 +1303,7 @@ Public Function GetRangeMultipleCriteria(lo As ListObject, Columns As Variant, c
     Next idx
     
     If firstIDX > 0 And lastIDX > 0 Then
-        Set retRange = lo.ListColumns(returnColumn).DataBodyRange.offset(rowOffset:=firstIDX - 1).Resize(lastIDX - firstIDX + 1)
+        Set retRange = lo.ListColumns(returnColumn).DataBodyRange.Offset(rowOffset:=firstIDX - 1).Resize(lastIDX - firstIDX + 1)
         If Not IsMissing(setRangeValue) Then
             retRange.value = setRangeValue
         End If
@@ -2110,25 +2110,94 @@ Public Property Get LastColumnWithData(wks As Worksheet) As Long
     End If
 End Property
 
-Public Property Get LastRowWithData(wks As Worksheet, Optional column As Variant) As Long
-    Dim ret As Long
-    ret = -1
-    If Not IsMissing(column) Then
-        If IsNumeric(column) Then
-            ret = wks.Cells(wks.Rows.count, CLng(column)).End(xlUp).Row
-        Else
-            ret = wks.Cells(wks.Rows.count, CStr(column)).End(xlUp).Row
+Public Function LastPopulatedRow(wks As Worksheet, Optional column As Variant) As Long
+    Dim LPR As Long
+    Dim rowOffset As Long, colOffset As Long, urColEnd As Long, urRowEnd As Long
+    rowOffset = wks.usedRange.Row - 1
+    colOffset = wks.usedRange.column - 1
+    urColEnd = wks.usedRange.Columns.count + colOffset
+    urRowEnd = wks.usedRange.Rows.count + rowOffset
+    Dim exactCol As Long: If Not IsMissing(column) Then exactCol = column
+    If exactCol > 0 And exactCol < urColEnd Then urColEnd = exactCol
+    '   If asking for Column outside last col with data, then return 0
+    If exactCol > urColEnd Then
+        LPR = 0
+    '   HANDLE EMPTY SHEET ( OR JUST $A$1 HAS DATA)
+    ElseIf urRowEnd = 1 And urColEnd = 1 Then
+        LPR = IIf(Len(wks.Range("A1").Text) > 0, 1, 0)
+        If Not exactCol > 0 And LPR = 1 Then
+            If exactCol > 1 Then LPR = 0
+        End If
+    '   HANDLE SINGLE CELL POPULATED OTHER THAN $A$1
+    ElseIf (VarType(wks.usedRange.Text) And VbVarType.vbArray) = 0 Then
+        LPR = urRowEnd
+        If exactCol > 0 Then
+            ' ONLY ONE CELL POPULATED IIF urColEnd doesn't match Column, then return 0
+            If exactCol <> urColEnd Then LPR = 0
         End If
     Else
-        ret = wks.usedRange.Rows.count + (wks.usedRange.Row - 1)
+        LPR = urRowEnd
     End If
-    LastRowWithData = ret
-End Property
+   'SHOULD BE GOOD, UNLESS THE ROW [LPR] ISN'T VISIBLE
+   '(HIDDEN ROW THAT HAS NOT DATA IS STILL COUNTED IN USED RANGE, SO
+   ' NOW WE NEED TO CHECK THAT)
+   If LPR > 0 Then
+        Dim deepCheck As Boolean
+        If wks.Rows(LPR).Hidden Then deepCheck = True
+        If Not deepCheck And exactCol > 0 Then
+            If Len(wks.Cells(LPR, exactCol).Text) = 0 Then deepCheck = True
+        End If
+        If deepCheck Then
+            Dim rowIDX As Long, colIDX As Long
+            Dim hasRowData As Boolean
+            For rowIDX = LPR To 1 Step -1
+                If exactCol > 0 Then
+                    hasRowData = Len(wks.Cells(rowIDX, exactCol + colOffset)) > 0
+                    If hasRowData Then
+                        LPR = rowIDX
+                    ElseIf rowIDX = 1 Then
+                        'NO ROWS IN [COLUMN] HAVE ANY DATA
+                        LPR = 0
+                        Exit For
+                    End If
+                Else
+                    For colIDX = 1 To urColEnd
+                        hasRowData = Len(wks.Cells(rowIDX, colIDX + colOffset)) > 0
+                        If hasRowData Then
+                            LPR = rowIDX
+                            Exit For
+                        End If
+                    Next colIDX
+                End If
+                DoEvents
+                If hasRowData Then Exit For
+            Next rowIDX
+        End If
+    End If
+    LastPopulatedRow = LPR
+End Function
+
+'Public Property Get LastPopulatedRow(wks As Worksheet, Optional column As Variant) As Long
+'    Dim ret As Long
+'    ret = -1
+'    If Not IsMissing(column) Then
+'        If IsNumeric(column) Then
+'            ret = wks.Cells(wks.Rows.count, CLng(column)).End(xlUp).Row
+'        Else
+'            ret = wks.Cells(wks.Rows.count, CStr(column)).End(xlUp).Row
+'        End If
+'    Else
+'        ret = wks.usedRange.Rows.count + (wks.usedRange.Row - 1)
+'    End If
+'    LastPopulatedRow = ret
+'End Property
+
+
 Public Function GetA1CellRef(fromRng As Range, Optional colOffset As Long = 0, Optional rowCount As Long = 1, Optional colcount As Long = 1, Optional rowOffset As Long = 0, Optional fixedRef As Boolean = False, Optional visibleCellsOnly As Boolean = False) As String
 '   return A1 style reference (e.g. "A10:A116") from selection
 '   Optional offsets, resized ranges supported
     Dim tmpRng As Range
-    Set tmpRng = fromRng.offset(rowOffset, colOffset)
+    Set tmpRng = fromRng.Offset(rowOffset, colOffset)
     If colcount > 1 Or rowCount > 1 Then
         Set tmpRng = tmpRng.Resize(rowCount, colcount)
     End If

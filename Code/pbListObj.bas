@@ -45,7 +45,7 @@ Public Function UserSort(lstObj As ListObject, lstColIdx As Long)
             clearPreviousSort = True
         Else
             If lstObj.Sort.SortFields.count = 1 Then
-                If lstObj.Sort.SortFields(1).key.column - hdrCol + 1 <> lstColIdx Then
+                If lstObj.Sort.SortFields(1).Key.column - hdrCol + 1 <> lstColIdx Then
                     clearPreviousSort = True
                 End If
             End If
@@ -371,7 +371,7 @@ End Function
 Public Function CountBlanks(lstObj As ListObject, listColumn As Variant) As Long
 On Error Resume Next
     Dim rng As Range
-    If HasData(lstObj) = False Then
+    If hasData(lstObj) = False Then
         CountBlanks = 0
         Exit Function
     End If
@@ -384,12 +384,12 @@ On Error Resume Next
 
 End Function
 
-Public Function HasData(lstObj As Variant) As Boolean
+Public Function hasData(lstObj As Variant) As Boolean
 On Error Resume Next
     If TypeName(lstObj) = "ListObject" Then
-        HasData = lstObj.listRows.count > 0
+        hasData = lstObj.listRows.count > 0
     ElseIf TypeName(lstObj) = "String" Then
-        HasData = wt(CStr(lstObj)).listRows.count > 0
+        hasData = wt(CStr(lstObj)).listRows.count > 0
     End If
     If Err.Number <> 0 Then Err.Clear
 End Function
@@ -409,7 +409,7 @@ Public Function ListColumnRange(srcListobj As ListObject, lstColumn As Variant, 
         Set tmpRange = srcListobj.ListColumns(lstColumn).Range
     
         If includeHeaderRow = False Then
-            Set tmpRange = tmpRange.offset(rowOffset:=HeaderRangeRows(srcListobj)).Resize(rowSize:=tmpRange.Rows.count - HeaderRangeRows(srcListobj))
+            Set tmpRange = tmpRange.Offset(rowOffset:=HeaderRangeRows(srcListobj)).Resize(rowSize:=tmpRange.Rows.count - HeaderRangeRows(srcListobj))
         End If
         
         If includeTotalsRow = False And .ShowTotals Then
@@ -480,7 +480,29 @@ E:
 
 End Function
 
+Public Function FindListObject(extWB As Workbook, lstName As String) As ListObject
 
+    Dim retLO As ListObject
+
+    Dim eWS As Worksheet, eLO As ListObject
+    For Each eWS In extWB.Worksheets
+        For Each eLO In eWS.ListObjects
+            If StringsMatch(lstName, eLO.Name) Then
+                Set retLO = eLO
+                Exit For
+            End If
+        Next eLO
+        If Not retLO Is Nothing Then
+            Exit For
+        End If
+    Next eWS
+    
+    If Not retLO Is Nothing Then
+        Set FindListObject = retLO
+    End If
+    Set retLO = Nothing
+
+End Function
 
 'Obtain the first row given a set of headers and values
 '@param {ListObject} The listobject to search within.

@@ -115,6 +115,7 @@ On Error GoTo E:
         End If
     End If
     
+    
     l_hideSheets.CompareMode = vbTextCompare
 
 '   ~~~ ~~~ OPTIONAL ~~~ ~~~
@@ -140,7 +141,7 @@ End Function
 Private Function AddHideSheet(wsName As String)
     If Len(wsName) > 0 Then
         If WorksheetExists(wsName) Then
-            l_hideSheets.Add wsName, key:=wsName
+            l_hideSheets.Add wsName, Key:=wsName
         End If
     End If
 End Function
@@ -154,7 +155,7 @@ End Function
         Optional enableCloseBypass As Boolean = False)
         
         PerfStateClear doNotProtect:=ignoreProtect, doNotDumpTrace:=ignoreDumpTrace, forceSheet:=forceSheet, byPassCloseChk:=enableCloseBypass
-    
+        
     End Function
 
     Public Function SuspendMode(Optional calc As XlCalculation = XlCalculation.xlCalculationAutomatic)
@@ -479,6 +480,7 @@ Public Function RestoreDefaultAppSettingsOnly()
         Application.EnableAnimations = True
         Application.EnableMacroAnimations = True
 
+        lPerfState.IsPerfState = False
 End Function
 
 Private Sub Class_Initialize()

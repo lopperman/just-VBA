@@ -31,7 +31,7 @@ Attribute VB_Exposed = False
     Option Explicit
 
     Private Type KVP
-      key As String
+      Key As String
       value As Variant
     End Type
     Private Type HashIndexes
@@ -53,7 +53,7 @@ Attribute VB_Exposed = False
            If Not dVal = 0 Then Item(fKey) = Item(fKey) + dVal
         Else
             'Add new Key, even if value is 0
-            Add dVal, key:=fKey
+            Add dVal, Key:=fKey
         End If
     End Function
 
@@ -61,10 +61,42 @@ Attribute VB_Exposed = False
         If Exists(fKey) Then
             If addCount <> 0 Then Item(fKey) = Item(fKey) + addCount
         Else
-            Add addCount, key:=fKey
+            Add addCount, Key:=fKey
         End If
     End Function
 
+    Public Function CreateOrUseMAX(ByVal fKey As String, ByVal dVal As Variant)
+        If Exists(fKey) Then
+            Item(fKey) = ChooseMax(dVal, Item(fKey))
+        Else
+            Add dVal, Key:=fKey
+        End If
+    End Function
+    
+    Public Function CreateOrUseMIN(ByVal fKey As String, ByVal dVal As Variant)
+        If Exists(fKey) Then
+            Item(fKey) = ChooseMin(dVal, Item(fKey))
+        Else
+            Add dVal, Key:=fKey
+        End If
+    End Function
+    
+    Private Function ChooseMax(Val1, Val2)
+    ' REPLACE WORKSHEET 'MAX' WITH THIS (MUCH BETTER PERFORMANCE FROM VBA)
+        If Val1 > Val2 Then
+            ChooseMax = Val1
+        Else
+            ChooseMax = Val2
+        End If
+    End Function
+    Public Function ChooseMin(Val1, Val2)
+        If Val1 > Val2 Then
+            ChooseMin = Val2
+        Else
+            ChooseMin = Val1
+        End If
+    End Function
+    
 
     Public Function SetExpectedCount(Optional ByVal expCount As Long = 5000)
         lHashTblSize = 8
@@ -85,20 +117,20 @@ Attribute VB_Exposed = False
         count = lCount
     End Property
     
-    Public Function Exists(key As String) As Boolean
-        Exists = FindIndex(key, CalcHash(key)) > 0
+    Public Function Exists(Key As String) As Boolean
+        Exists = FindIndex(Key, CalcHash(Key)) > 0
     End Function
     
-    Public Function IndexByKey(key As String) As Long
-        IndexByKey = FindIndex(key, CalcHash(key))
+    Public Function IndexByKey(Key As String) As Long
+        IndexByKey = FindIndex(Key, CalcHash(Key))
     End Function
 
-    Public Function Add(Item, Optional key As String)
+    Public Function Add(Item, Optional Key As String)
         Dim HashValue As Long, UB As Long
-        HashValue = CalcHash(key)
+        HashValue = CalcHash(Key)
         If UniqueKeys Then
-            If FindIndex(key, HashValue) Then
-                Err.Raise 457, Description:="Key already exists in pbHASH (UniqueKeys: TRUE, key: " & key & ")"
+            If FindIndex(Key, HashValue) Then
+                Err.Raise 457, Description:="Key already exists in pbHASH (UniqueKeys: TRUE, key: " & Key & ")"
             End If
         End If
         
@@ -109,7 +141,7 @@ Attribute VB_Exposed = False
             ReDim Preserve DataTable(0 To lDtUpper)
         End If
       
-        DataTable(lCount).key = key
+        DataTable(lCount).Key = Key
         If IsObject(Item) Then
             Set DataTable(lCount).value = Item
         Else
@@ -127,7 +159,7 @@ Attribute VB_Exposed = False
 
     Public Property Get KeyByIndex(ByVal IndexOneBased As Long)
         If IndexOneBased < 1 Or IndexOneBased > lCount Then Err.Raise 9
-        KeyByIndex = DataTable(IndexOneBased).key
+        KeyByIndex = DataTable(IndexOneBased).Key
     End Property
 
     Public Property Get Item(KeyOrOneBasedIndex)
@@ -168,24 +200,24 @@ Attribute VB_Exposed = False
         Item(KeyOrOneBasedIndex) = newItem
     End Property
 
-    Private Function FindIndex(key, ByVal HashValue As Long) As Long
+    Private Function FindIndex(Key, ByVal HashValue As Long) As Long
         Dim i As Long, CM As VbCompareMethod
         With HashTable(HashValue)
             CM = CompareMode
             For i = 1 To UBound(.DataIndexes)
-                If StrComp(key, DataTable(.DataIndexes(i)).key, CM) = 0 Then
+                If StrComp(Key, DataTable(.DataIndexes(i)).Key, CM) = 0 Then
                     FindIndex = .DataIndexes(i): Exit Function
                 End If
             Next i
         End With
     End Function
 
-    Public Function CalcHash(key) As Long
+    Public Function CalcHash(Key) As Long
         Dim i As Long, l As Long, b() As Byte
         If CompareMode Then
-            b = LCase$(key)
+            b = LCase$(Key)
         Else
-            b = key
+            b = Key
         End If
         l = 7919
         For i = UBound(b) To 0 Step -1
