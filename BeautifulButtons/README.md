@@ -9,7 +9,7 @@
 ## FULLY FUNCTIONAL DEMO / CODE
 #### Download the ![BeautifulButtons.xlsm](https://github.com/lopperman/just-VBA/raw/main/BeautifulButtons/BeautifulButtons.xlsm) to get a fully functional demo, which also includes all the source code.  I apologize for how 'noisy' this next image is, but if you take a look, it illustrates some information about how these custom buttons work.
 ***
-![](https://github.com/lopperman/just-VBA/blob/main/BeautifulButtons/Buttoninfo.png?raw=true)
+![](https://github.com/lopperman/just-VBA/blob/main/BeautifulButtons/ButtonInfo.png?raw=true)
 
 
 
