@@ -1,7 +1,7 @@
 ![](https://github.com/lopperman/just-VBA/blob/main/Misc/haveYouSeen.png?raw=true)
 ***
-## [Latest Upload: Hash table demo](https://github.com/lopperman/just-VBA/tree/main/HashtableDemo)
-![](https://github.com/lopperman/just-VBA/blob/main/HashtableDemo/fastHash.png?raw=true)
+## [Latest Upload: Custom Hash table Vs. Dictionary](https://github.com/lopperman/just-VBA/tree/main/DictionaryVsHashTable)
+![](https://github.com/lopperman/just-VBA/blob/main/DictionaryVsHashTable/hashVsDict1.png?raw=true)
 ***
 
 ***
