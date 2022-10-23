@@ -37,7 +37,7 @@ End Function
 
 Public Property Get DynamicPvtTable() As PivotTable
     If lPvtTable Is Nothing Then
-        If wsDynamicPivot.PivotTables.count = 1 Then
+        If wsDynamicPivot.PivotTables.Count = 1 Then
             Set lPvtTable = wsDynamicPivot.PivotTables(1)
         End If
     End If
@@ -66,7 +66,7 @@ Public Function FieldNames() As Dictionary
     tmpARR = WorksheetFunction.Sort(SourceTable.HeaderRowRange.value)
     
     Dim idx As Long
-    For idx = 1 To SourceTable.ListColumns.count
+    For idx = 1 To SourceTable.ListColumns.Count
         d.Add SourceTable.ListColumns(idx).Name, SourceTable.ListColumns(idx).Name
     Next idx
     Set FieldNames = d
@@ -89,14 +89,14 @@ Public Function AddPageFields(Optional flds As Variant)
     If IsArray(flds) = False Then
         pbPivotUtil.UpdatePivotField DynamicPvtTable, flds, xlPageField
     Else
-        Dim fIDX As Long
-        For fIDX = LBound(flds) To UBound(flds)
+        Dim fidx As Long
+        For fidx = LBound(flds) To UBound(flds)
             If ArrDimensions(flds) = 1 Then
-                pbPivotUtil.UpdatePivotField DynamicPvtTable, flds(fIDX), xlPageField
+                pbPivotUtil.UpdatePivotField DynamicPvtTable, flds(fidx), xlPageField
             Else
-                pbPivotUtil.UpdatePivotField DynamicPvtTable, flds(fIDX, 1), xlPageField
+                pbPivotUtil.UpdatePivotField DynamicPvtTable, flds(fidx, 1), xlPageField
             End If
-        Next fIDX
+        Next fidx
     End If
 
 End Function
@@ -117,14 +117,14 @@ Public Function AddRowFields(Optional flds As Variant)
     If IsArray(flds) = False Then
         pbPivotUtil.UpdatePivotField DynamicPvtTable, flds, xlRowField, , , True
     Else
-        Dim fIDX As Long
-        For fIDX = LBound(flds) To UBound(flds)
+        Dim fidx As Long
+        For fidx = LBound(flds) To UBound(flds)
             If ArrDimensions(flds) = 1 Then
-                pbPivotUtil.UpdatePivotField DynamicPvtTable, flds(fIDX), xlRowField, , , True
+                pbPivotUtil.UpdatePivotField DynamicPvtTable, flds(fidx), xlRowField, , , True
             Else
-                pbPivotUtil.UpdatePivotField DynamicPvtTable, flds(fIDX, 1), xlRowField, , , True
+                pbPivotUtil.UpdatePivotField DynamicPvtTable, flds(fidx, 1), xlRowField, , , True
             End If
-        Next fIDX
+        Next fidx
     End If
 End Function
 
@@ -164,15 +164,15 @@ Public Function ConfigureDataFields(flds As Variant, Optional summaryType As Var
     End If
     
     If IsArray(flds) Then
-        curFld = flds(LBound(flds) + lDataFieldConsolFunctions.count)
+        curFld = flds(LBound(flds) + lDataFieldConsolFunctions.Count)
     Else
         curFld = flds
     End If
     
     lDataFieldConsolFunctions.Add curFld, summaryType
     
-    If lDataFieldConsolFunctions.count < fldCount Then
-        curFld = flds(LBound(flds) + lDataFieldConsolFunctions.count)
+    If lDataFieldConsolFunctions.Count < fldCount Then
+        curFld = flds(LBound(flds) + lDataFieldConsolFunctions.Count)
         Set pkg = BuildPackage(pbPivotTable.DynamicPivot, "ConfigureDataFields", VbMethod)
         pkg.UpdateArgs flds
         Wom.Picklist.Initialize "Choose Summary Type for: " & curFld, "Choose Function to Summarize Field: " & curFld, GetConsolidationNames, plSingle, pkg
@@ -260,7 +260,7 @@ Public Function Subtotals(Optional flds As Variant)
         For Each pf In DynamicPvtTable.rowFields
             d(pf.SourceName) = pf.SourceName
         Next pf
-        If d.count > 0 Then
+        If d.Count > 0 Then
             Dim pkg As Package
             Set pkg = BuildPackage(pbPivotTable.DynamicPivot, "Subtotals", VbMethod)
             Wom.Picklist.Initialize "Add Subtotals", "Choose fields to display subtotals", d, plMultiple_MinimumNone, pkg
@@ -306,14 +306,14 @@ Public Function AddColumnFields(Optional flds As Variant)
     If IsArray(flds) = False Then
         pbPivotUtil.UpdatePivotField DynamicPvtTable, flds, xlColumnField
     Else
-        Dim fIDX As Long
-        For fIDX = LBound(flds) To UBound(flds)
+        Dim fidx As Long
+        For fidx = LBound(flds) To UBound(flds)
             If ArrDimensions(flds) = 1 Then
-                pbPivotUtil.UpdatePivotField DynamicPvtTable, flds(fIDX), xlColumnField
+                pbPivotUtil.UpdatePivotField DynamicPvtTable, flds(fidx), xlColumnField
             Else
-                pbPivotUtil.UpdatePivotField DynamicPvtTable, flds(fIDX, 1), xlColumnField
+                pbPivotUtil.UpdatePivotField DynamicPvtTable, flds(fidx, 1), xlColumnField
             End If
-        Next fIDX
+        Next fidx
     End If
 End Function
 

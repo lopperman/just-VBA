@@ -32,7 +32,7 @@ Option Base 1
 '   ~~~ ~~~ Sort's a List Object by [lstColIdx] Ascending.  If already
 '                   sorted Ascending, sorts Descending
 Public Function UserSort(lstObj As ListObject, lstColIdx As Long)
-        If lstObj.listRows.count = 0 Then Exit Function
+        If lstObj.listRows.Count = 0 Then Exit Function
         If lstObj.Range.Worksheet.Protection.AllowSorting = False Then
             MsgBox_FT "This table does not allow custom sorting", vbOKOnly + vbInformation, "SORRY"
             Exit Function
@@ -41,11 +41,11 @@ Public Function UserSort(lstObj As ListObject, lstColIdx As Long)
         Dim orderBy As XlSortOrder
         orderBy = xlAscending
         hdrCol = lstObj.HeaderRowRange.column
-        If lstObj.Sort.SortFields.count > 1 Then
+        If lstObj.Sort.SortFields.Count > 1 Then
             clearPreviousSort = True
         Else
-            If lstObj.Sort.SortFields.count = 1 Then
-                If lstObj.Sort.SortFields(1).Key.column - hdrCol + 1 <> lstColIdx Then
+            If lstObj.Sort.SortFields.Count = 1 Then
+                If lstObj.Sort.SortFields(1).KEY.column - hdrCol + 1 <> lstColIdx Then
                     clearPreviousSort = True
                 End If
             End If
@@ -54,7 +54,7 @@ Public Function UserSort(lstObj As ListObject, lstColIdx As Long)
             lstObj.Sort.SortFields.Clear
         End If
         With lstObj.Sort
-            If .SortFields.count = 1 Then
+            If .SortFields.Count = 1 Then
                 If Not .SortFields(1).SortOn = xlSortOnValues Then .SortFields(1).SortOn = xlSortOnValues
                 If .SortFields(1).Order = xlAscending Then
                     .SortFields(1).Order = xlDescending
@@ -68,7 +68,7 @@ Public Function UserSort(lstObj As ListObject, lstColIdx As Long)
         End With
 Finalize:
     On Error Resume Next
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
     Exit Function
 E:
     ErrorCheck
@@ -89,7 +89,7 @@ On Error GoTo E:
     If totalRowCount <= 0 And addRowCount <= 0 Then Exit Function
     
     '   Confirm both rowcount parameters were not used (totalRowCount, addRowCount)
-    If totalRowCount > 0 And totalRowCount < lstObj.listRows.count Then
+    If totalRowCount > 0 And totalRowCount < lstObj.listRows.Count Then
         Err.Raise 17
         'RaiseError ERR_LIST_OBJECT_RESIZE_CANNOT_DELETE, "Resizing Failed because new 'totalRowCount' is less than existing row count"
     End If
@@ -99,22 +99,22 @@ On Error GoTo E:
     End If
         
     If addRowCount > 0 Then
-        newRowCount = lstObj.listRows.count + addRowCount
+        newRowCount = lstObj.listRows.Count + addRowCount
     Else
-        addRowCount = totalRowCount - lstObj.listRows.count
+        addRowCount = totalRowCount - lstObj.listRows.Count
         newRowCount = totalRowCount
     End If
     '   Include Header range and TotalsRange (if applicable) in overall ListObject Range Size
     nonBodyRowCount = HeaderRangeRows(lstObj) + TotalsRangeRows(lstObj)
         
-    lastRealDataRow = lstObj.HeaderRowRange.Row + lstObj.HeaderRowRange.Rows.count - 1
-    If lstObj.listRows.count > 0 Then lastRealDataRow = lastRealDataRow + lstObj.listRows.count
+    lastRealDataRow = lstObj.HeaderRowRange.Row + lstObj.HeaderRowRange.Rows.Count - 1
+    If lstObj.listRows.Count > 0 Then lastRealDataRow = lastRealDataRow + lstObj.listRows.Count
     
     '   Resize ListObject Range with new range
     lstObj.Resize lstObj.Range.Resize(rowSize:=newRowCount + nonBodyRowCount)
     
     Set newRowRange = lstObj.Range.Worksheet.Cells(lastRealDataRow + 1, lstObj.Range.column)
-    Set newRowRange = newRowRange.Resize(rowSize:=addRowCount, ColumnSize:=lstObj.ListColumns.count)
+    Set newRowRange = newRowRange.Resize(rowSize:=addRowCount, ColumnSize:=lstObj.ListColumns.Count)
 
 Finalize:
     On Error Resume Next
@@ -129,9 +129,9 @@ Finalize:
 E:
     failed = True
     '   add your own error handline rules here
-    MsgBox "Error: " & Err.Number & ", " & Err.Description
+    MsgBox "Error: " & Err.number & ", " & Err.Description
     'ErrorCheck
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
     Resume Finalize:
 
 End Function
@@ -140,11 +140,11 @@ End Function
     Public Function HeaderRangeRows(lstObj As ListObject) As Long
     ' *** Returns -1 for Error, other Num Rows in HeaderRowRange
     On Error Resume Next
-        HeaderRangeRows = lstObj.HeaderRowRange.Rows.count
-        If Err.Number <> 0 Then
+        HeaderRangeRows = lstObj.HeaderRowRange.Rows.Count
+        If Err.number <> 0 Then
             HeaderRangeRows = -1
         End If
-        If Err.Number <> 0 Then Err.Clear
+        If Err.number <> 0 Then Err.Clear
     End Function
     
     Public Function TotalsRangeRows(lstObj As ListObject) As Long
@@ -152,13 +152,13 @@ End Function
     On Error Resume Next
         If Not lstObj.TotalsRowRange Is Nothing Then
             If lstObj.ShowTotals Then
-                TotalsRangeRows = lstObj.TotalsRowRange.Rows.count
+                TotalsRangeRows = lstObj.TotalsRowRange.Rows.Count
             End If
         End If
-        If Err.Number <> 0 Then
+        If Err.number <> 0 Then
             TotalsRangeRows = -1
         End If
-        If Err.Number <> 0 Then Err.Clear
+        If Err.number <> 0 Then Err.Clear
     End Function
 
 
@@ -167,7 +167,7 @@ End Function
 Public Function ReplaceFormulasWithStatic(lstObj As ListObject) As Boolean
 '   REPLACES ALL FORMULAS IN LIST COLUMS, WITH THE VALUES
 '   Helpful for situations like creating static copies of tables/listobjects
-    If lstObj.listRows.count = 0 Then Exit Function
+    If lstObj.listRows.Count = 0 Then Exit Function
     Dim lc As listColumn
     For Each lc In lstObj.ListColumns
         If lc.DataBodyRange(1, 1).HasFormula Then
@@ -207,7 +207,7 @@ Public Function CreateListColumnFormula(lstObj As ListObject, lstColName As Stri
 '   Note: Sets the 'Formula2R1C1' Formula Property.
 On Error GoTo E:
     Dim failed As Boolean
-    If lstObj.listRows.count = 0 Then
+    If lstObj.listRows.Count = 0 Then
         Exit Function
     End If
     
@@ -248,7 +248,7 @@ Finalize:
     If ArrDimensions(tmpColArr) > 0 Then Erase tmpColArr
     CreateListColumnFormula = Not failed
     
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
     Exit Function
 E:
     failed = True
@@ -313,7 +313,7 @@ Public Function ListColumnAsArray(lstObj As ListObject, colName As String) As Va
     Dim tmpARR As Variant
     Dim tmpAI As ArrInformation
     
-    If lstObj.listRows.count = 0 Then
+    If lstObj.listRows.Count = 0 Then
         Exit Function
     End If
     tmpARR = ArrListCols(lstObj, aoNone, colName)
@@ -334,7 +334,7 @@ End Function
 Public Function ListColumnIndex(ByRef lstObj As ListObject, lstColName As String) As Long
     Dim retV As Long
     Dim colIDX As Long
-    For colIDX = 1 To lstObj.ListColumns.count
+    For colIDX = 1 To lstObj.ListColumns.Count
         If StrComp(LCase(lstColName), LCase(lstObj.ListColumns(colIDX).Name), vbTextCompare) = 0 Then
             retV = colIDX
             Exit For
@@ -357,15 +357,15 @@ On Error Resume Next
             Set nc = lstObj.ListColumns.Add
         End If
         nc.Name = colName
-        If lstObj.listRows.count > 0 And numberFormat <> vbNullString Then
+        If lstObj.listRows.Count > 0 And numberFormat <> vbNullString Then
             nc.DataBodyRange.numberFormat = numberFormat
         End If
     End If
-    AddColumnIfMissing = (Err.Number = 0)
-    If Err.Number <> 0 Then Err.Clear
+    AddColumnIfMissing = (Err.number = 0)
+    If Err.number <> 0 Then Err.Clear
     Set nc = Nothing
     
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
 End Function
 
 Public Function CountBlanks(lstObj As ListObject, listColumn As Variant) As Long
@@ -377,21 +377,48 @@ On Error Resume Next
     End If
     Set rng = lstObj.ListColumns(listColumn).DataBodyRange.SpecialCells(xlCellTypeBlanks)
     If Not rng Is Nothing Then
-        CountBlanks = rng.Rows.count
+        CountBlanks = rng.Rows.Count
     End If
     Set rng = Nothing
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
+
+End Function
+
+Public Function ClearFormulas(lstObj As ListObject, listCol As Variant, Optional ByVal showMsg As Boolean = False) As Long
+On Error Resume Next
+    
+    Dim fmlaRng As Range, retV As Long
+    If hasData(lstObj) Then
+        Set fmlaRng = lstObj.ListColumns(listCol).DataBodyRange
+        Set fmlaRng = fmlaRng.SpecialCells(xlCellTypeFormulas)
+        If Err.number <> 0 Then
+            Err.Clear
+        Else
+            If Not fmlaRng Is Nothing Then
+                retV = fmlaRng.Count
+                fmlaRng.value = Empty
+            End If
+        End If
+    End If
+        
+    ClearFormulas = retV
+    If showMsg And retV > 0 Then
+        MsgBox_FT Concat(retV, " values were removed from ", lstObj.Range.Worksheet.Name, "[", lstObj.Name, "].[", lstObj.ListColumns(listCol).Name, "] becase formulas are not allowed to be manually entered anywere in the Financial Tool"), vbCritical + vbOKOnly, "OOPS"
+        DoEvents
+    End If
+
+    
 
 End Function
 
 Public Function hasData(lstObj As Variant) As Boolean
 On Error Resume Next
     If TypeName(lstObj) = "ListObject" Then
-        hasData = lstObj.listRows.count > 0
+        hasData = lstObj.listRows.Count > 0
     ElseIf TypeName(lstObj) = "String" Then
-        hasData = wt(CStr(lstObj)).listRows.count > 0
+        hasData = wt(CStr(lstObj)).listRows.Count > 0
     End If
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
 End Function
 
 
@@ -400,7 +427,7 @@ Public Function ListColumnRange(srcListobj As ListObject, lstColumn As Variant, 
     Dim tmpRange As Range, tmpRowCount As Long
     
     With srcListobj
-        tmpRowCount = .listRows.count
+        tmpRowCount = .listRows.Count
         If includeHeaderRow Then tmpRowCount = tmpRowCount + HeaderRangeRows(srcListobj)
         If includeTotalsRow And .ShowTotals Then tmpRowCount = tmpRowCount + TotalsRangeRows(srcListobj)
         
@@ -409,11 +436,11 @@ Public Function ListColumnRange(srcListobj As ListObject, lstColumn As Variant, 
         Set tmpRange = srcListobj.ListColumns(lstColumn).Range
     
         If includeHeaderRow = False Then
-            Set tmpRange = tmpRange.Offset(rowOffset:=HeaderRangeRows(srcListobj)).Resize(rowSize:=tmpRange.Rows.count - HeaderRangeRows(srcListobj))
+            Set tmpRange = tmpRange.offSet(rowOffset:=HeaderRangeRows(srcListobj)).Resize(rowSize:=tmpRange.Rows.Count - HeaderRangeRows(srcListobj))
         End If
         
         If includeTotalsRow = False And .ShowTotals Then
-            Set tmpRange = tmpRange.Resize(rowSize:=tmpRange.Rows.count - TotalsRangeRows(srcListobj))
+            Set tmpRange = tmpRange.Resize(rowSize:=tmpRange.Rows.Count - TotalsRangeRows(srcListobj))
         End If
     End With
 
@@ -436,30 +463,30 @@ On Error GoTo E:
     
     Application.EnableEvents = False
     If prot Then
-        pbUnprotectSheet lstObj.Range.Worksheet
+        UnprotectSht lstObj.Range.Worksheet
     End If
     
     pbRange.ClearFilter lstObj
     
     Dim hdrRngRows As Long, totRngRows As Long, listRows As Long
-    hdrRngRows = lstObj.HeaderRowRange.Rows.count
+    hdrRngRows = lstObj.HeaderRowRange.Rows.Count
     If lstObj.TotalsRowRange Is Nothing Then
         totRngRows = 0
     Else
-        totRngRows = lstObj.TotalsRowRange.Rows.count
+        totRngRows = lstObj.TotalsRowRange.Rows.Count
     End If
-    listRows = lstObj.listRows.count
+    listRows = lstObj.listRows.Count
     
     Dim endCount As Long
-    endCount = lstObj.listRows.count + addRowCount
+    endCount = lstObj.listRows.Count + addRowCount
     
     lstObj.Resize lstObj.Range.Resize(rowSize:=(hdrRngRows + totRngRows + listRows) + addRowCount)
-    Do While lstObj.listRows.count < endCount
+    Do While lstObj.listRows.Count < endCount
         lstObj.listRows.Add
     Loop
     
     Dim firstNewRow As Long, lastNewRow As Long
-    firstNewRow = lstObj.listRows.count - addRowCount + 1
+    firstNewRow = lstObj.listRows.Count - addRowCount + 1
     lastNewRow = firstNewRow + (addRowCount - 1)
         
     Set NewRowsRange = lstObj.listRows(firstNewRow).Range.Resize(rowSize:=addRowCount)
@@ -468,10 +495,10 @@ On Error GoTo E:
 Finalize:
     On Error Resume Next
         If prot Then
-            pbProtectSheet lstObj.Range.Worksheet
+            ProtectSht lstObj.Range.Worksheet
         End If
         Application.EnableEvents = evts
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
     Exit Function
 E:
     ErrorCheck
@@ -510,6 +537,8 @@ End Function
 '@param {Array<Variant>} Key to lookup
 '@returns {Long} Row index containing the key data
 Function getFirstRow(ByVal lo As ListObject, headers, values, Optional cachedDict As Dictionary, Optional forceRebuild As Boolean = False) As Long
+   
+'    forceRebuild = True
    
    Dim chi As Long
    For chi = LBound(headers) To UBound(headers)
@@ -589,7 +618,25 @@ On Error GoTo E:
   Set getIndex = oDict
   Exit Function
 E:
-    Beep
+    ftBeep btError
     Stop
   Resume
 End Function
+
+
+
+Public Function ListRowIdxFromWksht(lstObj As ListObject, worksheetRow As Long) As Long
+    Dim hdrRow As Long
+    hdrRow = lstObj.HeaderRowRange.Row + (1 - lstObj.HeaderRowRange.Rows.Count)
+    If worksheetRow - hdrRow > 0 And worksheetRow - hdrRow <= lstObj.listRows.Count Then
+        ListRowIdxFromWksht = worksheetRow - hdrRow
+    End If
+End Function
+Public Function ListColIdxFromWksht(lstObj As ListObject, worksheetCol As Long) As Long
+    Dim firstCol As Long
+    firstCol = lstObj.Range.column
+    If worksheetCol - firstCol + 1 <= lstObj.ListColumns.Count Then
+        ListColIdxFromWksht = worksheetCol - firstCol + 1
+    End If
+End Function
+

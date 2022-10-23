@@ -24,7 +24,7 @@ Public Sub resetTimer()
     timerStart = 0
     timerStop = 0
 End Sub
-Public Sub StartTimer(Optional swKey As Variant)
+Public Sub StartTimer(Optional ByVal swKey As Variant)
     If Not IsMissing(swKey) Then
         If Not IsObject(swKey) Then l_key = swKey
     End If
@@ -64,6 +64,7 @@ Public Function Result() As String
     Result = CStr(totalSeconds) & " seconds"
 End Function
 Public Function ResultAsTime() As String
+On Error Resume Next
     Dim retV As String
         Dim startTime As Single, timeElapsed As Single, Hours As Long, mins As Long, seconds As Single
         timeElapsed = totalSeconds
@@ -80,6 +81,10 @@ Public Function ResultAsTime() As String
             retV = Concat(Format(seconds, "00.00"), " (seconds)")
         End If
         ResultAsTime = retV
+    If Err.number <> 0 Then
+        ResultAsTime = "Error: " & Err.Description
+        Err.Clear
+    End If
 End Function
 
 

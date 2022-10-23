@@ -13,11 +13,13 @@ Option Explicit
 Option Compare Text
 Option Base 1
 
+
+
 Public Function IsSorted(rng As Range) As Boolean
-    If rng.Rows.count > 1 Then
+    If rng.Rows.Count > 1 Then
         Dim rng1 As Range, rng2 As Range
-        Set rng1 = rng.Resize(rowSize:=rng.Rows.count - 1)
-        Set rng2 = rng1.Offset(rowOffset:=1)
+        Set rng1 = rng.Resize(rowSize:=rng.Rows.Count - 1)
+        Set rng2 = rng1.offSet(rowOffset:=1)
         Dim expr As String
         expr = "AND(" & "'[" & ThisWorkbook.Name & "]" & rng1.Worksheet.Name & "'!" & rng1.Address & "<='[" & ThisWorkbook.Name & "]" & rng2.Worksheet.Name & "'!" & rng2.Address & ")"
         Debug.Print expr
@@ -29,12 +31,89 @@ Public Function IsSorted(rng As Range) As Boolean
 End Function
 
 Public Function IsListColSorted(lstObj As ListObject, lstCol As Variant) As Boolean
-    If lstObj.listRows.count <= 1 Then
+    If lstObj.listRows.Count <= 1 Then
         IsListColSorted = True
     Else
         IsListColSorted = IsSorted(lstObj.ListColumns(lstCol).DataBodyRange)
     End If
 End Function
+
+    ''   * GIVEN A KEY, AND VALUE, LOOK FOR ALL MATCHING
+    ''   * KEYS IN [TARGETRANGE].[TARGETKEYCOL]
+    ''   * Returns Count of ROWS WITH MATCHING KEY AND
+    ''          MISMATCHED VALUE ([TargetRange].[targetRefCol] <> [srcRefVal] )
+    ''   * Optionally, If 'updateInvalid' = True, then
+    ''          mismatched values will be changed to equal [srcRefVal], and
+    ''          (Return count then equal number of items changed)
+    Public Function ReferenceMisMatch( _
+        srcKey As Variant, _
+        srcRefVal As Variant, _
+        targetRange As Range, _
+        targetKeyCol As Long, _
+        targetRefCol As Long, _
+        Optional updateInvalid As Boolean = False) As Long
+        
+    On Error GoTo E:
+        
+        Dim failed  As Boolean, evts As Boolean
+        Dim mismatchCount  As Long
+        Dim keyRng As Range, valRng As Range
+        evts = Application.EnableEvents
+        Application.EnableEvents = False
+        
+        Set keyRng = targetRange(1, targetKeyCol).Resize(rowSize:=targetRange.Rows.Count)
+        Set valRng = targetRange(1, targetRefCol).Resize(rowSize:=targetRange.Rows.Count)
+        Dim changedValues As Boolean
+        Dim keyARR() As Variant, valARR() As Variant
+        
+        If targetRange.Rows.Count = 1 Then
+            ReDim keyARR(1 To 1, 1 To 1)
+            ReDim valARR(1 To 1, 1 To 1)
+            keyARR(1, 1) = keyRng(1, 1)
+            valARR(1, 1) = valRng(1, 1)
+        Else
+            keyARR = keyRng
+            valARR = valRng
+        End If
+        
+        Dim rowIdx As Long, curInvalid As Boolean
+        For rowIdx = LBound(keyARR) To UBound(keyARR)
+            curInvalid = False
+            If TypeName(srcKey) = "String" Then
+                If StringsMatch(srcKey, keyARR(rowIdx, 1), smEqual) Then
+                   If StringsMatch(srcRefVal, valARR(rowIdx, 1), smEqual) = False Then curInvalid = True
+                End If
+            ElseIf srcKey = keyARR(rowIdx, 1) Then
+                If srcRefVal <> valARR(rowIdx, 1) Then curInvalid = True
+            End If
+            If curInvalid Then
+                mismatchCount = mismatchCount + 1
+                If updateInvalid Then valARR(rowIdx, 1) = srcRefVal
+            End If
+        Next rowIdx
+    
+        If mismatchCount > 0 And updateInvalid Then
+            valRng = valARR
+        End If
+        
+        ReferenceMisMatch = mismatchCount
+    
+Finalize:
+        On Error Resume Next
+            
+            If failed Then
+                'optional handling
+            End If
+            Application.EnableEvents = evts
+            
+        Exit Function
+E:
+        failed = True
+        Debug.Print Err.number, Err.Description
+        ErrorCheck
+        Resume Finalize:
+    
+    End Function
 
 Public Function FindDuplicateRows(rng As Range, ParamArray checkRangeCols() As Variant) As Dictionary
     'EXAMPLE CALL:   set  [myDictionary] = FindDuplicateRows(Worksheets(1).Range("B5:C100"))
@@ -52,12 +131,12 @@ On Error GoTo E:
     ' ~~~ ~~~ check for mismatched range area columns ~~~ ~~~
     Dim firstCol As Long, totCols As Long
     Dim areaIDX As Long
-    If rng.Areas.count >= 1 Then
+    If rng.Areas.Count >= 1 Then
         firstCol = rng.Areas(1).column
-        totCols = rng.Areas(1).Columns.count
-        For areaIDX = 1 To rng.Areas.count
+        totCols = rng.Areas(1).Columns.Count
+        For areaIDX = 1 To rng.Areas.Count
             If Not rng.Areas(areaIDX).column = firstCol _
-                Or Not rng.Areas(areaIDX).Columns.count = totCols Then
+                Or Not rng.Areas(areaIDX).Columns.Count = totCols Then
                 Err.Raise 17, Description:="FindDuplicateRows can not support mismatched columns for multiple Range Areas"
             End If
         Next areaIDX
@@ -68,12 +147,12 @@ On Error GoTo E:
     retDict.CompareMode = TextCompare
     tmpDict.CompareMode = TextCompare
     
-    If rng.Areas.count = 1 And rng.Rows.count = 1 Then
+    If rng.Areas.Count = 1 And rng.Rows.Count = 1 Then
         GoTo Finalize:
     End If
     ' ~~~ ~~~ Determine Number of columns being compared for each row  ~~~ ~~~
     If UBound(checkRangeCols) = -1 Then
-        compareColCount = rng.Areas(1).Columns.count
+        compareColCount = rng.Areas(1).Columns.Count
         ReDim checkCols(1 To compareColCount)
         For tmpIdx = 1 To compareColCount
             checkCols(tmpIdx) = tmpIdx
@@ -86,13 +165,13 @@ On Error GoTo E:
         Next tmpIdx
     End If
     
-    For areaIDX = 1 To rng.Areas.count
-        Dim rowIDX As Long, checkCol As Long, compareArr As Variant, curKey As String
-        For rowIDX = 1 To rng.Areas(areaIDX).Rows.count
-            compareArr = GetCompareValues(rng.Areas(areaIDX), rowIDX, checkCols)
+    For areaIDX = 1 To rng.Areas.Count
+        Dim rowIdx As Long, checkCol As Long, compareArr As Variant, curKey As String
+        For rowIdx = 1 To rng.Areas(areaIDX).Rows.Count
+            compareArr = GetCompareValues(rng.Areas(areaIDX), rowIdx, checkCols)
             curKey = Join(compareArr, ", ")
             If Not tmpDict.Exists(curKey) Then
-                tmpDict(curKey) = rng.Rows(rowIDX).Row
+                tmpDict(curKey) = rng.Rows(rowIdx).Row
             Else
                 Dim keyFirstRow As Long
                 keyFirstRow = CLng(tmpDict(curKey))
@@ -104,7 +183,7 @@ On Error GoTo E:
                     retDict(keyFirstRow) = CLng(retDict(keyFirstRow)) + 1
                 End If
             End If
-        Next rowIDX
+        Next rowIdx
     Next areaIDX
     
 Finalize:
@@ -122,7 +201,7 @@ Finalize:
     Exit Function
 E:
     failed = True
-    MsgBox "FindDuplicateRows failed. (Error: " & Err.Number & ", " & Err.Description & ")"
+    MsgBox "FindDuplicateRows failed. (Error: " & Err.number & ", " & Err.Description & ")"
     Err.Clear
     Resume Finalize:
 
@@ -154,7 +233,7 @@ On Error GoTo E:
     posBang = InStr(1, sheetBangAddress, "!", vbTextCompare)
     'next line validate sheet name is at least 1 char, and address is at least 2 chars (e.g. "A1")
     If posBang > 1 And Len(sheetBangAddress) > posBang + 1 Then
-        shtName = left(sheetBangAddress, posBang - 1)
+        shtName = Left(sheetBangAddress, posBang - 1)
         rADd = Mid(sheetBangAddress, posBang + 1)
         Set RangeBySheetAdd = ThisWorkbook.Worksheets(shtName).Range(rADd)
     End If
@@ -165,7 +244,7 @@ Finalize:
     If failed Then
         Set RangeBySheetAdd = Nothing
     End If
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
     Exit Function
 E:
     failed = True
@@ -174,15 +253,27 @@ E:
     
 End Function
 
-'   RETURN TRUE IF RANGE CONTAINS 1 AREA AND ALL CELLS IN RANGE ARE MERGED
-Public Function IsMerged(checkRng As Range) As Boolean
-    If checkRng.Areas.count > 1 Then
-        IsMerged = False
-    ElseIf IsNull(checkRng.MergeCells) Then
-        IsMerged = False
+Public Function TestM()
+
+    Dim rng As Range
+    Set rng = ActiveSheet.Range("M5:N5")
+    Debug.Assert IsRangeMerged(rng) = ebTRUE + ebPartial
+
+End Function
+
+'   RETURNS ebTRUE if any cells are merged, ebTrue+ebPartial is some cells are merged
+Public Function IsRangeMerged(checkRng As Range) As ExtendedBool
+    Dim extBool As ExtendedBool
+    If IsNull(checkRng.MergeCells) Then
+        extBool = ebTRUE + ebPartial
     Else
-        IsMerged = checkRng.MergeCells
+        If checkRng.MergeCells = True Then
+            extBool = ebTRUE
+        Else
+            extBool = ebFALSE
+        End If
     End If
+    IsRangeMerged = extBool
 End Function
 
 Public Function MergeRange(mRng As Range, Optional options As MergeRangeEnum = MergeRangeEnum.mrDefault_MergeAll, _
@@ -193,12 +284,12 @@ On Error GoTo E:
     
     
     
-    If mRng.Areas.count <> 1 Then
-        RaiseError ERR_INVALID_RANGE_SIZE, "pbRange.MergeRange 'mRng' argument allows for only 1 area! ('" & mRng.Worksheet.Name & "!" & mRng.Address & " contains * " & mRng.Areas.count & " * areas!"
+    If mRng.Areas.Count <> 1 Then
+        RaiseError ERR_INVALID_RANGE_SIZE, "pbRange.MergeRange 'mRng' argument allows for only 1 area! ('" & mRng.Worksheet.Name & "!" & mRng.Address & " contains * " & mRng.Areas.Count & " * areas!"
     End If
     
     If EnumCompare(options, MergeRangeEnum.mrUnprotect) Then
-        If mRng.Worksheet.ProtectContents Then pbUnprotectSheet mRng.Worksheet
+        If mRng.Worksheet.ProtectContents Then UnprotectSht mRng.Worksheet
     End If
     If EnumCompare(options, MergeRangeEnum.mrClearContents + MergeRangeEnum.mrClearFormatting, ecAnd) Then
         mRng.Clear
@@ -222,7 +313,7 @@ Finalize:
         
     MergeRange = Not failed
     
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
     Exit Function
 E:
     failed = True
@@ -268,7 +359,7 @@ Public Function CountUniqueInRange(rng As Range, Optional includeNonNumeric As B
 '
     Dim cnt As Variant
     
-    If rng.Areas.count = 1 And rng.Areas(1).count = 1 Then
+    If rng.Areas.Count = 1 And rng.Areas(1).Count = 1 Then
         If includeNonNumeric = False And IsNumeric(rng.Cells(1, 1).value) Then
             cnt = 1
         Else
@@ -284,9 +375,9 @@ Public Function CountUniqueInRange(rng As Range, Optional includeNonNumeric As B
     If includeNonNumeric Then
         cnt = Application.WorksheetFunction.CountA(Application.WorksheetFunction.unique(rng))
     Else
-        cnt = Application.WorksheetFunction.count(Application.WorksheetFunction.unique(rng))
+        cnt = Application.WorksheetFunction.Count(Application.WorksheetFunction.unique(rng))
     End If
-    If Err.Number <> 0 Then
+    If Err.number <> 0 Then
         If IsDEV Then
             Beep
             MsgBox_FT "ERROR in pbRange.CoountUniqueInRange"
@@ -294,7 +385,7 @@ Public Function CountUniqueInRange(rng As Range, Optional includeNonNumeric As B
         Err.Clear
         cnt = -1
     End If
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
     On Error GoTo 0
 
 Finalize:
@@ -308,15 +399,15 @@ Public Function CheckSort(lstObj As ListObject, col As Variant, sortPosition As 
     Dim colcount As Long
     Dim sidx As Long
     Dim tmpIdx As Long
-    If lstObj.Sort.SortFields.count >= sortPosition Then
+    If lstObj.Sort.SortFields.Count >= sortPosition Then
         retV = True
         Dim sortFld As SortField
         Set sortFld = lstObj.Sort.SortFields(sortPosition)
-        If sortFld.Key.Columns.count <> 1 Then
+        If sortFld.KEY.Columns.Count <> 1 Then
             retV = False
             Exit Function
         End If
-        If StrComp(sortFld.Key.Address, lstObj.ListColumns(col).DataBodyRange.Address, vbTextCompare) <> 0 Then
+        If StrComp(sortFld.KEY.Address, lstObj.ListColumns(col).DataBodyRange.Address, vbTextCompare) <> 0 Then
             retV = False
             Exit Function
         End If
@@ -335,13 +426,13 @@ Public Function GetRangeMultipleCrit(lstObj As ListObject, Columns As Variant, c
     Dim sortcols As Boolean
     Dim colcount As Long
     colcount = UBound(Columns) - LBound(Columns) + 1
-    If lstObj.Sort.SortFields.count < colcount Then sortcols = True
+    If lstObj.Sort.SortFields.Count < colcount Then sortcols = True
     Dim sidx As Long
     Dim tmpIdx As Long
     If sortcols = False Then
         For sidx = LBound(Columns) To UBound(Columns)
             tmpIdx = tmpIdx + 1
-            If StrComp(lstObj.Sort.SortFields(tmpIdx).Key.Address, lstObj.ListColumns(Columns(sidx)).DataBodyRange.Address, vbTextCompare) <> 0 Then
+            If StrComp(lstObj.Sort.SortFields(tmpIdx).KEY.Address, lstObj.ListColumns(Columns(sidx)).DataBodyRange.Address, vbTextCompare) <> 0 Then
                 sortcols = True
                 Exit For
             End If
@@ -375,9 +466,9 @@ Public Function GetRangeMultipleCrit(lstObj As ListObject, Columns As Variant, c
                 Set curRng = Nothing
                 Exit For
             End If
-            Set curRng = lstObj.ListColumns(currCol).Range.Offset(rowOffset:=firstOuter).Resize(rowSize:=lastOuter - firstOuter + 1)
+            Set curRng = lstObj.ListColumns(currCol).Range.offSet(rowOffset:=firstOuter).Resize(rowSize:=lastOuter - firstOuter + 1)
         Else
-            Set curRng = curRng.Offset(ColumnOffset:=lstObj.ListColumns(currCol).Range.EntireColumn.column - curRng.column)
+            Set curRng = curRng.offSet(ColumnOffset:=lstObj.ListColumns(currCol).Range.EntireColumn.column - curRng.column)
             firstOuter = FirstRowInRange(curRng, currCrit)
             lastOuter = LastRowInRange(curRng, currCrit)
             If firstOuter = 0 Then
@@ -390,14 +481,14 @@ Public Function GetRangeMultipleCrit(lstObj As ListObject, Columns As Variant, c
             Else
                 rwOffset = 0
             End If
-            Set curRng = curRng.Offset(rowOffset:=rwOffset).Resize(rowSize:=lastOuter - firstOuter + 1)
+            Set curRng = curRng.offSet(rowOffset:=rwOffset).Resize(rowSize:=lastOuter - firstOuter + 1)
         End If
     Next cidx
          
     If Not curRng Is Nothing Then
         Dim lstRowIdxStart As Long
         lstRowIdxStart = curRng.Row - lstObj.HeaderRowRange.Row
-        Set curRng = lstObj.listRows(lstRowIdxStart).Range.Resize(rowSize:=curRng.Rows.count)
+        Set curRng = lstObj.listRows(lstRowIdxStart).Range.Resize(rowSize:=curRng.Rows.Count)
     End If
 
     
@@ -436,14 +527,14 @@ Public Function LastRowInRange(rng As Range, crit As Variant) As Long
         crit = Format(crit, rng(1, 1).numberFormat)
     End If
     If TypeName(crit) = "String" Then
-        If StrComp(rng(rng.Rows.count, 1).value, crit, vbTextCompare) = 0 Then
-            LastRowInRange = rng.Rows.count
+        If StrComp(rng(rng.Rows.Count, 1).value, crit, vbTextCompare) = 0 Then
+            LastRowInRange = rng.Rows.Count
         Else
             LastRowInRange = MatchLast(crit, rng, ExactMatch)
         End If
     Else
-        If rng(rng.Rows.count, 1).value = crit Then
-            LastRowInRange = rng.Rows.count
+        If rng(rng.Rows.Count, 1).value = crit Then
+            LastRowInRange = rng.Rows.Count
         Else
             LastRowInRange = MatchLast(crit, rng, ExactMatch)
         End If
@@ -453,7 +544,7 @@ End Function
 
 Private Function FormatSearchCriteria(lstObj As ListObject, colArray As Variant, critArray As Variant) As Variant
 
-    If lstObj.listRows.count = 0 Then
+    If lstObj.listRows.Count = 0 Then
         GoTo Finalize:
     End If
     
@@ -471,8 +562,8 @@ Finalize:
 
 End Function
 
-Public Function FindFirstListObjectRow(lstObj As ListObject, Columns As Variant, crit As Variant) As Long
-    FindFirstListObjectRow = pbListObj.getFirstRow(lstObj, Columns, crit)
+Public Function FindFirstListObjectRow(lstObj As ListObject, Columns As Variant, crit As Variant, Optional RebuildDict As Boolean = False) As Long
+    FindFirstListObjectRow = pbListObj.getFirstRow(lstObj, Columns, crit, forceRebuild:=RebuildDict)
 End Function
 
 '   ~~~ ~~~ Very Fast Function to find the first row of a ListObject where EXACT MATCH filters can be applied for up to ALL the columns in the list object
@@ -638,10 +729,10 @@ Public Function GetOffsetRange(ByRef listObjCell As Range, returnCol As Variant)
     If listObjCell.ListObject Is Nothing Then
         Err.Raise 512 - 101, Description:="Range provided must be in the range of a ListObject"
     End If
-    If listObjCell.Areas.count > 1 Then
+    If listObjCell.Areas.Count > 1 Then
         Err.Raise 512 - 101, Description:="Range provided must contain only 1 area"
     End If
-    If listObjCell.Columns.count > 1 Then
+    If listObjCell.Columns.Count > 1 Then
         Err.Raise 512 - 101, Description:="Range provided must contain only 1 column"
     End If
 
@@ -649,7 +740,7 @@ Public Function GetOffsetRange(ByRef listObjCell As Range, returnCol As Variant)
     Dim fromLOCol As Long: fromLOCol = (listObjCell.column - firstLOCol) + 1
     Dim toFldIdx As Long: toFldIdx = GetFieldIndex(listObjCell.ListObject, returnCol)
     If fromLOCol > 0 And toFldIdx > 0 Then
-        Set retRng = listObjCell.Offset(ColumnOffset:=(toFldIdx - fromLOCol))
+        Set retRng = listObjCell.offSet(ColumnOffset:=(toFldIdx - fromLOCol))
     End If
 
     Set GetOffsetRange = retRng
@@ -657,7 +748,7 @@ Public Function GetOffsetRange(ByRef listObjCell As Range, returnCol As Variant)
 End Function
 
 Public Function CountBlankInListCol(lstObj As ListObject, field As Variant) As Long
-    If lstObj.listRows.count > 0 Then
+    If lstObj.listRows.Count > 0 Then
         CountBlankInListCol = CountBlankInRange(lstObj.ListColumns(field).DataBodyRange)
     End If
 End Function
@@ -668,6 +759,8 @@ End Function
 
 Public Function ReplaceBlankInRange(srcRng As Range, replaceWith As Variant)
 On Error GoTo E:
+    If srcRng Is Nothing Then Exit Function
+    
     
     Dim evts As Boolean
     evts = Events
@@ -675,11 +768,11 @@ On Error GoTo E:
     
     If srcRng.Worksheet.ProtectContents Then
         'reapply protect
-        pbProtectSheet srcRng.Worksheet
+        ProtectSht srcRng.Worksheet
     End If
 
     If CountBlankInRange(srcRng) > 0 Then
-        srcRng.Replace "", replaceWith, LookAt:=xlWhole
+        srcRng.Replace "", replaceWith, lookAt:=xlWhole
     End If
 
 Finalize:
@@ -697,7 +790,7 @@ End Function
         If Not srcRange Is Nothing Then
             CountBlankInRange = WorksheetFunction.CountBlank(srcRange)
         End If
-    If Not Err.Number = 0 Then Err.Clear
+    If Not Err.number = 0 Then Err.Clear
  End Function
  
 Public Function CountInRange(srcRng As Range, criteria As Variant) As Long
@@ -710,14 +803,14 @@ On Error GoTo E:
     CountInRange = cnt
     Exit Function
 E:
-    Beeper
-    Trace "Error in RangeMonger.CountInRange: Range: " & srcRng.Worksheet.Name & "." & srcRng.Address & ", for Criteria: " & CStr(criteria & "")
+    ftBeep btError
+    LogError "pbRange.CountInRange - Error in RangeMonger.CountInRange: Range: " & srcRng.Worksheet.Name & "." & srcRng.Address & ", for Criteria: " & CStr(criteria & "")
 
 End Function
 
 Public Function MinMaxNumber(lstObj As ListObject, field As Variant, operator As ftMinMax) As Variant
 
-    If lstObj.listRows.count = 0 Then Exit Function
+    If lstObj.listRows.Count = 0 Then Exit Function
 
     If Not IsNumeric(field) Then
         field = GetFieldIndex(lstObj, field)
@@ -748,14 +841,14 @@ On Error Resume Next
         End If
     End If
     
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
 End Function
 
 
 
 'The reason behind this stupid magic is that values that are numbers and are ** PASTED ** into a range formatted as text, cannot be searched as text.
 'Thanks Mr. Gates
-Public Function MatchFirst(crit As Variant, ByRef rng As Range, matchmode As XMatchMode, Optional secondPass As Boolean = False, Optional srchMode As XSearchMode = searchFirstToLast) As Long
+Public Function MatchFirst(crit As Variant, ByRef rng As Range, matchMode As XMatchMode, Optional secondPass As Boolean = False, Optional srchMode As XSearchMode = searchFirstToLast) As Long
 On Error GoTo E:
     Dim fnd As Variant
     If Len(crit & vbNullString) = 0 Then
@@ -766,7 +859,7 @@ On Error GoTo E:
      
     If IsDate(rng(1, 1)) Then crit = CDbl(crit)
     
-    fnd = WorksheetFunction.XMatch(crit, rng, matchmode, srchMode)
+    fnd = WorksheetFunction.XMatch(crit, rng, matchMode, srchMode)
       
 Finalize:
     On Error Resume Next
@@ -778,7 +871,7 @@ Finalize:
       
     MatchFirst = fnd
    
-     If Err.Number <> 0 Then Err.Clear
+     If Err.number <> 0 Then Err.Clear
     Exit Function
 E:
     Err.Clear
@@ -790,7 +883,7 @@ End Function
 
 'The reason behind this stupid magic is that values that are numbers and are ** PASTED ** into a range formatted as text, cannot be searched as text.
 'Thanks Mr. Gates
-Public Function MatchLast(crit As Variant, ByRef rng As Range, matchmode As XMatchMode, Optional secondPass As Boolean = False, Optional srchMode As XSearchMode = searchLastToFirst) As Long
+Public Function MatchLast(crit As Variant, ByRef rng As Range, matchMode As XMatchMode, Optional secondPass As Boolean = False, Optional srchMode As XSearchMode = searchLastToFirst) As Long
 On Error GoTo E:
     Dim fnd As Variant
     If Len(crit & vbNullString) = 0 Then
@@ -803,7 +896,7 @@ On Error GoTo E:
     If IsDate(rng(1, 1)) Then crit = CDbl(crit)
 
     
-    fnd = WorksheetFunction.XMatch(crit, rng, matchmode, srchMode)
+    fnd = WorksheetFunction.XMatch(crit, rng, matchMode, srchMode)
       
 Finalize:
     On Error Resume Next
@@ -813,7 +906,7 @@ Finalize:
     End If
      
      MatchLast = fnd
-     If Err.Number <> 0 Then Err.Clear
+     If Err.number <> 0 Then Err.Clear
     Exit Function
 E:
     Err.Clear
@@ -826,15 +919,15 @@ Public Function DeleteListRowsRange_ShiftUp(lstObj As ListObject, startListRowIn
 On Error GoTo E:
     Dim failed As Boolean
     
-   If lstObj.listRows.count = 0 Then Exit Function
+   If lstObj.listRows.Count = 0 Then Exit Function
     
     If lstObj.Range.Worksheet.ProtectContents And lstObj.Range.Worksheet.Protection.AllowDeletingRows = False Then
-        If pbUnprotectSheet(lstObj.Range.Worksheet) = False Then
+        If UnprotectSht(lstObj.Range.Worksheet) = False Then
             Err.Raise 419, Description:="Protected sheet does not allow deleting rows"
         End If
     End If
     
-    If (startListRowIndex + delRowCount) - 1 > lstObj.listRows.count Then
+    If (startListRowIndex + delRowCount) - 1 > lstObj.listRows.Count Then
         Err.Raise 419, Description:="delete listRowStart + Row Count is > than total listrows"
     End If
     
@@ -848,7 +941,7 @@ Finalize:
     
     DeleteListRowsRange_ShiftUp = Not failed
     
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
     Exit Function
 E:
     failed = True
@@ -856,16 +949,16 @@ E:
     Resume Finalize:
 End Function
 
-Public Function DeleteListRows_UsesSort(listObj As ListObject, field As Variant, criteria As Variant, matchmode As XMatchMode) As Long
+Public Function DeleteListRows_UsesSort(listObj As ListObject, field As Variant, criteria As Variant, matchMode As XMatchMode) As Long
 On Error GoTo E:
     Dim failed As Boolean
 
     Dim evts As Boolean, scrn As Boolean
 
-   If listObj.listRows.count = 0 Then Exit Function
+   If listObj.listRows.Count = 0 Then Exit Function
     
     If listObj.Range.Worksheet.ProtectContents And listObj.Range.Worksheet.Protection.AllowDeletingRows = False Then
-        If pbUnprotectSheet(listObj.Range.Worksheet) = False Then
+        If UnprotectSht(listObj.Range.Worksheet) = False Then
             Err.Raise 419, Description:="Protected sheet does not allow deleting rows"
         End If
     End If
@@ -900,7 +993,7 @@ Finalize:
         DeleteListRows_UsesSort = toDeleteCount
     End If
     
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
     Exit Function
 E:
     failed = True
@@ -913,12 +1006,12 @@ End Function
 'can specify full or partial match
 'Throws error if Worksheet is Protected Against Deleting ListRows
 'Returns Number of Deleted ListRows
-Public Function DeleteFoundListRows(listObj As ListObject, field As Variant, criteria As Variant, matchmode As XMatchMode) As Long
-   If listObj.listRows.count = 0 Then Exit Function
+Public Function DeleteFoundListRows(listObj As ListObject, field As Variant, criteria As Variant, matchMode As XMatchMode) As Long
+   If listObj.listRows.Count = 0 Then Exit Function
    
     
     If listObj.Range.Worksheet.ProtectContents And listObj.Range.Worksheet.Protection.AllowDeletingRows = False Then
-        If pbUnprotectSheet(listObj.Range.Worksheet) = False Then
+        If UnprotectSht(listObj.Range.Worksheet) = False Then
             Err.Raise 419, Description:="Protected sheet does not allow deleting rows"
         End If
     End If
@@ -934,14 +1027,14 @@ Public Function DeleteFoundListRows(listObj As ListObject, field As Variant, cri
     Dim sanityCount As Long, rCount As Long, nextRow As Long, deletedCount As Long
         
     With listObj
-        rCount = .listRows.count
+        rCount = .listRows.Count
         Do While True
             nextRow = 0
-            If .listRows.count = 0 Then
+            If .listRows.Count = 0 Then
                 Exit Do
             End If
             Dim fndRow As Long
-            fndRow = MatchFirst(criteria, .ListColumns(fieldIdx).DataBodyRange, matchmode)
+            fndRow = MatchFirst(criteria, .ListColumns(fieldIdx).DataBodyRange, matchMode)
             If fndRow > 0 Then
                 nextRow = fndRow
                 If nextRow > 0 Then
@@ -986,7 +1079,7 @@ Public Function GetFoundRangeBetweenSortedRange(listObj As ListObject, field As 
     '1 = first to last
     '-1 = last to first
     
-    If listObj.listRows.count = 0 Then Exit Function
+    If listObj.listRows.Count = 0 Then Exit Function
 
 
 
@@ -1007,7 +1100,7 @@ Public Function GetFoundRangeBetweenSortedRange(listObj As ListObject, field As 
     Dim rng As Range: Set rng = listObj.ListColumns(fieldIdx).DataBodyRange
     Dim CountBlank As Long: CountBlank = WorksheetFunction.CountBlank(listObj.ListColumns(fieldIdx).DataBodyRange)
     If CountBlank > 0 Then
-        Set rng = listObj.ListColumns(fieldIdx).DataBodyRange.Resize(rowSize:=listObj.ListColumns(fieldIdx).DataBodyRange.Rows.count - CountBlank)
+        Set rng = listObj.ListColumns(fieldIdx).DataBodyRange.Resize(rowSize:=listObj.ListColumns(fieldIdx).DataBodyRange.Rows.Count - CountBlank)
     End If
     
     On Error Resume Next
@@ -1020,7 +1113,7 @@ Public Function GetFoundRangeBetweenSortedRange(listObj As ListObject, field As 
     End If
 
     Set GetFoundRangeBetweenSortedRange = foundRange
-If Err.Number <> 0 Then Err.Clear
+If Err.number <> 0 Then Err.Clear
 End Function
 
 
@@ -1035,7 +1128,7 @@ On Error GoTo E:
     
     Dim rInfo As RngInfo, ai As ArrInformation
     Dim fieldIdx As Long
-    Dim rowIDX As Variant, realRow As Long
+    Dim rowIdx As Variant, realRow As Long
     
     rInfo = RangeInfo(srchRng)
     If rInfo.Columns > 1 Then
@@ -1044,19 +1137,19 @@ On Error GoTo E:
     
     fieldIdx = 1
     Set startLooking = srchRng
-    rowIDX = MatchFirst(criteria, startLooking, ExactMatch)
-    Do While rowIDX > 0
-        realRow = startLooking(RowIndex:=rowIDX).Row
+    rowIdx = MatchFirst(criteria, startLooking, ExactMatch)
+    Do While rowIdx > 0
+        realRow = startLooking(RowIndex:=rowIdx).Row
         dicItems(realRow) = 1
-        If (startLooking.Rows.count - rowIDX) = 0 Then
+        If (startLooking.Rows.Count - rowIdx) = 0 Then
             Exit Do
         End If
-        Set startLooking = startLooking.Offset(rowIDX).Resize(startLooking.Rows.count - rowIDX)
-        rowIDX = MatchFirst(criteria, startLooking, ExactMatch)
+        Set startLooking = startLooking.offSet(rowIdx).Resize(startLooking.Rows.Count - rowIdx)
+        rowIdx = MatchFirst(criteria, startLooking, ExactMatch)
     Loop
     
-    If dicItems.count > 0 Then
-        ReDim retV(1 To dicItems.count, 1 To 1)
+    If dicItems.Count > 0 Then
+        ReDim retV(1 To dicItems.Count, 1 To 1)
         Dim dKey As Variant, cntr As Long
         For Each dKey In dicItems.Keys
             cntr = cntr + 1
@@ -1072,7 +1165,7 @@ Finalize:
     If ArrDimensions(retV) > 0 Then Erase retV
     Set dicItems = Nothing
     Set startLooking = Nothing
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
     Exit Function
 E:
     failed = True
@@ -1087,34 +1180,34 @@ Public Function GetFoundListIndexArray(lstObj As ListObject, field As Variant, c
 On Error GoTo E:
 
     Dim dicItems As New Dictionary
-    If lstObj.listRows.count = 0 Then Exit Function
+    If lstObj.listRows.Count = 0 Then Exit Function
     
     Dim fieldIdx As Long
     Dim startLooking As Range
-    Dim rowIDX As Variant
+    Dim rowIdx As Variant
     Dim lstObjRowIdx As Long
     
     fieldIdx = GetFieldIndex(lstObj, field)
     Set startLooking = lstObj.ListColumns(fieldIdx).DataBodyRange
-    rowIDX = MatchFirst(criteria, startLooking, ExactMatch)
-    Do While rowIDX > 0
-        lstObjRowIdx = startLooking.Rows(rowIDX).Row - lstObj.HeaderRowRange.Row
+    rowIdx = MatchFirst(criteria, startLooking, ExactMatch)
+    Do While rowIdx > 0
+        lstObjRowIdx = startLooking.Rows(rowIdx).Row - lstObj.HeaderRowRange.Row
         dicItems(lstObjRowIdx) = 1
         
-        If (startLooking.Rows.count - rowIDX) = 0 Then
+        If (startLooking.Rows.Count - rowIdx) = 0 Then
             Exit Do
         End If
         
-        Set startLooking = startLooking.Offset(rowIDX).Resize(startLooking.Rows.count - rowIDX)
-        rowIDX = MatchFirst(criteria, startLooking, ExactMatch)
+        Set startLooking = startLooking.offSet(rowIdx).Resize(startLooking.Rows.Count - rowIdx)
+        rowIdx = MatchFirst(criteria, startLooking, ExactMatch)
     Loop
 
 Finalize:
     On Error Resume Next
 
-    If dicItems.count > 0 Then
+    If dicItems.Count > 0 Then
         Dim k As Variant, retV() As Variant
-        ReDim retV(1 To dicItems.count)
+        ReDim retV(1 To dicItems.Count)
         Dim cnt As Long
         cnt = 1
         For Each k In dicItems.Keys
@@ -1127,7 +1220,7 @@ Finalize:
     End If
 
     Set dicItems = Nothing
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
     Exit Function
 E:
     ErrorCheck
@@ -1135,9 +1228,9 @@ E:
 End Function
 
 'Return the range in a ListObject of all the matching values in a single ListColumn
-Public Function GetFoundRange(listObj As ListObject, field As Variant, forceSortAS As XlSortOrder, criteria As Variant, matchmode As XMatchMode, Optional returnColumn As Variant) As Range
+Public Function GetFoundRange(listObj As ListObject, field As Variant, forceSortAS As XlSortOrder, criteria As Variant, matchMode As XMatchMode, Optional returnColumn As Variant) As Range
 
-    If listObj.listRows.count = 0 Then Exit Function
+    If listObj.listRows.Count = 0 Then Exit Function
     AddSort listObj, field, forceSortAS, True
 
     Dim foundRange As Range
@@ -1147,9 +1240,9 @@ Public Function GetFoundRange(listObj As ListObject, field As Variant, forceSort
     fieldIdx = GetFieldIndex(listObj, field)
 
     Dim firstRow As Long, lastRow As Long
-    firstRow = GetFirstRowIndex(listObj, fieldIdx, criteria, matchmode, True, True)
+    firstRow = GetFirstRowIndex(listObj, fieldIdx, criteria, matchMode, True, True)
     If firstRow > 0 Then
-        lastRow = GetLastRowIndex(listObj, fieldIdx, criteria, matchmode, True, True)
+        lastRow = GetLastRowIndex(listObj, fieldIdx, criteria, matchMode, True, True)
         Set foundRange = listObj.ListColumns(fieldIdx).DataBodyRange(RowIndex:=firstRow)
         Set foundRange = foundRange.Resize(rowSize:=(lastRow - firstRow) + 1)
     End If
@@ -1160,7 +1253,7 @@ Public Function GetFoundRange(listObj As ListObject, field As Variant, forceSort
             retColIdx = GetFieldIndex(listObj, returnColumn)
             Dim offsetBy As Long
             offsetBy = retColIdx - fieldIdx
-            Set foundRange = foundRange.Offset(ColumnOffset:=offsetBy)
+            Set foundRange = foundRange.offSet(ColumnOffset:=offsetBy)
         End If
     End If
 
@@ -1168,22 +1261,22 @@ Public Function GetFoundRange(listObj As ListObject, field As Variant, forceSort
 
 End Function
 
-Public Function GetFirstRowIndex(ByRef listObj As ListObject, field As Variant, criteria As Variant, matchmode As XMatchMode, sortIfNeeded As Boolean, ClearFilter As Boolean) As Long
-    GetFirstRowIndex = GetRowIndex(listObj, field, criteria, True, matchmode, sortIfNeeded, ClearFilter)
+Public Function GetFirstRowIndex(ByRef listObj As ListObject, field As Variant, criteria As Variant, matchMode As XMatchMode, sortIfNeeded As Boolean, ClearFilter As Boolean) As Long
+    GetFirstRowIndex = GetRowIndex(listObj, field, criteria, True, matchMode, sortIfNeeded, ClearFilter)
 End Function
-Public Function GetLastRowIndex(ByRef listObj As ListObject, field As Variant, criteria As Variant, matchmode As XMatchMode, sortIfNeeded As Boolean, ClearFilter As Boolean) As Long
-    GetLastRowIndex = GetRowIndex(listObj, field, criteria, False, matchmode, sortIfNeeded, ClearFilter)
+Public Function GetLastRowIndex(ByRef listObj As ListObject, field As Variant, criteria As Variant, matchMode As XMatchMode, sortIfNeeded As Boolean, ClearFilter As Boolean) As Long
+    GetLastRowIndex = GetRowIndex(listObj, field, criteria, False, matchMode, sortIfNeeded, ClearFilter)
 End Function
 
 
 
-Public Function FindFirstInRange(ByVal rng As Range, criteria As Variant, Optional matchmode As XMatchMode = XMatchMode.ExactMatch) As Double
+Public Function FindFirstInRange(ByVal rng As Range, criteria As Variant, Optional matchMode As XMatchMode = XMatchMode.ExactMatch) As Double
 On Error GoTo E:
     Dim foundIDX As Double
     
     If TypeName(criteria) = "Date" Then criteria = CDbl(criteria)
  
-    foundIDX = WorksheetFunction.XMatch(criteria, rng, matchmode, 1)
+    foundIDX = WorksheetFunction.XMatch(criteria, rng, matchMode, 1)
     
     FindFirstInRange = foundIDX
     
@@ -1194,13 +1287,13 @@ E:
     FindFirstInRange = 0
 End Function
 
-Public Function FindLastInRange(ByVal rng As Range, criteria As Variant, Optional matchmode As XMatchMode = XMatchMode.ExactMatch) As Double
+Public Function FindLastInRange(ByVal rng As Range, criteria As Variant, Optional matchMode As XMatchMode = XMatchMode.ExactMatch) As Double
 On Error GoTo E:
     Dim foundIDX As Double
     
     If TypeName(criteria) = "Date" Then criteria = CDbl(criteria)
     
-    foundIDX = WorksheetFunction.XMatch(criteria, rng, matchmode, -1)
+    foundIDX = WorksheetFunction.XMatch(criteria, rng, matchMode, -1)
     
     FindLastInRange = foundIDX
     
@@ -1210,7 +1303,7 @@ E:
     Err.Clear
     FindLastInRange = 0
 End Function
-Private Function GetRowIndex(ByRef listObj As ListObject, field As Variant, criteria As Variant, firstRowIndex As Boolean, matchmode As XMatchMode, sortIfNeeded As Boolean, clearFilters As Boolean) As Long
+Private Function GetRowIndex(ByRef listObj As ListObject, field As Variant, criteria As Variant, firstRowIndex As Boolean, matchMode As XMatchMode, sortIfNeeded As Boolean, clearFilters As Boolean) As Long
     
     
     
@@ -1218,7 +1311,7 @@ Private Function GetRowIndex(ByRef listObj As ListObject, field As Variant, crit
     fieldIdx = GetFieldIndex(listObj, field)
     
     With listObj
-        If .listRows.count = 0 Then
+        If .listRows.Count = 0 Then
             GetRowIndex = 0
             Exit Function
         End If
@@ -1227,7 +1320,7 @@ Private Function GetRowIndex(ByRef listObj As ListObject, field As Variant, crit
         If IsDate(listObj.ListColumns(field).DataBodyRange(1, 1)) Then criteria = CDbl(criteria)
         
         'before wasting time sorting and filtering, see if a matching value exists in the range
-        If MatchFirst(criteria, .ListColumns(fieldIdx).DataBodyRange, matchmode) = 0 Then
+        If MatchFirst(criteria, .ListColumns(fieldIdx).DataBodyRange, matchMode) = 0 Then
             Exit Function
         End If
         
@@ -1236,21 +1329,21 @@ Private Function GetRowIndex(ByRef listObj As ListObject, field As Variant, crit
         End If
         
         If sortIfNeeded Then
-            If .Sort.SortFields.count = 0 Then
+            If .Sort.SortFields.Count = 0 Then
                 AddSort listObj, field, clearPreviousSorts:=True
             Else
                 Dim srtField As SortField
                 Set srtField = .Sort.SortFields(1)
-                If srtField.Key.column <> .ListColumns(fieldIdx).Range.column Then
+                If srtField.KEY.column <> .ListColumns(fieldIdx).Range.column Then
                     AddSort listObj, field, clearPreviousSorts:=True
                 End If
             End If
         End If
         
         If firstRowIndex = True Then
-            GetRowIndex = MatchFirst(criteria, .ListColumns(fieldIdx).DataBodyRange, matchmode)
+            GetRowIndex = MatchFirst(criteria, .ListColumns(fieldIdx).DataBodyRange, matchMode)
         Else
-            GetRowIndex = MatchLast(criteria, .ListColumns(fieldIdx).DataBodyRange, matchmode)
+            GetRowIndex = MatchLast(criteria, .ListColumns(fieldIdx).DataBodyRange, matchMode)
         End If
         
         
@@ -1288,7 +1381,7 @@ Public Function GetRangeMultipleCriteria(lo As ListObject, Columns As Variant, c
             Dim lookInRange As Range
             Set lookInRange = lo.ListColumns(Columns(idx)).DataBodyRange
             
-            Set lookInRange = lookInRange.Offset(rowOffset:=firstIDX - 1).Resize(rowSize:=lastIDX - firstIDX + 1)
+            Set lookInRange = lookInRange.offSet(rowOffset:=firstIDX - 1).Resize(rowSize:=lastIDX - firstIDX + 1)
             Dim subFirst As Long, subLast As Long
             subFirst = MatchFirst(criteria(idx), lookInRange, ExactMatch)
             subLast = MatchLast(criteria(idx), lookInRange, ExactMatch)
@@ -1303,7 +1396,7 @@ Public Function GetRangeMultipleCriteria(lo As ListObject, Columns As Variant, c
     Next idx
     
     If firstIDX > 0 And lastIDX > 0 Then
-        Set retRange = lo.ListColumns(returnColumn).DataBodyRange.Offset(rowOffset:=firstIDX - 1).Resize(lastIDX - firstIDX + 1)
+        Set retRange = lo.ListColumns(returnColumn).DataBodyRange.offSet(rowOffset:=firstIDX - 1).Resize(lastIDX - firstIDX + 1)
         If Not IsMissing(setRangeValue) Then
             retRange.value = setRangeValue
         End If
@@ -1323,13 +1416,13 @@ Public Function AddSortMultipleColumns(lstObj As ListObject, clearFilters As Boo
 On Error GoTo E:
 
     If Not lstObj Is Nothing Then
-        If lstObj.listRows.count <= 1 Then
+        If lstObj.listRows.Count <= 1 Then
             AddSortMultipleColumns = True
             Exit Function
         End If
     End If
     If lstObj.Range.Worksheet.ProtectContents = True And lstObj.Range.Worksheet.Protection.AllowSorting = False Then
-        If pbUnprotectSheet(lstObj.Range.Worksheet) = False Then
+        If UnprotectSht(lstObj.Range.Worksheet) = False Then
             Err.Raise 419, Description:="Protected sheet does not allow filtering"
         End If
     End If
@@ -1386,7 +1479,7 @@ On Error GoTo E:
 
     
     If listObj.Range.Worksheet.ProtectContents = True And listObj.Range.Worksheet.Protection.AllowSorting = False Then
-        If pbUnprotectSheet(listObj.Range.Worksheet) = False Then
+        If UnprotectSht(listObj.Range.Worksheet) = False Then
             Err.Raise 419, Description:="Protected sheet does not allow filtering"
         End If
     End If
@@ -1397,7 +1490,7 @@ On Error GoTo E:
     fieldIdx = GetFieldIndex(listObj, field)
     
     RngInfo = listObj.Name & "[" & listObj.ListColumns(fieldIdx).Name & "]"
-    If listObj.listRows.count > 0 Then
+    If listObj.listRows.Count > 0 Then
         If clearFilters Then
             ClearFilter listObj
         End If
@@ -1463,14 +1556,14 @@ On Error GoTo E:
         Err.Raise 5, Description:="A filter is already applied on " & listObj.Name & "." & listObj.ListColumns(field).Name
     End If
 
-    If Not listObj Is Nothing And listObj.listRows.count > 0 Then
+    If Not listObj Is Nothing And listObj.listRows.Count > 0 Then
         If clearExistFilters Then
             ClearFilter listObj
         End If
         Dim handled As Boolean
         With listObj
             If Len(crit1) > 0 Then
-                If Strings.left(CStr(crit1), 1) <> "*" Then crit1 = "*" & crit1
+                If Strings.Left(CStr(crit1), 1) <> "*" Then crit1 = "*" & crit1
                 If Strings.Right(CStr(crit1), 1) <> "*" Then crit1 = crit1 & "*"
             End If
             .Range.AutoFilter field:=fieldIdx, Criteria1:=crit1, operator:=xlFilterValues
@@ -1499,7 +1592,7 @@ On Error GoTo E:
         Err.Raise 5, Description:="A filter is already applied on " & listObj.Name & "." & listObj.ListColumns(field).Name
     End If
     
-    If Not listObj Is Nothing And listObj.listRows.count > 0 Then
+    If Not listObj Is Nothing And listObj.listRows.Count > 0 Then
         If clearExistFilters Then
             ClearFilter listObj
         End If
@@ -1532,7 +1625,7 @@ On Error GoTo E:
     Dim cndOper As String: cndOper = ConvertConditionOperatorToString(conditionOperator)
     
     If listObj.Range.Worksheet.ProtectContents And listObj.Range.Worksheet.Protection.AllowFiltering = False Then
-        If pbUnprotectSheet(listObj.Range.Worksheet) = False Then
+        If UnprotectSht(listObj.Range.Worksheet) = False Then
             
             Err.Raise 419, Description:="Protected sheet does not allow filtering"
         End If
@@ -1543,7 +1636,7 @@ On Error GoTo E:
         Err.Raise 5, Description:="A filter is already applied on " & listObj.Name & "." & listObj.ListColumns(field).Name
     End If
     
-    If Not listObj Is Nothing And listObj.listRows.count > 0 Then
+    If Not listObj Is Nothing And listObj.listRows.Count > 0 Then
         If clearExistFilters Then
             ClearFilter listObj
         End If
@@ -1581,12 +1674,12 @@ On Error GoTo E:
             'If We're filtering for blank, find the first visible ListColumn, then count visible range
             If Len(crit1) = 0 Then
                 Dim findVisIdx As Long
-                For findVisIdx = 1 To .ListColumns.count
+                For findVisIdx = 1 To .ListColumns.Count
                     If .ListColumns(findVisIdx).Range.EntireColumn.Hidden = False Then
                         Dim vRng As Range
                         Set vRng = GetVisible(.ListColumns(findVisIdx).DataBodyRange)
                         If Not vRng Is Nothing Then
-                            cnt = vRng.count
+                            cnt = vRng.Count
                         End If
                         Exit For
                     End If
@@ -1627,7 +1720,7 @@ On Error GoTo E:
     fieldIdx = GetFieldIndex(listObj, field)
     
     If listObj.Range.Worksheet.ProtectContents And listObj.Range.Worksheet.Protection.AllowFiltering = False Then
-        If pbUnprotectSheet(listObj.Range.Worksheet) = False Then
+        If UnprotectSht(listObj.Range.Worksheet) = False Then
             
             Err.Raise 419, listObj, "Protected sheet does not allow filtering"
         End If
@@ -1639,7 +1732,7 @@ On Error GoTo E:
     End If
 
     
-    If Not listObj Is Nothing And listObj.listRows.count > 0 Then
+    If Not listObj Is Nothing And listObj.listRows.Count > 0 Then
         If clearExistFilters Then
             ClearFilter listObj
         Else
@@ -1689,7 +1782,7 @@ On Error Resume Next
     End If
 
     ListObjectIsFiltered = isFiltered
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
 End Function
 
 
@@ -1704,12 +1797,12 @@ On Error GoTo E:
     If listObj Is Nothing Then
         GoTo Finalize:
     End If
-    If listObj.listRows.count = 0 Then
+    If listObj.listRows.Count = 0 Then
         GoTo Finalize:
     End If
     
     If listObj.Range.Worksheet.ProtectContents And listObj.Range.Worksheet.Protection.AllowFiltering = False Then
-        If pbUnprotectSheet(listObj.Range.Worksheet) = False Then
+        If UnprotectSht(listObj.Range.Worksheet) = False Then
             
             Err.Raise 419, listObj, "Protected sheet does not allow filtering"
         End If
@@ -1731,11 +1824,11 @@ Finalize:
 
     ClearFilter = Not failed
     
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
     Exit Function
 E:
    failed = True
-   Err.Raise Err.Number, Err.Source, Err.Description
+   Err.Raise Err.number, Err.Source, Err.Description
    Resume Finalize:
     
 End Function
@@ -1751,7 +1844,7 @@ Private Function FilterCount(lstObj As ListObject) As Long
         With lstObj
             If Not .AutoFilter.Filters Is Nothing Then
                 Dim lcIDX As Long
-                For lcIDX = 1 To .ListColumns.count
+                For lcIDX = 1 To .ListColumns.Count
                     If .AutoFilter.Filters(lcIDX).On Then
                         fltrCount = fltrCount + 1
                     End If
@@ -1770,7 +1863,7 @@ Public Function RangeIsInsideListColumn(rng As Range, lstObj As ListObject, vali
         RangeIsInsideListColumn = False
         Exit Function
     End If
-    If rng.count = 1 Then
+    If rng.Count = 1 Then
         If Intersect(rng, lstObj.ListColumns(validColIdx).DataBodyRange) Is Nothing Then
             RangeIsInsideListColumn = False
             Exit Function
@@ -1780,13 +1873,13 @@ Public Function RangeIsInsideListColumn(rng As Range, lstObj As ListObject, vali
         End If
     End If
     
-    If rng.Areas.count = 1 Then
+    If rng.Areas.Count = 1 Then
         If Intersect(rng, lstObj.ListColumns(validColIdx).DataBodyRange) Is Nothing Then
             RangeIsInsideListColumn = False
             Exit Function
         Else
             'check columns
-            If rng.Columns.count <> 1 Then
+            If rng.Columns.Count <> 1 Then
                 RangeIsInsideListColumn = False
                 Exit Function
             End If
@@ -1809,35 +1902,35 @@ End Function
 
 Public Function FirstVisibleListRowIdx(lstObj As ListObject, Optional goBeyondListObjectIfNoVisible As Boolean = True) As Long
 
-    If lstObj.listRows.count > 0 Then
+    If lstObj.listRows.Count > 0 Then
         Dim firstVisColIdx As Long: firstVisColIdx = FirstVisibleListColIndex(lstObj)
-        Dim rowIDX As Long
+        Dim rowIdx As Long
         If firstVisColIdx > 0 Then
             Dim vRng As Range
             Set vRng = lstObj.ListColumns(firstVisColIdx).Range.SpecialCells(xlCellTypeVisible)
             Dim areaRng As Range
             For Each areaRng In vRng.Areas
                 If areaRng.Row > lstObj.HeaderRowRange.Row Then
-                    rowIDX = areaRng.Row
+                    rowIdx = areaRng.Row
                     Exit For
                 Else
-                    If areaRng.Rows.count > 1 Then
-                        rowIDX = areaRng.Rows(2).Row
+                    If areaRng.Rows.Count > 1 Then
+                        rowIdx = areaRng.Rows(2).Row
                         Exit For
                     End If
                 End If
             Next areaRng
         End If
         If goBeyondListObjectIfNoVisible Then
-            If rowIDX = 0 Then
-                rowIDX = lstObj.HeaderRowRange.Row + lstObj.listRows.count + 1
+            If rowIdx = 0 Then
+                rowIdx = lstObj.HeaderRowRange.Row + lstObj.listRows.Count + 1
                 If lstObj.ShowTotals Then
-                    rowIDX = rowIDX + 1
+                    rowIdx = rowIdx + 1
                 End If
             End If
         End If
-        If rowIDX > 0 Then
-            FirstVisibleListRowIdx = rowIDX - lstObj.HeaderRowRange.Row
+        If rowIdx > 0 Then
+            FirstVisibleListRowIdx = rowIdx - lstObj.HeaderRowRange.Row
         End If
     End If
 
@@ -1885,17 +1978,17 @@ On Error GoTo E:
     Dim rwCount As Long, visColIdx As Long
     visColIdx = FirstVisibleListColIndex(lstObj)
     If visColIdx > 0 Then
-        If lstObj.listRows.count > 0 Then
+        If lstObj.listRows.Count > 0 Then
             Dim visRng As Range
             Set visRng = lstObj.listRows(1).Range(1, visColIdx)
-            Set visRng = visRng.Resize(rowSize:=lstObj.listRows.count)
+            Set visRng = visRng.Resize(rowSize:=lstObj.listRows.Count)
             
-            If visRng.count = 1 And visRng.EntireRow.Hidden = False Then
+            If visRng.Count = 1 And visRng.EntireRow.Hidden = False Then
                 rwCount = 1
             Else
                 Set visRng = GetVisible(visRng)
                 If Not visRng Is Nothing Then
-                    rwCount = visRng.count
+                    rwCount = visRng.Count
                 End If
             End If
         End If
@@ -1907,13 +2000,13 @@ On Error GoTo E:
 E:
     Beeper
     Trace "Error getting VisibleListObjRows for " & lstObj.Name, True
-    Trace "Error: - " & Err.Number & ", " & Err.Source & ", " & Err.Description
+    Trace "Error: - " & Err.number & ", " & Err.Source & ", " & Err.Description
     Err.Clear
     
 End Function
 
 Public Function FindInColRange(ByRef rng As Range, searchVal As Variant, Optional isSortedAsc As Boolean = False) As ftFound
-    If rng.Columns.count > 1 Then
+    If rng.Columns.Count > 1 Then
         Err.Raise ERR_INVALID_RANGE_SIZE, Description:="Invalid Range Size: Column Count <> 1"
     End If
     
@@ -1972,9 +2065,9 @@ On Error GoTo E:
     Dim tmpFound As ftFound
     
     Dim loCount As Long
-    loCount = lo.listRows.count
+    loCount = lo.listRows.Count
 
-    If lo.listRows.count = 0 Then
+    If lo.listRows.Count = 0 Then
         InsertPosition = 1
         GoTo Finalize:
     End If
@@ -2035,7 +2128,7 @@ Finalize:
     Erase arrCurRng
     
     
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
     Exit Function
 E:
     failed = True
@@ -2051,7 +2144,7 @@ On Error Resume Next
     Dim retV As Boolean
     Dim vType As Long
     vType = rng.Validation.Type
-    If Err.Number <> 0 Then
+    If Err.number <> 0 Then
         retV = False
         GoTo Finalize:
     End If
@@ -2062,10 +2155,10 @@ On Error Resume Next
     Else
         retV = True
     End If
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
 Finalize:
     HasValidation = retV
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
     On Error GoTo 0
 End Function
 Public Function UniqueRowNumberInRange(ByVal Target As Range) As Long()
@@ -2074,8 +2167,8 @@ Public Function UniqueRowNumberInRange(ByVal Target As Range) As Long()
     tmpD.CompareMode = BinaryCompare
     Dim areaIDX As Long, rwIDX As Long
     Dim realRow As Long
-    For areaIDX = 1 To Target.Areas.count
-        For rwIDX = 1 To Target.Areas(areaIDX).Rows.count
+    For areaIDX = 1 To Target.Areas.Count
+        For rwIDX = 1 To Target.Areas(areaIDX).Rows.Count
             realRow = Target.Areas(areaIDX).Rows(rwIDX).Row
             If Not tmpD.Exists(realRow) Then
                 tmpD(realRow) = realRow
@@ -2083,9 +2176,9 @@ Public Function UniqueRowNumberInRange(ByVal Target As Range) As Long()
         Next rwIDX
     Next areaIDX
     
-    If tmpD.count > 0 Then
+    If tmpD.Count > 0 Then
         Dim retV() As Long, rwCount As Long
-        ReDim retV(1 To tmpD.count)
+        ReDim retV(1 To tmpD.Count)
         Dim ky As Variant
         For Each ky In tmpD.Keys
             retV(rwCount + 1) = ky
@@ -2106,75 +2199,75 @@ Public Function IsListObjectHeader(ByVal Target As Range) As Boolean
 End Function
 Public Property Get LastColumnWithData(wks As Worksheet) As Long
     If Not wks.usedRange Is Nothing Then
-        LastColumnWithData = wks.usedRange.Columns.count + (wks.usedRange.column - 1)
+        LastColumnWithData = wks.usedRange.Columns.Count + (wks.usedRange.column - 1)
     End If
 End Property
 
 Public Function LastPopulatedRow(wks As Worksheet, Optional column As Variant) As Long
-    Dim LPR As Long
+    Dim lpr As Long
     Dim rowOffset As Long, colOffset As Long, urColEnd As Long, urRowEnd As Long
     rowOffset = wks.usedRange.Row - 1
     colOffset = wks.usedRange.column - 1
-    urColEnd = wks.usedRange.Columns.count + colOffset
-    urRowEnd = wks.usedRange.Rows.count + rowOffset
+    urColEnd = wks.usedRange.Columns.Count + colOffset
+    urRowEnd = wks.usedRange.Rows.Count + rowOffset
     Dim exactCol As Long: If Not IsMissing(column) Then exactCol = column
     If exactCol > 0 And exactCol < urColEnd Then urColEnd = exactCol
     '   If asking for Column outside last col with data, then return 0
     If exactCol > urColEnd Then
-        LPR = 0
+        lpr = 0
     '   HANDLE EMPTY SHEET ( OR JUST $A$1 HAS DATA)
     ElseIf urRowEnd = 1 And urColEnd = 1 Then
-        LPR = IIf(Len(wks.Range("A1").Text) > 0, 1, 0)
-        If Not exactCol > 0 And LPR = 1 Then
-            If exactCol > 1 Then LPR = 0
+        lpr = IIf(Len(wks.Range("A1").Text) > 0, 1, 0)
+        If Not exactCol > 0 And lpr = 1 Then
+            If exactCol > 1 Then lpr = 0
         End If
     '   HANDLE SINGLE CELL POPULATED OTHER THAN $A$1
     ElseIf (VarType(wks.usedRange.Text) And VbVarType.vbArray) = 0 Then
-        LPR = urRowEnd
+        lpr = urRowEnd
         If exactCol > 0 Then
             ' ONLY ONE CELL POPULATED IIF urColEnd doesn't match Column, then return 0
-            If exactCol <> urColEnd Then LPR = 0
+            If exactCol <> urColEnd Then lpr = 0
         End If
     Else
-        LPR = urRowEnd
+        lpr = urRowEnd
     End If
    'SHOULD BE GOOD, UNLESS THE ROW [LPR] ISN'T VISIBLE
    '(HIDDEN ROW THAT HAS NOT DATA IS STILL COUNTED IN USED RANGE, SO
    ' NOW WE NEED TO CHECK THAT)
-   If LPR > 0 Then
+   If lpr > 0 Then
         Dim deepCheck As Boolean
-        If wks.Rows(LPR).Hidden Then deepCheck = True
+        If wks.Rows(lpr).Hidden Then deepCheck = True
         If Not deepCheck And exactCol > 0 Then
-            If Len(wks.Cells(LPR, exactCol).Text) = 0 Then deepCheck = True
+            If Len(wks.Cells(lpr, exactCol).Text) = 0 Then deepCheck = True
         End If
         If deepCheck Then
-            Dim rowIDX As Long, colIDX As Long
+            Dim rowIdx As Long, colIDX As Long
             Dim hasRowData As Boolean
-            For rowIDX = LPR To 1 Step -1
+            For rowIdx = lpr To 1 Step -1
                 If exactCol > 0 Then
-                    hasRowData = Len(wks.Cells(rowIDX, exactCol + colOffset)) > 0
+                    hasRowData = Len(wks.Cells(rowIdx, exactCol + colOffset)) > 0
                     If hasRowData Then
-                        LPR = rowIDX
-                    ElseIf rowIDX = 1 Then
+                        lpr = rowIdx
+                    ElseIf rowIdx = 1 Then
                         'NO ROWS IN [COLUMN] HAVE ANY DATA
-                        LPR = 0
+                        lpr = 0
                         Exit For
                     End If
                 Else
                     For colIDX = 1 To urColEnd
-                        hasRowData = Len(wks.Cells(rowIDX, colIDX + colOffset)) > 0
+                        hasRowData = Len(wks.Cells(rowIdx, colIDX + colOffset)) > 0
                         If hasRowData Then
-                            LPR = rowIDX
+                            lpr = rowIdx
                             Exit For
                         End If
                     Next colIDX
                 End If
                 DoEvents
                 If hasRowData Then Exit For
-            Next rowIDX
+            Next rowIdx
         End If
     End If
-    LastPopulatedRow = LPR
+    LastPopulatedRow = lpr
 End Function
 
 'Public Property Get LastPopulatedRow(wks As Worksheet, Optional column As Variant) As Long
@@ -2197,7 +2290,7 @@ Public Function GetA1CellRef(fromRng As Range, Optional colOffset As Long = 0, O
 '   return A1 style reference (e.g. "A10:A116") from selection
 '   Optional offsets, resized ranges supported
     Dim tmpRng As Range
-    Set tmpRng = fromRng.Offset(rowOffset, colOffset)
+    Set tmpRng = fromRng.offSet(rowOffset, colOffset)
     If colcount > 1 Or rowCount > 1 Then
         Set tmpRng = tmpRng.Resize(rowCount, colcount)
     End If
@@ -2221,17 +2314,17 @@ Public Function RangeRowCount(ByVal rng As Range) As Long
     
     'Check first if all First/Count are the same, if they are, no need to loop through everything
     If AreasMatchRows(rng) Then
-        tmpCount = rng.Areas(1).Rows.count
+        tmpCount = rng.Areas(1).Rows.Count
     Else
         Set rowDict = New Dictionary
-        For areaIDX = 1 To rng.Areas.count
-            For rwIDX = 1 To rng.Areas(areaIDX).Rows.count
+        For areaIDX = 1 To rng.Areas.Count
+            For rwIDX = 1 To rng.Areas(areaIDX).Rows.Count
                 Dim realRow As Long
                 realRow = rng.Areas(areaIDX).Rows(rwIDX).Row
                 rowDict(realRow) = realRow
             Next rwIDX
         Next areaIDX
-        tmpCount = rowDict.count
+        tmpCount = rowDict.Count
     End If
 
 Finalize:
@@ -2253,17 +2346,17 @@ Public Function RangeColCount(ByVal rng As Range) As Long
     
     
     If AreasMatchCols(rng) Then
-        tmpCount = rng.Areas(1).Columns.count
+        tmpCount = rng.Areas(1).Columns.Count
     Else
         Set colDict = New Dictionary
-        For areaIDX = 1 To rng.Areas.count
+        For areaIDX = 1 To rng.Areas.Count
             firstCol = rng.Areas(areaIDX).column
             colDict(firstCol) = firstCol
-            For colIDX = 1 To rng.Areas(areaIDX).Columns.count
+            For colIDX = 1 To rng.Areas(areaIDX).Columns.Count
                 If colIDX > 1 Then colDict(firstCol + (colIDX - 1)) = firstCol + (colIDX - 1)
             Next colIDX
         Next areaIDX
-        tmpCount = colDict.count
+        tmpCount = colDict.Count
     End If
     
 Finalize:
@@ -2280,15 +2373,15 @@ Private Function AreasMatchRows(rng As Range) As Boolean
     End If
 
     Dim retV As Boolean
-    If rng.Areas.count = 1 Then
+    If rng.Areas.Count = 1 Then
         retV = True
     Else
         Dim firstRow As Long, firstCount As Long, noMatch As Boolean, aIDX As Long
         firstRow = rng.Areas(1).Row
-        firstCount = rng.Areas(1).Rows.count
-        For aIDX = 2 To rng.Areas.count
+        firstCount = rng.Areas(1).Rows.Count
+        For aIDX = 2 To rng.Areas.Count
             With rng.Areas(aIDX)
-                If .Row <> firstRow Or .Rows.count <> firstCount Then
+                If .Row <> firstRow Or .Rows.Count <> firstCount Then
                     noMatch = True
                     Exit For
                 End If
@@ -2304,15 +2397,15 @@ End Function
 Private Function AreasMatchCols(rng As Range) As Boolean
 
     Dim retV As Boolean
-    If rng.Areas.count = 1 Then
+    If rng.Areas.Count = 1 Then
         retV = True
     Else
         Dim firstCol As Long, firstCount As Long, noMatch As Boolean, aIDX As Long
         firstCol = rng.Areas(1).column
-        firstCount = rng.Areas(1).Columns.count
-        For aIDX = 2 To rng.Areas.count
+        firstCount = rng.Areas(1).Columns.Count
+        For aIDX = 2 To rng.Areas.Count
             With rng.Areas(aIDX)
-                If .column <> firstCol Or .Columns.count <> firstCount Then
+                If .column <> firstCol Or .Columns.Count <> firstCount Then
                     noMatch = True
                     Exit For
                 End If
@@ -2335,20 +2428,20 @@ Public Function ContiguousRows(rng As Range) As Boolean
         Exit Function
     End If
 
-    If rng.Areas.count = 1 Then
+    If rng.Areas.Count = 1 Then
         retV = True
     Else
         'If any Area is outside the min/max row of any other area then return false
         Dim loop1 As Long, loop2 As Long, isDiffRange As Boolean
         Dim l1Start As Long, l1End As Long, l2Start As Long, l2End As Long
         
-        For loop1 = 1 To rng.Areas.count
+        For loop1 = 1 To rng.Areas.Count
             l1Start = rng.Areas(loop1).Row
-            l1End = l1Start + rng.Areas(loop1).Rows.count - 1
+            l1End = l1Start + rng.Areas(loop1).Rows.Count - 1
             
-            For loop2 = 1 To rng.Areas.count
+            For loop2 = 1 To rng.Areas.Count
                 l2Start = rng.Areas(loop2).Row
-                l2End = l1Start + rng.Areas(loop2).Rows.count - 1
+                l2End = l1Start + rng.Areas(loop2).Rows.Count - 1
                 If l1Start < l2Start Or l1End > l2End Then
                     isDiffRange = True
                 End If
@@ -2375,20 +2468,20 @@ Public Function ContiguousColumns(rng As Range) As Boolean
     End If
 
 
-    If rng.Areas.count = 1 Then
+    If rng.Areas.Count = 1 Then
         retV = True
     Else
         'If any Area is outside the min/max row of any other area then return false
         Dim loop1 As Long, loop2 As Long, isDiffRange As Boolean
         Dim l1Start As Long, l1End As Long, l2Start As Long, l2End As Long
         
-        For loop1 = 1 To rng.Areas.count
+        For loop1 = 1 To rng.Areas.Count
             l1Start = rng.Areas(loop1).column
-            l1End = l1Start + rng.Areas(loop1).Columns.count - 1
+            l1End = l1Start + rng.Areas(loop1).Columns.Count - 1
             
-            For loop2 = 1 To rng.Areas.count
+            For loop2 = 1 To rng.Areas.Count
                 l2Start = rng.Areas(loop2).column
-                l2End = l1Start + rng.Areas(loop2).Columns.count - 1
+                l2End = l1Start + rng.Areas(loop2).Columns.Count - 1
                 If l1Start < l2Start Or l1End > l2End Then
                     isDiffRange = True
                 End If
@@ -2403,5 +2496,8 @@ Public Function ContiguousColumns(rng As Range) As Boolean
     ContiguousColumns = retV
 
 End Function
+
+
+
 
 

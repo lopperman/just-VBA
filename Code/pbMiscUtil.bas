@@ -18,12 +18,258 @@ Option Base 1
 '   DEFAULT NAME (NOT PATH) OF TOP LEVEL TEMP DIRETORY FOR CURRENT APP
 Public Const TEMP_DIRECTORY_NAME As String = "FinToolTemp"
 Public Const LOG_DIRECTORY_NAME As String = "Logs"
-
-
-Private lBypassOnCloseCheck As Boolean
 Private l_pbPackageRunning As Boolean
+
 Private l_preventProtection As Boolean
 Private l_OperatingState As ftOperatingState
+
+
+    
+Public Property Get ENV_User() As String
+    ENV_User = VBA.Interaction.Environ("USER")
+End Property
+
+Public Function ENV_LogName() As String
+On Error Resume Next
+    #If Mac Then
+        ENV_LogName = VBA.Interaction.Environ("LOGNAME")
+    #Else
+        ENV_LogName = VBA.Interaction.Environ("USERNAME")
+    #End If
+End Function
+
+Public Property Get ENV_HOME() As String
+    ENV_HOME = VBA.Interaction.Environ("HOME")
+End Property
+Public Property Get ENV_TEMPDIR() As String
+    ENV_TEMPDIR = VBA.Interaction.Environ("TMPDIR")
+End Property
+
+
+    
+'Private l_pbPackageRunning As Boolean
+Public Property Get pbPackageRunning() As Boolean
+    pbPackageRunning = l_pbPackageRunning
+End Property
+Public Property Let pbPackageRunning(vl As Boolean)
+    l_pbPackageRunning = vl
+End Property
+    
+    
+    
+
+    
+    
+
+    
+
+    
+Public Property Get DBLQUOTE() As String
+    DBLQUOTE = Chr(34)
+End Property
+    
+    
+
+    
+    
+Public Function DtAdd(intervalType As DateDiffType, _
+    number As Variant, ByVal dt As Variant) As Variant
+    
+    Dim retVal As Variant
+    
+    Select Case intervalType
+        Case DateDiffType.dtday
+            retVal = DateAdd("d", number, dt)
+        Case DateDiffType.dtDayOfYear
+            retVal = DateAdd("y", number, dt)
+        Case DateDiffType.dtHour
+            retVal = DateAdd("h", number, dt)
+        Case DateDiffType.dtMinute
+            retVal = DateAdd("n", number, dt)
+        Case DateDiffType.dtMonth
+            retVal = DateAdd("m", number, dt)
+        Case DateDiffType.dtQuarter
+            retVal = DateAdd("q", number, dt)
+        Case DateDiffType.dtSecond
+            retVal = DateAdd("s", number, dt)
+        Case DateDiffType.dtWeekday
+            retVal = DateAdd("w", number, dt)
+        Case DateDiffType.dtWeek
+            retVal = DateAdd("ww", number, dt)
+        Case DateDiffType.dtYear
+            retVal = DateAdd("yyyy", number, dt)
+    End Select
+    
+    DtAdd = retVal
+    
+End Function
+
+Public Function DtPart(thePart As DateDiffType, dt1 As Variant, _
+    Optional ByVal firstDayOfWeek As VbDayOfWeek = vbSunday, _
+    Optional ByVal firstWeekOfYear As VbFirstWeekOfYear = VbFirstWeekOfYear.vbFirstJan1) As Variant
+    Select Case thePart
+        Case DateDiffType.dtDate_NoTime
+            DtPart = DateSerial(DtPart(dtYear, dt1), DtPart(dtMonth, dt1), DtPart(dtday, dt1))
+        Case DateDiffType.dtday
+            DtPart = DatePart("d", dt1, firstDayOfWeek, firstWeekOfYear)
+        Case DateDiffType.dtDayOfYear
+            DtPart = DatePart("y", dt1, firstDayOfWeek, firstWeekOfYear)
+        Case DateDiffType.dtHour
+            DtPart = DatePart("h", dt1, firstDayOfWeek, firstWeekOfYear)
+        Case DateDiffType.dtMinute
+            DtPart = DatePart("n", dt1, firstDayOfWeek, firstWeekOfYear)
+        Case DateDiffType.dtMonth
+            DtPart = DatePart("m", dt1, firstDayOfWeek, firstWeekOfYear)
+        Case DateDiffType.dtQuarter
+            DtPart = DatePart("q", dt1, firstDayOfWeek, firstWeekOfYear)
+        Case DateDiffType.dtSecond
+            DtPart = DatePart("s", dt1, firstDayOfWeek, firstWeekOfYear)
+        Case DateDiffType.dtWeek
+            DtPart = DatePart("ww", dt1, firstDayOfWeek, firstWeekOfYear)
+        Case DateDiffType.dtWeekday
+            DtPart = DatePart("w", dt1, firstDayOfWeek, firstWeekOfYear)
+        Case DateDiffType.dtYear
+            DtPart = DatePart("yyyy", dt1, firstDayOfWeek, firstWeekOfYear)
+    End Select
+End Function
+
+Public Function DtDiff(diffType As DateDiffType, _
+    dt1 As Variant, Optional ByVal dt2 As Variant, _
+    Optional firstDayOfWeek As VbDayOfWeek = vbSunday, _
+    Optional firstWeekOfYear As VbFirstWeekOfYear = VbFirstWeekOfYear.vbFirstJan1, _
+    Optional returnFraction As Boolean = False) As Variant
+' ~~~ FRACTIONAL RETURN VALUES ONLY SUPPORTED FOR
+'        minutes, hours, days, weeks
+' ~~~ note:  fractionals are based on type of date/time component
+' ~~~ for example, if the difference in time was 2 minutes, 30 seconds
+' ~~~ and you were returning Minutes as a fractions, the return value would
+' ~~~ be 2.5 (for 2 1/2 minutes)
+    
+    If IsMissing(dt2) Then dt2 = Now
+    Dim retVal As Variant
+    Dim tmpVal1 As Variant
+    Dim tmpVal2 As Variant
+    Dim tmpRemain As Variant
+    
+    Select Case diffType
+        Case DateDiffType.dtSecond
+            retVal = DateDiff("s", dt1, dt2)
+        Case DateDiffType.dtWeekday
+            retVal = DateDiff("w", dt1, dt2)
+        Case DateDiffType.dtMinute
+            If returnFraction Then
+                ' fractions based on SECONDS (60)
+                tmpVal1 = DtDiff(dtSecond, dt1, dt2)
+                tmpVal2 = tmpVal1 - (DateDiff("n", dt1, dt2) * 60)
+                If tmpVal2 > 0 Then
+                    retVal = DateDiff("n", dt1, dt2) + (tmpVal2 / 60)
+                Else
+                    retVal = DateDiff("n", dt1, dt2)
+                End If
+            Else
+                retVal = DateDiff("n", dt1, dt2)
+            End If
+        Case DateDiffType.dtHour
+                ' fractions based on MINUTES (60)
+            If returnFraction Then
+                tmpVal1 = DtDiff(dtMinute, dt1, dt2)
+                tmpVal2 = tmpVal1 - (DateDiff("h", dt1, dt2) * 60)
+                If tmpVal2 > 0 Then
+                    retVal = DateDiff("h", dt1, dt2) + (tmpVal2 / 60)
+                Else
+                    retVal = DateDiff("h", dt1, dt2)
+                End If
+            Else
+                retVal = DateDiff("h", dt1, dt2)
+            End If
+        Case DateDiffType.dtday
+                ' fractions based on HOURS (24)
+            If returnFraction Then
+                tmpVal1 = DtDiff(dtHour, dt1, dt2)
+                tmpVal2 = tmpVal1 - (DateDiff("d", dt1, dt2) * 24)
+                If tmpVal2 > 0 Then
+                    retVal = DateDiff("d", dt1, dt2) + (tmpVal2 / 24)
+                Else
+                    retVal = DateDiff("d", dt1, dt2)
+                End If
+            Else
+                retVal = DateDiff("d", dt1, dt2)
+            End If
+        Case DateDiffType.dtWeek
+                ' fractions based on DAYS (7)
+            If returnFraction Then
+                tmpVal1 = DtDiff(dtday, dt1, dt2)
+                tmpVal2 = tmpVal1 - (DateDiff("ww", dt1, dt2, firstDayOfWeek, firstWeekOfYear) * 7)
+                If tmpVal2 > 0 Then
+                    retVal = DateDiff("ww", dt1, dt2, firstDayOfWeek, firstWeekOfYear) + (tmpVal2 / 7)
+                Else
+                    retVal = DateDiff("ww", dt1, dt2, firstDayOfWeek, firstWeekOfYear)
+                End If
+            Else
+                retVal = DateDiff("ww", dt1, dt2, firstDayOfWeek, firstWeekOfYear)
+            End If
+        Case DateDiffType.dtMonth
+            retVal = DateDiff("m", dt1, dt1, firstDayOfWeek, firstWeekOfYear)
+        Case DateDiffType.dtQuarter
+            retVal = DateDiff("q", dt1, dt1, firstDayOfWeek, firstWeekOfYear)
+        Case DateDiffType.dtYear
+            retVal = DateDiff("yyyy", dt1, dt1, firstDayOfWeek, firstWeekOfYear)
+        Case DateDiffType.dtDayOfYear
+            retVal = DateDiff("y", dt1, dt1, firstDayOfWeek, firstWeekOfYear)
+    End Select
+    
+    DtDiff = retVal
+    
+End Function
+
+Public Sub CheckReady(Optional timeoutSec As Long = 20)
+    On Error Resume Next
+    If timeoutSec > 30 Then timeoutSec = 30
+    Dim curTmr As Single, notReadyLogged As Boolean
+    curTmr = Timer
+    Do While Application.Ready = False
+        If notReadyLogged = False Then
+            notReadyLogged = True
+        End If
+        If Timer - curTmr >= timeoutSec Then
+            Exit Do
+        End If
+        DoEvents
+    Loop
+    If Not Err.number = 0 Then
+        Err.Clear
+    End If
+End Sub
+
+Public Function InVisibleRange(activeSheetAddress As String, Optional scrollTo As Boolean = False) As Boolean
+On Error Resume Next
+    If Not ThisWorkbook.ActiveSheet Is Nothing Then
+        If Intersect(ThisWorkbook.Windows(1).VisibleRange, ThisWorkbook.ActiveSheet.Range(activeSheetAddress).Cells(1, 1)) Is Nothing Then
+            InVisibleRange = False
+        Else
+            InVisibleRange = True
+        End If
+    End If
+    
+    If InVisibleRange = False And scrollTo = True Then
+        Dim scrn As Boolean: scrn = Application.ScreenUpdating
+        Application.ScreenUpdating = True
+        Application.GoTo Reference:=ThisWorkbook.ActiveSheet.Range(activeSheetAddress).Cells(1, 1), Scroll:=True
+        DoEvents
+        Application.ScreenUpdating = scrn
+    End If
+    
+    If Err.number <> 0 Then
+        Trace ConcatWithDelim(", ", "Error pbMiscUtil.InVisibleRange", "Address: ", ActiveSheetName, activeSheetAddress, Err.number, Err.Description), forceWrite:=True, forceDebug:=True
+        Err.Clear
+    End If
+End Function
+
+'Public Function FullNameCorrectedByName(wbName) As String
+'    If WorkbookIsOpen(wbName) Then
+'        FullNameCorrectedByName = wbName
+'    End If
+'End Function
 
 Public Function FullWbNameCorrected(Optional wkbk As Workbook) As String
 On Error Resume Next
@@ -39,123 +285,60 @@ On Error Resume Next
         End If
     End If
     FullWbNameCorrected = fName
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
 End Function
 
 
-Public Property Get pbPackageRunning() As Boolean
-    pbPackageRunning = l_pbPackageRunning
-End Property
-Public Property Let pbPackageRunning(vl As Boolean)
-    l_pbPackageRunning = vl
-End Property
-
-Public Property Get byPassOnCloseCheck() As Boolean
-    byPassOnCloseCheck = lBypassOnCloseCheck
-End Property
-Public Property Let byPassOnCloseCheck(bypassCheck As Boolean)
-    lBypassOnCloseCheck = bypassCheck
-End Property
-
-
-Public Function pbProtectSheet(ws As Worksheet) As Boolean
-    'Replace with you own implementation
-    'pbProtectSheet = True
-    
-    pbProtectSheet = protectSht(ws)
-End Function
-Public Function pbUnprotectSheet(ws As Worksheet) As Boolean
-    'Replace with you own implementation
-    'pbpbUnprotectSheet = True
-    pbUnprotectSheet = UnprotectSHT(ws)
-End Function
-
-Public Function StringsMatch(ByVal str1 As Variant, ByVal str2 As Variant, Optional smEnum As strMatchEnum = strMatchEnum.smEqual, Optional compMethod As VbCompareMethod = vbTextCompare) As Boolean
-'       PUT THIS ENUM AT TOP OF A STANDARD MODULE COPY OF THE ENUM FROM COMMON
-        'Public Enum strMatchEnum
-        '    smEqual = 0
-        '    smNotEqualTo = 1
-        '    smContains = 2
-        '    smStartsWithStr = 3
-        '    smEndWithStr = 4
-        'End Enum
-    str1 = CStr(str1)
-    str2 = CStr(str2)
-    Select Case smEnum
-        Case strMatchEnum.smEqual
-            StringsMatch = StrComp(str1, str2, compMethod) = 0
-        Case strMatchEnum.smNotEqualTo
-            StringsMatch = StrComp(str1, str2, compMethod) <> 0
-        Case strMatchEnum.smContains
-            StringsMatch = InStr(1, str1, str2, compMethod) > 0
-        Case strMatchEnum.smStartsWithStr
-            StringsMatch = InStr(1, str1, str2, compMethod) = 1
-        Case strMatchEnum.smEndWithStr
-            If Len(str2) > Len(str1) Then
-                StringsMatch = False
-            Else
-                StringsMatch = InStr(Len(str1) - Len(str2) + 1, str1, str2, compMethod) = Len(str1) - Len(str2) + 1
-            End If
-    End Select
-End Function
-
-Public Function DeleteFolderFiles(folderPath As String, Optional patternMatch As String = vbNullString)
-On Error Resume Next
-    folderPath = PathCombine(True, folderPath)
-    
-    If DirectoryFileCount(folderPath) > 0 Then
-        Dim myPath As Variant
-        myPath = PathCombine(True, folderPath)
-        ChDir folderPath
-        Dim myFile, MyName As String
-        MyName = Dir(myPath, vbNormal)
-        Do While MyName <> ""
-            If (GetAttr(PathCombine(False, myPath, MyName)) And vbNormal) = vbNormal Then
-                If patternMatch = vbNullString Then
-                    Kill PathCombine(False, myPath, MyName)
-                Else
-                    If LCase(MyName) Like LCase(patternMatch) Then
-                        Kill PathCombine(False, myPath, MyName)
-                    End If
-                End If
-            End If
-            MyName = Dir()
-        Loop
+Public Function SimpleURLEncode(ByVal fPath As String) As String
+    If Len(fPath) > 0 Then
+        If InStr(1, fPath, "http", vbTextCompare) > 0 Then
+            fPath = Replace(fPath, " ", "%20", compare:=vbTextCompare)
+        End If
     End If
-    If Err.Number <> 0 Then Err.Clear
+    SimpleURLEncode = fPath
+    If Err.number <> 0 Then Err.Clear
+
 End Function
 
-Public Function DirectoryFileCount(tmpDirPath As String) As Long
-On Error Resume Next
 
-    Dim myFile, myPath, MyName As String, retV As Long
-    myPath = PathCombine(True, tmpDirPath)
-    MyName = Dir(myPath, vbNormal)
-    Do While MyName <> ""
-        If (GetAttr(PathCombine(False, myPath, MyName)) And vbNormal) = vbNormal Then
-            retV = retV + 1
-        End If
-        MyName = Dir()
-    Loop
-    DirectoryFileCount = retV
-    If Err.Number <> 0 Then Err.Clear
-End Function
 
-Public Function DirectoryDirectoryCount(tmpDirPath As String) As Long
-On Error Resume Next
+    
+    Public Function StringsMatch( _
+        ByVal str1 As Variant, ByVal _
+        str2 As Variant, _
+        Optional smEnum As strMatchEnum = strMatchEnum.smEqual, _
+        Optional compMethod As VbCompareMethod = vbTextCompare) As Boolean
+        
+    '       IF NEEDED, PUT THIS ENUM AT TOP OF A STANDARD MODULE
+            'Public Enum strMatchEnum
+            '    smEqual = 0
+            '    smNotEqualTo = 1
+            '    smContains = 2
+            '    smStartsWithStr = 3
+            '    smEndWithStr = 4
+            'End Enum
+            
+        str1 = CStr(str1)
+        str2 = CStr(str2)
+        Select Case smEnum
+            Case strMatchEnum.smEqual
+                StringsMatch = StrComp(str1, str2, compMethod) = 0
+            Case strMatchEnum.smNotEqualTo
+                StringsMatch = StrComp(str1, str2, compMethod) <> 0
+            Case strMatchEnum.smContains
+                StringsMatch = InStr(1, str1, str2, compMethod) > 0
+            Case strMatchEnum.smStartsWithStr
+                StringsMatch = InStr(1, str1, str2, compMethod) = 1
+            Case strMatchEnum.smEndWithStr
+                If Len(str2) > Len(str1) Then
+                    StringsMatch = False
+                Else
+                    StringsMatch = InStr(Len(str1) - Len(str2) + 1, str1, str2, compMethod) = Len(str1) - Len(str2) + 1
+                End If
+        End Select
+    End Function
 
-    Dim myFile, myPath, MyName As String, retV As Long
-    myPath = PathCombine(True, tmpDirPath)
-    MyName = Dir(myPath, vbDirectory)
-    Do While MyName <> ""
-        If (GetAttr(PathCombine(False, myPath, MyName)) And vbDirectory) = vbDirectory Then
-            retV = retV + 1
-        End If
-        MyName = Dir()
-    Loop
-    DirectoryDirectoryCount = retV
-    If Err.Number <> 0 Then Err.Clear
-End Function
+
 
 Public Property Get DefaultTempTblPrefixes() As Variant()
     'DEFAULT PREFIXES TO INDICATE A TABLE/LISTOBJECT IS TEMPORARY
@@ -199,12 +382,12 @@ Public Function CallAppRun(wbName As String, procName As String, Optional raiseE
     Application.Run ("'" & wbName & "'!'" & procName & "'")
     Exit Function
 E:
-    Beep
+    ftBeep btError
     If Not raiseErrorOnFail Then
         Err.Clear
         On Error GoTo 0
     Else
-        Err.Raise Err.Number, Err.Description
+        Err.Raise Err.number, Err.Description
     End If
 End Function
 
@@ -268,33 +451,15 @@ Finalize:
     
     If l_listObjDict.Exists(listObjectName) Then
         Set wt = l_listObjDict(listObjectName)
-    Else
-        If IsDEV Then
-            If wt Is Nothing Then
-                Beep
-            End If
-           ' Beep
-            'Stop
-        End If
     End If
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
     Exit Function
 E:
-    Beeper
+    ftBeep btError
     DebugPrint "Error getting list object " & listObjectName
     Err.Clear
 End Function
 
-' ~~~~~~~~~~   CLEAN SINGLE TICKS ~~~~~~~~~~'
-Public Function CleanSingleTicks(wbName As String) As String
-    Dim retV As String
-    If InStr(wbName, "'") > 0 And InStr(wbName, "''") = 0 Then
-        retV = Replace(wbName, "'", "''")
-    Else
-        retV = wbName
-    End If
-    CleanSingleTicks = retV
-End Function
 
 ' ~~~ ~~ FLAG ENUM COMPARE ~~~ ~~~
 Public Function EnumCompare(theEnum As Variant, enumMember As Variant, Optional ByVal iType As ecComparisonType = ecComparisonType.ecOR) As Boolean
@@ -306,7 +471,7 @@ End Function
 
 ' ~~~~~~~~~~   INPUT BOX   ~~~~~~~~~~'
 Public Function InputBox_FT(prompt As String, Optional title As String = "Financial Tool - Input Needed", Optional default As Variant, Optional inputType As ftInputBoxType) As Variant
-    Beeper
+    ftBeep btMsgBoxChoice
     If inputType > 0 Then
         InputBox_FT = Application.InputBox(prompt, title:=title, default:=default, Type:=inputType)
     Else
@@ -321,7 +486,11 @@ Public Function MsgBox_FT(prompt As String, Optional buttons As VbMsgBoxStyle = 
     EventsOff
     If Not EnumCompare(buttons, vbSystemModal) Then buttons = buttons + vbSystemModal
     If Not EnumCompare(buttons, vbMsgBoxSetForeground) Then buttons = buttons + vbMsgBoxSetForeground
-    Beep
+    If EnumCompare(buttons, vbOKOnly) Then
+        ftBeep btMsgBoxOK
+    Else
+        ftBeep btMsgBoxChoice
+    End If
     If Not ThisWorkbook.ActiveSheet Is Application.ActiveSheet Then
         Application.ScreenUpdating = True
         ThisWorkbook.Activate
@@ -337,7 +506,7 @@ Public Function AskYesNo(msg As String, title As String, Optional defaultYES As 
     If IsMissing(title) Then
         title = "QUESTION"
     End If
-    Beep
+    ftBeep btMsgBoxChoice
     If defaultYES Then
         AskYesNo = MsgBox_FT(msg, vbYesNo + vbQuestion, title)
     Else
@@ -351,11 +520,11 @@ Public Function GetNextID(table As ListObject, uniqueIdcolumnIdx As Long) As Lon
 '   Use to create next (Long) number for unique ROW id in a Range
 On Error Resume Next
     Dim nextID As Long
-    If table.listRows.count > 0 Then
+    If table.listRows.Count > 0 Then
         nextID = Application.WorksheetFunction.Max(table.ListColumns(uniqueIdcolumnIdx).DataBodyRange)
     End If
     GetNextID = nextID + 1
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
 End Function
 
 
@@ -371,156 +540,13 @@ On Error Resume Next
     If DirectoryExists(tmpPath) Then
         TempDirPath = tmpPath
     End If
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
 End Property
 
-' ~~~~~~~~~~   CREATE THE ** LAST ** DIRECTORY IN 'fullPath' ~~~~~~~~~~'
-Public Function CreateDirectory(fullPath As String) As Boolean
-' IF 'fullPath' is not a valid directory but the '1 level back' IS a valid directory, then the last directory in 'fullPath' will be created
-' Example: CreateDirectory("/Users/paul/Library/Containers/com.microsoft.Excel/Data/Documents/FinToolTemp/Logs")
-    'If the 'FinToolTemp' directory exists, the Logs will be created if it is not already there.
-'   Primary reason for not creating multiple directories in the path is issues with both PC and Mac for File System changes.
-    
-    DebugPrint ConcatWithDelim(", ", "pbMiscUtil.CreateDirectory", "CHECKING", fullPath)
-    
-    Dim retV As Boolean
 
-    If DirectoryExists(fullPath) Then
-        DebugPrint ConcatWithDelim(", ", "pbMiscUtil.CreateDirectory", fullPath, "aready exists")
-        retV = True
-    Else
-        Dim lastDirName As String, pathArr As Variant, checkFldrName As String
-        fullPath = PathCombine(False, fullPath)
-        If InStrRev(fullPath, Application.PathSeparator, compare:=vbTextCompare) > InStr(1, fullPath, Application.PathSeparator, vbTextCompare) Then
-            lastDirName = left(fullPath, InStrRev(fullPath, Application.PathSeparator, compare:=vbTextCompare) - 1)
-            If DirectoryExists(lastDirName) Then
-                On Error Resume Next
-                DebugPrint ConcatWithDelim(", ", "pbMiscUtil.CreateDirectory", "Creating directory: ", fullPath)
-                MkDir fullPath
-                If Err.Number = 0 Then
-                    DebugPrint ConcatWithDelim(", ", "pbMiscUtil.CreateDirectory", "Created: ", fullPath)
-                
-                    retV = DirectoryExists(fullPath)
-                End If
-            End If
-        End If
-    End If
-    CreateDirectory = retV
-    If Err.Number <> 0 Then Err.Clear
-End Function
 
-' ~~~~~~~~~~   Returns true if DIRECTORY path dirPath) Exists ~~~~~~~~~~'
-Public Function DirectoryExists(dirPath As String) As Boolean
-On Error Resume Next
-    Dim retV As Boolean
-    Dim lastDirName As String, pathArr As Variant, checkFldrName As String
-    dirPath = PathCombine(False, dirPath)
 
-    If InStr(dirPath, Application.PathSeparator) > 0 Then
-        pathArr = Split(dirPath, Application.PathSeparator)
-        checkFldrName = CStr(pathArr(UBound(pathArr)))
-        retV = StrComp(Dir(dirPath & "*", vbDirectory), LCase(checkFldrName), vbTextCompare) = 0
-        If Err.Number <> 0 Then
-            DebugPrint "DirectoryExists: Err Getting Path: " & dirPath & ", " & Err.Number & " - " & Err.Description
-        End If
-    End If
-    DirectoryExists = retV
-    If Err.Number <> 0 Then Err.Clear
-End Function
 
-' ~~~~~~~~~~   Returns true if filePth Exists and is not a directory  ~~~~~~~~~~'
-Public Function FileExists(filePth As String, Optional allowWildcardsForFile As Boolean = False) As Boolean
-On Error Resume Next
-    Dim retV As Boolean
-    Dim lastDirName As String, pathArr As Variant, checkFlName As String
-    filePth = PathCombine(False, filePth)
-
-    If InStr(filePth, Application.PathSeparator) > 0 Then
-        pathArr = Split(filePth, Application.PathSeparator)
-        checkFlName = CStr(pathArr(UBound(pathArr)))
-        Dim tmpReturnedFileName As String
-        tmpReturnedFileName = Dir(filePth & "*", vbNormal)
-        If allowWildcardsForFile = True And Len(tmpReturnedFileName) > 0 Then
-            retV = True
-        Else
-            retV = StrComp(Dir(filePth & "*"), LCase(checkFlName), vbTextCompare) = 0
-        End If
-        If Err.Number <> 0 Then DebugPrint "DirectoryExists: Err Getting Path: " & filePth & ", " & Err.Number & " - " & Err.Description
-    End If
-    FileExists = retV
-    If Err.Number <> 0 Then Err.Clear
-End Function
-
-' ~~~~~~~~~~   Create Valid File or Directory Path (for PC or Mac, local, or internet) from 1 or more arguments  ~~~~~~~~~~'
-Public Function PathCombine(includeEndSeparator As Boolean, ParamArray vals() As Variant) As String
-' COMBINE PATH AND/OR FILENAME SEGMENTS
-' WORKS FOR MAC OR PC ('/' vs '\'), and for web url's
-'
-'   DebugPrint PathCombine(True, "/usr", "\\what", "/a//", "mess")
-'      outputs:  /usr/what/a/mess/
-'   DebugPrint PathCombine(False, "/usr", "\\what", "/a//", "mess", "word.docx/")
-'      outputs: /usr/what/a/mess/word.docx
-'   DebugPrint PathCombine(true,"https://www.google.com\badurl","gmail")
-'       outputs:  https://www.google.com/badurl/gmail/
-    
-    Dim tDelim As String, isHTTP As Boolean
-    Dim i As Long
-    Dim retV As String
-    Dim dblPS As String
-    Dim wrongPS As String
-    For i = LBound(vals) To UBound(vals)
-        If LCase(vals(i)) Like "*http*" Then
-            isHTTP = True
-            tDelim = "/"
-            wrongPS = "\"
-        End If
-    Next i
-    If Not isHTTP Then
-        tDelim = Application.PathSeparator
-        If InStr(1, "/", Application.PathSeparator) > 0 Then
-            wrongPS = "\"
-        Else
-            wrongPS = "/"
-        End If
-    End If
-    dblPS = tDelim & tDelim
-    For i = LBound(vals) To UBound(vals)
-        If i = LBound(vals) Then
-            retV = CStr(vals(i))
-            If Len(retV) = 0 Then retV = tDelim
-        Else
-            If Mid(retV, Len(retV)) = tDelim Then
-                retV = retV & vals(i)
-            Else
-                retV = retV & tDelim & vals(i)
-            End If
-        End If
-    Next i
-    retV = Replace(retV, wrongPS, tDelim)
-    If isHTTP Then
-        retV = Replace(retV, "://", ":::")
-        Do While InStr(1, retV, dblPS) > 0
-            retV = Replace(retV, dblPS, tDelim)
-        Loop
-        retV = Replace(retV, ":::", "://")
-    Else
-        Do While InStr(1, retV, dblPS) > 0
-            retV = Replace(retV, dblPS, tDelim)
-        Loop
-    End If
-    If includeEndSeparator Then
-        If Not Mid(retV, Len(retV)) = tDelim Then
-            retV = retV & Application.PathSeparator
-        End If
-    Else
-        'Remove it if it's there
-        If Mid(retV, Len(retV)) = Application.PathSeparator Then
-            retV = Mid(retV, 1, Len(retV) - 1)
-        End If
-    End If
-    PathCombine = retV
-
-End Function
 
 Public Function WorksheetExists(sName As String, Optional wbk As Workbook) As Boolean
 On Error Resume Next
@@ -529,43 +555,36 @@ On Error Resume Next
     End If
     Dim ws As Worksheet
     Set ws = wbk.Worksheets(sName)
-    If Err.Number = 0 Then
+    If Err.number = 0 Then
         WorksheetExists = True
     End If
     Set ws = Nothing
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
 End Function
 
-Public Function WorkbookIsOpen(wkBkName As String, Optional verifyFullNameCorrected As String = vbNullString) As Boolean
 
-    Dim i As Long, retV As Boolean
-    For i = 1 To Application.Workbooks.count
-        If StrComp(LCase(wkBkName), LCase(Application.Workbooks(i).Name), vbTextCompare) = 0 Then
-            If Len(verifyFullNameCorrected) > 0 Then
-                If StrComp(LCase(verifyFullNameCorrected), LCase(FullWbNameCorrected(Application.Workbooks(i))), vbTextCompare) = 0 Then
-                    retV = True
-                    Exit For
-                End If
-            Else
-                retV = True
-            End If
-        End If
-    Next i
-    
-    If retV = False And LCase(wkBkName) Like "*.xlam" Then
-        'This covers Addins, which by default will not show up in regular enumeration of Workbooks
-        '   Requires an Explicit 'Workbooks([addin workbook name])'
-        On Error Resume Next
-        Dim tmpWB As Workbook
-        Set tmpWB = Workbooks(wkBkName)
-        If Err.Number = 0 And Not tmpWB Is Nothing Then
-            retV = True
-        End If
-        Set tmpWB = Nothing
+
+Public Function WorkbookIsOpen(ByVal wkBkName As String, Optional checkCodeName As String = vbNullString) As Boolean
+On Error Resume Next
+    wkBkName = FileNameFromFullPath(wkBkName)
+    If Not Workbooks(wkBkName) Is Nothing Then
+        WorkbookIsOpen = True
+    Else
+        WorkbookIsOpen = False
     End If
-    
-    WorkbookIsOpen = retV
-If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then
+        WorkbookIsOpen = False
+    End If
+    If WorkbookIsOpen And Len(checkCodeName) > 0 Then
+        If StringsMatch(Workbooks(wkBkName).CodeName, checkCodeName) Then
+            WorkbookIsOpen = True
+        Else
+            WorkbookIsOpen = False
+        End If
+    End If
+    If Err.number <> 0 Then Err.Clear
+    Exit Function
+
 End Function
 
 Public Function FirstMondayOfMonth(dtVal As Variant) As Variant
@@ -615,93 +634,10 @@ On Error Resume Next
     Dim newDt As Double
     newDt = CDbl(dt) + addDays
     DateAddDays = CDate(newDt)
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
 End Function
 
-Public Function FullPathExcludingFileName(fullFileName As String) As String
-On Error Resume Next
-    Dim tPath As String, tFileName As String, fNameStarts As Long
-    tFileName = FileNameFromFullPath(fullFileName)
-    fNameStarts = InStr(fullFileName, tFileName)
-    tPath = Mid(fullFileName, 1, fNameStarts - 1)
-    FullPathExcludingFileName = tPath
-    If Err.Number <> 0 Then Err.Clear
-End Function
 
-Public Function FileNameFromFullPath(fullFileName As String) As String
-On Error Resume Next
-    Dim sepChar As String
-    sepChar = Application.PathSeparator
-    If LCase(fullFileName) Like "*http*" Then
-        sepChar = "/"
-    End If
-    Dim lastSep As Long: lastSep = Strings.InStrRev(fullFileName, sepChar)
-    Dim shortFName As String:  shortFName = Mid(fullFileName, lastSep + 1)
-    FileNameFromFullPath = shortFName
-    If Err.Number <> 0 Then Err.Clear
-End Function
-Public Function ChooseFolder(choosePrompt As String) As String
-'   Get User-Selected Directory name (MAC and PC Supported)
-On Error Resume Next
-    Beep
-    Dim retV As Variant
-
-    #If Mac Then
-        retV = MacScript("choose folder with prompt """ & choosePrompt & """ as string")
-        If Len(retV) > 0 Then
-            retV = MacScript("POSIX path of """ & retV & """")
-        End If
-    #Else
-        Dim fldr As FileDialog
-        Dim sItem As String
-        Set fldr = Application.FileDialog(msoFileDialogFolderPicker)
-        With fldr
-            .title = choosePrompt
-            .AllowMultiSelect = False
-            .InitialFileName = Application.DefaultFilePath
-            If .Show <> -1 Then GoTo NextCode
-            retV = .SelectedItems(1)
-        End With
-NextCode:
-        Set fldr = Nothing
-    #End If
-    
-    ChooseFolder = retV
-    If Err.Number <> 0 Then Err.Clear
-End Function
-
-Public Function ChooseFile(choosePrompt As String, Optional fileExt As String = vbNullString) As String
-'   Get User-Select File Name (MAC and PC Supported)
-On Error Resume Next
-    Beep
-    Dim retV As Variant
-
-    #If Mac Then
-        retV = MacScript("choose file with prompt """ & choosePrompt & """ as string")
-        If Len(retV) > 0 Then
-            retV = MacScript("POSIX path of """ & retV & """")
-        End If
-    #Else
-        Dim fldr As FileDialog
-        Dim sItem As String
-        Set fldr = Application.FileDialog(msoFileDialogFilePicker)
-        With fldr
-            .title = choosePrompt
-            If Not fileExt = vbNullString Then
-                .Filters.Clear
-                .Filters.Add "Files", fileExt & "?", 1
-            End If
-            .AllowMultiSelect = False
-            If .Show <> -1 Then GoTo NextCode
-            retV = .SelectedItems(1)
-        End With
-NextCode:
-        Set fldr = Nothing
-    #End If
-    
-    ChooseFile = retV
-    If Err.Number <> 0 Then Err.Clear
-End Function
 
 Public Function WaitWithDoEvents(waitSeconds As Long)
 'WAIT FOR N SECONDS WHILE ALLOWING OTHER EXCEL EVENT TO PROCESS
@@ -712,47 +648,51 @@ Public Function WaitWithDoEvents(waitSeconds As Long)
     Do While Timer - stTimer < waitSeconds
         DoEvents
     Loop
-    DebugPrint "End Wait: Waited For: " & Math.Round((Timer - stTimer), 3) & " seconds"
+'    Debug.Print "End Wait: Waited For: " & Math.Round((Timer - stTimer), 3) & " seconds"
     
 End Function
 
-Public Function IsWorkbookOpen(wName As String, Optional checkCodeName As String = vbNullString) As Boolean
 
-    Dim retV As Boolean
 
-    Dim wIDX As Long
-    For wIDX = 1 To Application.Workbooks.count
-        If StrComp(LCase(wName), LCase(Application.Workbooks(wIDX).Name), vbTextCompare) = 0 Then
-            If checkCodeName <> vbNullString Then
-                If StrComp(LCase(checkCodeName), LCase(Workbooks(wIDX).CodeName), vbTextCompare) = 0 Then
-                    retV = True
-                Else
-                    retV = False
-                End If
-            Else
-                retV = True
-            End If
-        End If
-        If retV Then
-            Exit For
-        End If
-    Next wIDX
-    
-    IsWorkbookOpen = retV
-
-End Function
-
-Public Function CallOnTime_TwoArg(wbName As String, procName As String, argVal1 As String, argVal2 As String, Optional secondsDelay As Long = 0)
+Public Function CallOnTime_TwoArg(ByVal wbName As String, ByVal procName As String, ByVal argVal1 As String, ByVal argVal2 As String, Optional ByVal secondsDelay As Long = 0)
     'FT HELPER NEEDS TO BE UPDATED AND TESTED BEFORE ALLOWING THE PARAMETER TO GO THROUGH
+    On Error Resume Next
+    Dim litDQ As String
+    litDQ = """"
+    
+    wbName = wbName
+    If TypeName(argVal1) = "String" Then
+        If StringsMatch(argVal1, ".xlam", smContains) Or StringsMatch(argVal1, ".xlsm", smContains) Then
+            argVal1 = argVal1
+        End If
+    End If
+    If TypeName(argVal2) = "String" Then
+        If StringsMatch(argVal2, ".xlam", smContains) Or StringsMatch(argVal2, ".xlsm", smContains) Then
+            argVal2 = argVal2
+        End If
+    End If
+    
     wbName = CleanSingleTicks(wbName)
     argVal1 = CleanSingleTicks(argVal1)
     argVal2 = CleanSingleTicks(argVal2)
     
-    Dim litDQ As String
-    litDQ = """"
+    DoEvents
+    Application.ONTIME EarliestTime:=GetTimeDelay(secondsDelay), Procedure:="'" & wbName & "'!'" & procName & " " & litDQ & argVal1 & litDQ & "," & litDQ & argVal2 & litDQ & "'"
+    If Err.number <> 0 Then Err.Clear
     
-    Application.OnTime EarliestTime:=GetTimeDelay(secondsDelay), Procedure:="'" & wbName & "'!'" & procName & " " & litDQ & argVal1 & litDQ & "," & litDQ & argVal2 & litDQ & "'"
 End Function
+'
+'Public Function CallOnTime_TwoArg(wbName As String, procName As String, argVal1 As String, argVal2 As String, Optional secondsDelay As Long = 0)
+'    'FT HELPER NEEDS TO BE UPDATED AND TESTED BEFORE ALLOWING THE PARAMETER TO GO THROUGH
+'    wbName = CleanSingleTicks(wbName)
+'    argVal1 = CleanSingleTicks(argVal1)
+'    argVal2 = CleanSingleTicks(argVal2)
+'
+'    Dim litDQ As String
+'    litDQ = """"
+'
+'    Application.ONTIME EarliestTime:=GetTimeDelay(secondsDelay), Procedure:="'" & wbName & "'!'" & procName & " " & litDQ & argVal1 & litDQ & "," & litDQ & argVal2 & litDQ & "'"
+'End Function
 
 Public Function WrapExternalCall(wbName As String, procName As String, argVal As Variant) As String
     If TypeName(argVal) = "String" Then
@@ -764,17 +704,24 @@ Public Function WrapExternalCall(wbName As String, procName As String, argVal As
 End Function
 
 Public Function CallOnTime_OneArg(wbName As String, procName As String, argVal As Variant, Optional secondsDelay As Long = 0)
-    If IsDEV Then
-        Beep
-        DebugPrint " ***** DEV ***** See if OnTime can work properly as Application.Run"
-    End If
-    wbName = CleanSingleTicks(wbName)
+On Error Resume Next
+    Dim litDQ As String
+    litDQ = """"
+    
+    wbName = wbName
     If TypeName(argVal) = "String" Then
-        argVal = Replace(argVal, "'", "''")
-        Application.OnTime EarliestTime:=GetTimeDelay(secondsDelay), Procedure:="'" & wbName & "'!'" & procName & " " & """" & argVal & """'"
-    Else
-        Application.OnTime EarliestTime:=GetTimeDelay(secondsDelay), Procedure:="'" & wbName & "'!'" & procName & " " & "" & argVal & "'"
+        If StringsMatch(argVal, ".xlam", smContains) Or StringsMatch(argVal, ".xlsm", smContains) Then
+            argVal = argVal
+        End If
     End If
+    If TypeName(argVal) = "String" Then
+        'argVal = Replace(argVal, "'", "''")
+        Application.ONTIME EarliestTime:=GetTimeDelay(secondsDelay), Procedure:="'" & wbName & "'!'" & procName & " " & litDQ & argVal & litDQ & "'"
+    Else
+        Application.ONTIME EarliestTime:=GetTimeDelay(secondsDelay), Procedure:="'" & wbName & "'!'" & procName & " " & argVal & "'"
+    End If
+
+    If Err.number <> 0 Then Err.Clear
 End Function
 
 Public Function GetTimeDelay(Optional secondsDelay As Long = 0) As Date
@@ -784,10 +731,12 @@ Public Function GetTimeDelay(Optional secondsDelay As Long = 0) As Date
 End Function
 
 Public Function CallOnTime(wbName As String, procName As String, Optional secondsDelay As Long = 0)
-    wbName = CleanSingleTicks(wbName)
+On Error Resume Next
+    wbName = wbName
     Dim tProc As String
     tProc = "'" & wbName & "'!'" & procName & "'"
-    Application.OnTime EarliestTime:=GetTimeDelay(secondsDelay), Procedure:=tProc
+    Application.ONTIME EarliestTime:=GetTimeDelay(secondsDelay), Procedure:=tProc
+    If Err.number <> 0 Then Err.Clear
 End Function
 
 Public Property Get ActiveSheetName() As String
@@ -816,18 +765,53 @@ End Function
 
 '   Example Usage: ConcatWithDelim(", ","Why","Doesn't","VBA","Have","This")
 '       outputs:  Why, Doesn't, VBA, Have, This
-Public Function ConcatWithDelim(delimeter As String, ParamArray items() As Variant) As String
-    ConcatWithDelim = Join(items, delimeter)
+Public Function ConcatWithDelim(ByVal delimeter As String, ParamArray Items() As Variant) As String
+    ConcatWithDelim = Join(Items, delimeter)
 End Function
 
+'RETURN STRING FOR EACH ROW REPRESENTED IN RANGE, vbNewLine as Line Delimeter
+'   Example 1 (Get your Column Names for a list object)
+'       Dim lo as ListObject
+'       Set lo = wsTeamInfo.ListOobjects("tblTeamInfo")
+'       DebugPrint ConcatRange(lo.HeaderRowRange)
+'           outputs:  StartDt|EndDt|Project|Employee|Role|BillRate|EstCostRt|ActCostRt|Active|TaskName|SegName|AllocPerc|Utilization|Bill_Hrs|NonBill_Hrs|CfgID|ActiveHidden|Updated
+'   Example 2 (let's grab some weird ranges)
+'       Dim rng As Range
+'       Set rng = wsDashboard.Range("E49:J50")
+'       Set rng = Union(rng, wsDashboard.Range("L60:Q60"))
+'       DebugPrint ConcatRange(rng)
+'           Outputs:
+'               8/16/21|8/22/21|Actual|0|0|0
+'               8/23/21|8/29/21|Actual|23762.5|13799.5|9963
+'               386274.85|18276.05|10631.35|7644.7|0.4182906043702|
+Public Function ConcatRange(rng As Range, Optional delimeter As String = "|") As String
+    Dim rngArea As Range, rRow As Long, rCol As Long, retV As String, rArea As Long
+    For rArea = 1 To rng.Areas.Count
+        For rRow = 1 To rng.Areas(rArea).Rows.Count
+            If Len(retV) > 0 Then
+                retV = retV & vbNewLine
+            End If
+            For rCol = 1 To rng.Areas(rArea).Columns.Count
+                If rCol = 1 Then
+                    retV = ConcatWithDelim("", retV, rng.Areas(rArea)(rRow, rCol).value)
+                Else
+                    retV = ConcatWithDelim(delimeter, retV, rng.Areas(rArea)(rRow, rCol).value)
+                End If
+            Next rCol
+        Next rRow
+    Next rArea
+    
+    ConcatRange = retV
+
+End Function
 
 '   Example Usage: Dim msg as string: msg = "Hello There today's date is: ": DebugPrint Concat(msg,Date)
 '       outputs: Hello There today's date is: 5/24/22
-Public Function Concat(ParamArray items() As Variant) As String
-    Concat = Join(items, "")
+Public Function Concat(ParamArray Items() As Variant) As String
+    Concat = Join(Items, "")
 End Function
 
-Public Function ftCreateWorkbook(Optional tmplPath As Variant) As Workbook
+Public Function ftCreateWorkbook(Optional ByVal tmplPath As Variant) As Workbook
 On Error Resume Next
     Dim retWB As Workbook
     If IsMissing(tmplPath) Then
@@ -840,11 +824,7 @@ On Error Resume Next
         DoEvents
     End If
     Set ftCreateWorkbook = retWB
-    If Not Err.Number = 0 Then
-        If IsDEV Then
-            Beep
-            Stop
-        End If
+    If Not Err.number = 0 Then
         Err.Clear
     End If
 End Function
@@ -1009,13 +989,38 @@ Public Function URLEncode(ByRef txt As String) As String
                 Mid$(buffer, n - 1) = Hex$(128 + (c Mod 64))
         End Select
     Next
-    URLEncode = left$(buffer, n)
+    URLEncode = Left$(buffer, n)
 End Function
 
-Function ReplaceIllegalCharacters(strIn As String, strChar As String, Optional padSingleQuote As Boolean = True) As String
+Public Function SanitizeAlpha(ByVal vl As String, Optional alsoAllowChars As String = vbNullString) As String
+'   strips out EVERYTHING that isn't A-Z
+    Dim retV As String
+    retV = vl
+    If Len(retV) = 0 Then
+        retV = vbNullString
+        SanitizeAlpha = retV
+        Exit Function
+    End If
+    Dim validChars As String: validChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    If Len(alsoAllowChars) > 0 Then validChars = validChars & alsoAllowChars
+    Dim i As Long
+    For i = Len(retV) To 1 Step -1
+        If Not StringsMatch(validChars, Mid(retV, i, 1), smContains, vbBinaryCompare) Then
+            retV = Replace(retV, Mid(retV, i, 1), "", compare:=vbBinaryCompare)
+        End If
+    Next i
+    SanitizeAlpha = Trim(retV)
+End Function
+
+
+Function ReplaceIllegalCharacters(ByVal strIn As String, ByVal strChar As String, Optional ByVal padSingleQuote As Boolean = True, Optional useForSpecialChars As Variant) As String
     Dim strSpecialChars As String
     Dim i As Long
-    strSpecialChars = "~""#%&*:<>?{|}/\[]" & Chr(10) & Chr(13)
+    If IsMissing(useForSpecialChars) Then
+        strSpecialChars = "~""#%&*:<>?{|}/\[]" & Chr(10) & Chr(13)
+    Else
+        strSpecialChars = useForSpecialChars
+    End If
 
     For i = 1 To Len(strSpecialChars)
         strIn = Replace(strIn, Mid$(strSpecialChars, i, 1), strChar)

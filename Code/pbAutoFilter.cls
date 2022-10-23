@@ -42,40 +42,40 @@ Attribute VB_Exposed = False
     Public Function Execute(dataRng As Range)
         'Remove Any Existing Filters
         If dataRng.Worksheet.FilterMode Then dataRng.Worksheet.ShowAllData
-        Dim srchV As Variant, pIdx As Long, updCrit1 As String, updCrit2 As String, isMult As Boolean
+        Dim srchV As Variant, pIDX As Long, updCrit1 As String, updCrit2 As String, isMult As Boolean
         Dim evts As Boolean: evts = Application.EnableEvents: Application.EnableEvents = False
         Dim scrn As Boolean: scrn = Application.ScreenUpdating: Application.ScreenUpdating = False
         
         With dataRng
-            For pIdx = 1 To colParams.Count
-                Select Case GetOperator(pIdx)
+            For pIDX = 1 To colParams.Count
+                Select Case GetOperator(pIDX)
                     Case XlFormatConditionOperator.xlEqual
-                        updCrit1 = "=" & GetCrit1(pIdx)
+                        updCrit1 = "=" & GetCrit1(pIDX)
                     Case XlFormatConditionOperator.xlGreater
-                        updCrit1 = ">" & GetCrit1(pIdx)
+                        updCrit1 = ">" & GetCrit1(pIDX)
                     Case XlFormatConditionOperator.xlGreaterEqual
-                        updCrit1 = ">=" & GetCrit1(pIdx)
+                        updCrit1 = ">=" & GetCrit1(pIDX)
                     Case XlFormatConditionOperator.xlLess
-                        updCrit1 = "<" & GetCrit1(pIdx)
+                        updCrit1 = "<" & GetCrit1(pIDX)
                     Case XlFormatConditionOperator.xlLessEqual
-                        updCrit1 = "<=" & GetCrit1(pIdx)
+                        updCrit1 = "<=" & GetCrit1(pIDX)
                     Case XlFormatConditionOperator.xlNotEqual
-                        updCrit1 = "<>" & GetCrit1(pIdx)
+                        updCrit1 = "<>" & GetCrit1(pIDX)
                     Case XlFormatConditionOperator.xlBetween
                         isMult = True
-                        updCrit1 = ">=" & GetCrit1(pIdx)
-                        updCrit2 = "<=" & GetCrit2(pIdx)
+                        updCrit1 = ">=" & GetCrit1(pIDX)
+                        updCrit2 = "<=" & GetCrit2(pIDX)
                     Case XlFormatConditionOperator.xlNotBetween
                         isMult = True
-                        updCrit1 = "<" & GetCrit1(pIdx)
-                        updCrit2 = ">" & GetCrit2(pIdx)
+                        updCrit1 = "<" & GetCrit1(pIDX)
+                        updCrit2 = ">" & GetCrit2(pIDX)
                 End Select
                 If Not isMult Then
-                    .AutoFilter field:=GetSearchCol(pIdx), Criteria1:=updCrit1
+                    .AutoFilter field:=GetSearchCol(pIDX), Criteria1:=updCrit1
                 Else
-                    .AutoFilter field:=GetSearchCol(pIdx), Criteria1:=updCrit1, operator:=xlAnd, Criteria2:=updCrit2
+                    .AutoFilter field:=GetSearchCol(pIDX), Criteria1:=updCrit1, operator:=xlAnd, Criteria2:=updCrit2
                 End If
-            Next pIdx
+            Next pIDX
         End With
         
         Application.ScreenUpdating = scrn

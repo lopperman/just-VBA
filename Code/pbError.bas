@@ -52,74 +52,67 @@ Public Const ERR_CANNOT_CHANGE_PACKAGE_PROPERTY = vbObjectError + 1026
 Public Const ERR_INVALID_PACKAGE_OPERATION = vbObjectError + 1027
 
 'If you have a method to close a 'wait' screen, put the name here, otherwise should be ""
-Private Const CLOSE_WAIT_SCREEN_METHOD As String = "CloseBusy"
+'Private Const CLOSE_WAIT_SCREEN_METHOD As String = "CloseBusy"
 'If you have a method to protect active sheet, put the name here, otherwise should be ""
-Private Const PROTECT_ACTIVE_SHEET_METHOD As String = "ProtectActiveSheet"
+'Private Const PROTECT_ACTIVE_SHEET_METHOD As String = "ProtectActiveSheet"
 
 Private l_lastError As Date
 Private l_currentErrCount As Long
 Private l_totalErrrorCount As Long
+Private l_IsDeveloper As Boolean
 
 Public Enum ErrorOptionsEnum
     ftDefaults = 2 ^ 0
-    ftERR_ControlStateClear = 2 ^ 1
-    ftERR_ProtectSheet = 2 ^ 2
-    ftERR_MessageIgnore = 2 ^ 3
-    ftERR_NoBeeper = 2 ^ 4
-    ftERR_IGNORE_TREAT_AS_NO_ERR = 2 ^ 5
-    ftERR_DoNotCloseBusy = 2 ^ 6
+    ftERR_ProtectSheet = 2 ^ 1
+    ftERR_MessageIgnore = 2 ^ 2
+    ftERR_NoBeeper = 2 ^ 3
+    ftERR_DoNotCloseBusy = 2 ^ 4
+    ftERR_ResponseAllowBreak = 2 ^ 5
 End Enum
+
+Public Property Get IsDeveloper() As Boolean
+    IsDeveloper = l_IsDeveloper
+End Property
+Public Property Let IsDeveloper(devMode As Boolean)
+    l_IsDeveloper = devMode
+End Property
+
 
 Public Function ErrorCheck(Optional Source As String, Optional options As ErrorOptionsEnum, Optional customErrorMsg As String) As Long
     Dim errNumber As Long, errDESC As Variant, errorInfo As String, ignoreError As Boolean, errERL As Long
-    errNumber = Err.Number
+    errNumber = Err.number
     errDESC = Err.Description
     errERL = Erl
     errorInfo = ErrString(customSrc:=Source, errNUM:=errNumber, errDESC:=errDESC, errERL:=errERL)
-    
     If errNumber = 0 Then Exit Function
+    LogError Concat("pbError.ErrorCheck: ", errorInfo)
     
-    ' ~~~ ~~~ FOR DEVELOPER ONLY ~~~ ~~~
-    If IsDEV Then
-        If DebugMode Then
-            DebugPrint errorInfo
-            Beep
-            'Comment / Uncomment The 'STOP and  'EXIT FUNCTION lines as needed
-            'Stop
-            'Exit Function
-        End If
-    End If
-    
-    ' ~~~ ~~~ ~~~ ~~~ WHAT TO DO IF ERROR 51 (INTERNAL ERROR) ~~~ ~~~ ~~~ ~~~
-    '   If you don't want to go to 'FatalEnd', d
-'    If errNumber = 51 Then
-'        Dim msgFO As String
-'        msgFO = "An INTERNAL ERROR (Error 51) has occured.  This error is not specific to the Financial Tool, is is a general EXCEL Error." & vbNewLine
-'        msgFO = msgFO & "The suggested course of action is to close ALL excel files and then re-open them. Please do that now to avoid any further issues." & vbCrLf
-'        msgFO = msgFO & "An attempt will be made now to save the Fin Tool, and a BYPASS will be created that should allow you to close the file without further problems."
-'        MsgBox_FT msgFO, vbOKOnly + vbCritical, "AN INTERNAL MS EXCEL ERROR HAS OCCURED!"
-'
-'    End If
-    
-    If ThisWorkbook.readOnly Then
-        'JUST IN CASE
+    If ThisWorkbook.ReadOnly Then
+        LogError "Workbook is READ-ONLY - Closing NOW"
+        pbPerf.RestoreDefaultAppSettingsOnly
+        ThisWorkbook.Close SaveChanges:=False
         Exit Function
     End If
+    
+    ftBeep btError
     
     If options = 0 Then options = ftDefaults
     On Error GoTo -1
     On Error Resume Next
     
-    ignoreError = EnumCompare(options, ftERR_IGNORE_TREAT_AS_NO_ERR)
-    If EnumCompare(options, ftERR_DoNotCloseBusy) = False Then
-        If Not ignoreError And ThisWorkbook.ActiveSheet Is wsBusy Then
-            If Len(CLOSE_WAIT_SCREEN_METHOD) > 0 Then Application.Run CLOSE_WAIT_SCREEN_METHOD
-        End If
+    
+    Dim cancelMsg As String
+    Dim okONLY As Boolean
+    okONLY = True
+    If (IsDEV And DebugMode) Or EnumCompare(options, ftERR_ResponseAllowBreak) Then
+        okONLY = False
+    End If
+    If okONLY Then
+        cancelMsg = vbCrLf & "** PRESS OK TO CONTINUE"
+    Else
+        cancelMsg = vbCrLf & "** PRESS OK TO CONTINUE CODE EXECUTION -- WHICH IS NORMALLY WHAT YOU WANT TO DO.  'CANCEL'  WILL STOP CODE FROM RUNNING, AND SHOULD ONLY BE USED IF YOU'RE CONTINUALLY SEEING ERROR MESSAGES"
     End If
     
-    Dim cancelMsg As String:
-    cancelMsg = vbCrLf & "** PRESS OK TO CONTINUE CODE EXECUTION -- WHICH IS NORMALLY WHAT YOU WANT TO DO.  'CANCEL'  WILL STOP CODE FROM RUNNING, AND SHOULD ONLY BE USED IF YOU'RE CONTINUALLY SEEING ERROR MESSAGES"
-
     Dim EventsOn As Boolean: EventsOn = Application.EnableEvents
     Application.EnableEvents = False
     
@@ -130,65 +123,49 @@ Public Function ErrorCheck(Optional Source As String, Optional options As ErrorO
         errorInfo = errorInfo & vbCrLf & customErrorMsg
     End If
     
-    '***** TRACE
-    If DebugMode Or debugReleaseOverride Then
-        DebugPrint errorInfo
-    End If
-    Trace errorInfo, True
-        
     '*****ftERR_MessageIgnore
     If ignoreError = False And EnumCompare(options, ftERR_MessageIgnore) = False Then
-        If MsgBox_FT(CStr(errorInfo) & cancelMsg, vbOKCancel + vbCritical + vbSystemModal + vbDefaultButton1, "ERROR LOGGED TO DEBUG SCREEN") = vbCancel Then
-            If Err.Number <> 0 Then Err.Clear
-            FatalEnd
+        If okONLY = False Then
+            If MsgBox_FT(CStr(errorInfo) & cancelMsg, vbOKCancel + vbCritical + vbSystemModal + vbDefaultButton1, "ERROR LOGGED TO LOG FILE") = vbCancel Then
+                If Err.number <> 0 Then Err.Clear
+                FatalEnd
+                Exit Function
+            End If
+        Else
+            If IsDEV Then
+                If MsgBox_FT(CStr(errorInfo) & cancelMsg, vbOKCancel + vbSystemModal, "DEV MSG: CANCEL TO STOP CODE") = vbCancel Then
+                    Beep
+                    DoEvents
+                    Stop
+                End If
+            Else
+                MsgBox_FT CStr(errorInfo) & cancelMsg, vbOKOnly + vbError, "ERROR LOGGED TO LOG FILE"
+            End If
+            If Err.number <> 0 Then Err.Clear
             Exit Function
         End If
     End If
-
-    If errNumber <> 0 Then Err.Clear
     
+    If errNumber <> 0 Then Err.Clear
     If errNumber = 18 Then
         ResetUI
         MsgBox_FT "User Cancelled Current Process", title:="Cancelled"
         End
     End If
     
-    '*****ftERR_ControlStateClear
-    If ignoreError = False And EnumCompare(options, ftERR_ControlStateClear) Then
-        'will also protect active sheet
-        ResetUI
-        If Len(PROTECT_ACTIVE_SHEET_METHOD) > 0 Then
-            Application.Run PROTECT_ACTIVE_SHEET_METHOD
-        End If
-        If Err.Number <> 0 Then
-            If MsgBox_FT("An error occured trying to restore the screen back to interactive mode." & cancelMsg, vbOKCancel + vbDefaultButton1, "ERROR") = vbCancel Then
-                 
-                FatalEnd
-                Exit Function
-            End If
-            Err.Clear
-        End If
-    Else
-        '*****ftERR_ProtectSheet
-        If ignoreError = False And EnumCompare(options, ftERR_ProtectSheet) Then
-            If Len(PROTECT_ACTIVE_SHEET_METHOD) > 0 Then
-                Application.Run PROTECT_ACTIVE_SHEET_METHOD
-            End If
-        End If
-        If Err.Number <> 0 Then
-            ErrorCheck PROTECT_ACTIVE_SHEET_METHOD, ftERR_MessageIgnore
-        End If
-        'ResetUI forces events on -- otherwise only force them on if ForceEventsON
-        If ignoreError = False And Events = False And EnumCompare(options, ftERR_ControlStateClear) Then
-            Application.EnableEvents = True
-        End If
+    '*****ftERR_ProtectSheet
+    If ignoreError = False And EnumCompare(options, ftERR_ProtectSheet) Then
+        ProtectSht ThisWorkbook.ActiveSheet
+    End If
+    If Err.number <> 0 Then
+        ErrorCheck
     End If
     If ignoreError = False Then
         ErrorCheck = errNumber
     Else
         ErrorCheck = 0
     End If
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
 End Function
 
 Public Property Let LastErrorDt(dtTm As Variant)
@@ -218,6 +195,7 @@ End Function
 
 '   ~~~ ~~~ RAISE ERROR ~~~ ~~~
 Public Sub RaiseError(errNumber As Long, Optional errorDesc As String = vbNullString, Optional resetUserInterface As Boolean = True)
+    LogError Concat("RaiseError Called: ", errNumber, " - errorDesc: ", errorDesc)
     If resetUserInterface Then
         ResetUI
     End If
@@ -231,7 +209,7 @@ End Sub
 Public Property Get ErrString(Optional customSrc As String, Optional errNUM As Variant, Optional errDESC As Variant, Optional errERL As Variant) As String
 '   Format Known Error Information
 
-    If IsMissing(errNUM) Then errNUM = Err.Number
+    If IsMissing(errNUM) Then errNUM = Err.number
     If IsMissing(errDESC) Then errDESC = Err.Description
     If IsMissing(errERL) Then errERL = Erl
     If errNUM <> 0 Then
@@ -258,6 +236,7 @@ Private Function ResetUI()
         Application.EnableMacroAnimations = True
         
 End Function
+
 
 Public Function Beeper()
 '   Enable control over beeps -- put that here

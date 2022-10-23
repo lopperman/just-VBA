@@ -53,7 +53,7 @@ Private Function TmpUtilSheet() As Worksheet
     If WorksheetExists(TMP_RANGE_UTIL_WORKSHEET) = False Then
         Dim retWS As Worksheet
         
-        Set retWS = Excel.Application.Worksheets.Add(After:=Worksheets(Worksheets.count))
+        Set retWS = Excel.Application.Worksheets.Add(After:=Worksheets(Worksheets.Count))
         retWS.Name = TMP_RANGE_UTIL_WORKSHEET
         retWS.visible = xlSheetVeryHidden
         Set TmpUtilSheet = retWS
@@ -134,7 +134,7 @@ Public Function RangeInfo(rg As Range) As RngInfo
         retV.Columns = RangeColCount(rg)
         retV.AreasSameRows = ContiguousRows(rg)
         retV.AreasSameColumns = ContiguousColumns(rg)
-        retV.Areas = rg.Areas.count
+        retV.Areas = rg.Areas.Count
     End If
     RangeInfo = retV
 End Function
@@ -142,17 +142,17 @@ End Function
 Public Function RangeArea(rg As Range) As AreaStruct
 '   Return info about Range area
 '   Range with 1 Area allowed, otherwise error
-    If rg.Areas.count <> 1 Then
+    If rg.Areas.Count <> 1 Then
         RaiseError ERR_RANGE_AREA_COUNT, "Range Area Count <> 1 (ftRangeArray.RangeArea)"
     End If
     
     Dim retV As AreaStruct
     retV.RowStart = rg.Row
-    retV.RowEnd = rg.Row + rg.Rows.count - 1
+    retV.RowEnd = rg.Row + rg.Rows.Count - 1
     retV.ColStart = rg.column
-    retV.ColEnd = rg.column + rg.Columns.count - 1
-    retV.rowCount = rg.Rows.count
-    retV.columnCount = rg.Columns.count
+    retV.ColEnd = rg.column + rg.Columns.Count - 1
+    retV.rowCount = rg.Rows.Count
+    retV.columnCount = rg.Columns.Count
     
     RangeArea = retV
 
@@ -165,7 +165,7 @@ Public Function RangeTo1DArray(ByVal rng As Range) As Variant()
 '   Return all cells in Range as 1D Array
     Dim retV() As Variant
     ''BASE 1
-    ReDim retV(1 To rng.count)
+    ReDim retV(1 To rng.Count)
     Dim cl As Range, clIDX As Long
     clIDX = 1
     For Each cl In rng.Cells
@@ -180,7 +180,7 @@ End Function
 Public Function GetUniqueSortedListCol(lstObj As ListObject, lstCol As Variant, Optional returnType As ListReturnType = ListReturnType.lrtArray) As Variant
 '   Returns unique 1-based, 2D array from specific ListObject ListColumn
 '   Return Type = Array (default), Dictionary, or Collection
-    If lstObj.listRows.count = 0 Then Exit Function
+    If lstObj.listRows.Count = 0 Then Exit Function
     
     
     Dim tDic As Dictionary
@@ -224,12 +224,12 @@ Public Function ArrListCols(lstObj As ListObject, flags As ArrayOptionFlags, Par
 
     Dim idx As Long, rng As Range, inclHeader As Boolean
     inclHeader = EnumCompare(flags, aoIncludeListObjHeaderRow)
-    If lstObj.listRows.count > 0 Then
+    If lstObj.listRows.Count > 0 Then
         For idx = LBound(listCols) To UBound(listCols)
             If rng Is Nothing Then
                 If inclHeader Then
                     Set rng = lstObj.HeaderRowRange(1, lstObj.ListColumns(listCols(idx)).Index)
-                    Set rng = rng.Resize(rowSize:=lstObj.listRows.count + lstObj.HeaderRowRange.Rows.count)
+                    Set rng = rng.Resize(rowSize:=lstObj.listRows.Count + lstObj.HeaderRowRange.Rows.Count)
                 Else
                     Set rng = lstObj.ListColumns(listCols(idx)).DataBodyRange
                 End If
@@ -237,7 +237,7 @@ Public Function ArrListCols(lstObj As ListObject, flags As ArrayOptionFlags, Par
                 If inclHeader Then
                     Dim tRng As Range
                     Set tRng = lstObj.HeaderRowRange(1, lstObj.ListColumns(listCols(idx)).Index)
-                    Set tRng = tRng.Resize(rowSize:=lstObj.listRows.count + lstObj.HeaderRowRange.Rows.count)
+                    Set tRng = tRng.Resize(rowSize:=lstObj.listRows.Count + lstObj.HeaderRowRange.Rows.Count)
                     Set rng = Union(rng, tRng)
                     Set tRng = Nothing
                 Else
@@ -374,7 +374,7 @@ On Error Resume Next
     Else
         Dim dimLen As Long
         dimLen = UBound(tstArr, 1) - LBound(tstArr, 1) + 1
-        If Err.Number <> 0 Then
+        If Err.number <> 0 Then
             ArrayInitialized = False
         ElseIf UBound(tstArr, 1) < LBound(tstArr, 1) Then
             ArrayInitialized = False
@@ -382,7 +382,7 @@ On Error Resume Next
             ArrayInitialized = True
         End If
     End If
-    If Not Err.Number = 0 Then Err.Clear
+    If Not Err.number = 0 Then Err.Clear
 End Function
     
 
@@ -419,7 +419,7 @@ On Error Resume Next
     
 Finalize:
     ArrayInfo = tmp
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
 End Function
 
 Public Function ArrDimensions(ByRef checkArr As Variant) As Long
@@ -432,10 +432,10 @@ On Error Resume Next
     If Not ValidArray(checkArr) Then
         GoTo Finalize:
     End If
-    Do While Err.Number = 0
+    Do While Err.number = 0
         Dim tmp As Variant
         tmp = UBound(checkArr, dimCount + 1)
-        If Err.Number = 0 Then
+        If Err.number = 0 Then
             dimCount = dimCount + 1
         Else
             Err.Clear
@@ -450,7 +450,7 @@ On Error Resume Next
     
 Finalize:
     ArrDimensions = dimCount
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
 End Function
 
 ' ***** PRIVATE FUNCTIONS ***** ' ***** PRIVATE FUNCTIONS ***** ' ***** PRIVATE FUNCTIONS ***** ' ***** PRIVATE FUNCTIONS *****
@@ -489,15 +489,15 @@ Private Function UniqueRC1Arr(ByVal arr As Variant, flags As ArrayOptionFlags) A
         If Not EnumCompare(flags, ArrayOptionFlags.aoUniqueNoSort) Then
             Dim sidx As Long, sRng As Range
             .Sort.SortFields.Clear
-            For sidx = 1 To tmpRng.Columns.count
-                Set sRng = tmpRng.Resize(ColumnSize:=1).Offset(ColumnOffset:=sidx - 1)
-                .Sort.SortFields.add2 Key:=.Range(sRng.Address), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+            For sidx = 1 To tmpRng.Columns.Count
+                Set sRng = tmpRng.Resize(ColumnSize:=1).offSet(ColumnOffset:=sidx - 1)
+                .Sort.SortFields.add2 KEY:=.Range(sRng.Address), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
             Next sidx
             Set sRng = Nothing
             With .Sort
                 .SetRange tmpRng
                 .Header = xlNo
-                .MatchCase = False
+                .matchCase = False
                 .orientation = xlTopToBottom
                 .SortMethod = xlPinYin
                .Apply
@@ -619,7 +619,7 @@ Finalize:
     End If
     
     Set rngArea = Nothing
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
     Exit Function
 E:
     failed = True
@@ -629,7 +629,7 @@ E:
 End Function
 
 Private Function ConvertArrToRCArr(ByVal arr As Variant, Optional zeroBasedAsColumns As Boolean = False) As Variant
-    Dim retV() As Variant, rwCount As Long, isBase0 As Boolean, arrIDX As Long, colcount As Long
+    Dim retV() As Variant, rwCount As Long, isBase0 As Boolean, arrIdx As Long, colcount As Long
     If IsArrInit(arr) = False Then
         ReDim retV(1 To 1, 1 To 1)
         retV(1, 1) = arr
@@ -646,21 +646,21 @@ Private Function ConvertArrToRCArr(ByVal arr As Variant, Optional zeroBasedAsCol
             Else
                 ReDim retV(1 To UBound(arr), 1 To 1)
             End If
-            For arrIDX = LBound(arr) To UBound(arr)
+            For arrIdx = LBound(arr) To UBound(arr)
                 If isBase0 Then
-                    If IsObject(arr(arrIDX)) Then
-                        Set retV(arrIDX + 1, 1) = arr(arrIDX)
+                    If IsObject(arr(arrIdx)) Then
+                        Set retV(arrIdx + 1, 1) = arr(arrIdx)
                     Else
-                        retV(arrIDX + 1, 1) = arr(arrIDX)
+                        retV(arrIdx + 1, 1) = arr(arrIdx)
                     End If
                 Else
-                    If IsObject(arr(arrIDX)) Then
-                        Set retV(arrIDX, 1) = arr(arrIDX)
+                    If IsObject(arr(arrIdx)) Then
+                        Set retV(arrIdx, 1) = arr(arrIdx)
                     Else
-                        retV(arrIDX, 1) = arr(arrIDX)
+                        retV(arrIdx, 1) = arr(arrIdx)
                     End If
                 End If
-            Next arrIDX
+            Next arrIdx
             ConvertArrToRCArr = retV
         Else
             isBase0 = LBound(arr) = 0
@@ -670,21 +670,21 @@ Private Function ConvertArrToRCArr(ByVal arr As Variant, Optional zeroBasedAsCol
             Else
                 ReDim retV(1 To 1, 1 To UBound(arr))
             End If
-            For arrIDX = LBound(arr) To UBound(arr)
+            For arrIdx = LBound(arr) To UBound(arr)
                 If isBase0 Then
-                    If IsObject(arr(arrIDX)) Then
-                        Set retV(1, arrIDX + 1) = arr(arrIDX)
+                    If IsObject(arr(arrIdx)) Then
+                        Set retV(1, arrIdx + 1) = arr(arrIdx)
                     Else
-                        retV(1, arrIDX + 1) = arr(arrIDX)
+                        retV(1, arrIdx + 1) = arr(arrIdx)
                     End If
                 Else
-                    If IsObject(arr(arrIDX)) Then
-                        Set retV(1, arrIDX) = arr(arrIDX)
+                    If IsObject(arr(arrIdx)) Then
+                        Set retV(1, arrIdx) = arr(arrIdx)
                     Else
-                        retV(1, arrIDX) = arr(arrIDX)
+                        retV(1, arrIdx) = arr(arrIdx)
                     End If
                 End If
-            Next arrIDX
+            Next arrIdx
             ConvertArrToRCArr = retV
         End If
     Else

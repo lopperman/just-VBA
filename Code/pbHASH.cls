@@ -21,6 +21,7 @@ Attribute VB_Exposed = False
 '   ' Added additional functions for values that are objects;
 '   ' Added options for aggregating values while creating indexes
 '   ' Added 'not fail' option for duplicate indexes with matching values
+'   '
 '   ' Effort in progress for dyanmicall adjusting buckets for performance
 ' @license GNU General Public License v3.0
 '
@@ -30,10 +31,10 @@ Attribute VB_Exposed = False
 
     Option Explicit
 
-    Private Type KVP
-      Key As String
-      value As Variant
-    End Type
+'    Private Type KVP
+'      KEY As String
+'      value As Variant
+'    End Type
     Private Type HashIndexes
       DataIndexes() As Long
     End Type
@@ -53,7 +54,7 @@ Attribute VB_Exposed = False
            If Not dVal = 0 Then Item(fKey) = Item(fKey) + dVal
         Else
             'Add new Key, even if value is 0
-            Add dVal, Key:=fKey
+            Add dVal, KEY:=fKey
         End If
     End Function
 
@@ -61,7 +62,7 @@ Attribute VB_Exposed = False
         If Exists(fKey) Then
             If addCount <> 0 Then Item(fKey) = Item(fKey) + addCount
         Else
-            Add addCount, Key:=fKey
+            Add addCount, KEY:=fKey
         End If
     End Function
 
@@ -69,7 +70,7 @@ Attribute VB_Exposed = False
         If Exists(fKey) Then
             Item(fKey) = ChooseMax(dVal, Item(fKey))
         Else
-            Add dVal, Key:=fKey
+            Add dVal, KEY:=fKey
         End If
     End Function
     
@@ -77,7 +78,7 @@ Attribute VB_Exposed = False
         If Exists(fKey) Then
             Item(fKey) = ChooseMin(dVal, Item(fKey))
         Else
-            Add dVal, Key:=fKey
+            Add dVal, KEY:=fKey
         End If
     End Function
     
@@ -89,7 +90,7 @@ Attribute VB_Exposed = False
             ChooseMax = Val2
         End If
     End Function
-    Public Function ChooseMin(Val1, Val2)
+    Public Function ChooseMin(ByVal Val1, ByVal Val2)
         If Val1 > Val2 Then
             ChooseMin = Val2
         Else
@@ -113,24 +114,33 @@ Attribute VB_Exposed = False
         lCount = 0
     End Function
 
-    Public Property Get count() As Long
-        count = lCount
+    Public Property Get Count() As Long
+        Count = lCount
     End Property
     
-    Public Function Exists(Key As String) As Boolean
-        Exists = FindIndex(Key, CalcHash(Key)) > 0
+    Public Function Exists(ByVal KEY As String) As Boolean
+        Exists = FindIndex(KEY, CalcHash(KEY)) > 0
     End Function
     
-    Public Function IndexByKey(Key As String) As Long
-        IndexByKey = FindIndex(Key, CalcHash(Key))
+    Public Function IndexByKey(ByVal KEY As String) As Long
+        IndexByKey = FindIndex(KEY, CalcHash(KEY))
     End Function
 
-    Public Function Add(Item, Optional Key As String)
-        Dim HashValue As Long, UB As Long
-        HashValue = CalcHash(Key)
+    Public Function AddKV(ByVal KEY As String, Item, Optional alsoAddReverse As Boolean = False)
+                 Add Item, KEY
+                If alsoAddReverse Then
+                    If IsObject(Item) = False Then
+                        AddKV CStr(Item), KEY
+                    End If
+                End If
+    End Function
+
+    Public Function Add(Item, Optional ByVal KEY As String)
+        Dim HashValue As Long, ub As Long
+        HashValue = CalcHash(KEY)
         If UniqueKeys Then
-            If FindIndex(Key, HashValue) Then
-                Err.Raise 457, Description:="Key already exists in pbHASH (UniqueKeys: TRUE, key: " & Key & ")"
+            If FindIndex(KEY, HashValue) Then
+                Err.Raise 457, Description:="Key already exists in pbHASH (UniqueKeys: TRUE, key: " & KEY & ")"
             End If
         End If
         
@@ -141,7 +151,7 @@ Attribute VB_Exposed = False
             ReDim Preserve DataTable(0 To lDtUpper)
         End If
       
-        DataTable(lCount).Key = Key
+        DataTable(lCount).KEY = KEY
         If IsObject(Item) Then
             Set DataTable(lCount).value = Item
         Else
@@ -150,19 +160,36 @@ Attribute VB_Exposed = False
       
     '   add the new DataIndex to the proper Hash-Buckets .DataIndexes-Array
         With HashTable(HashValue)
-            UB = UBound(.DataIndexes)
-            UB = UB + 1
-            ReDim Preserve .DataIndexes(0 To UB)
-            .DataIndexes(UB) = lCount
+            ub = UBound(.DataIndexes)
+            ub = ub + 1
+            ReDim Preserve .DataIndexes(0 To ub)
+            .DataIndexes(ub) = lCount
         End With
     End Function
 
     Public Property Get KeyByIndex(ByVal IndexOneBased As Long)
         If IndexOneBased < 1 Or IndexOneBased > lCount Then Err.Raise 9
-        KeyByIndex = DataTable(IndexOneBased).Key
+        KeyByIndex = DataTable(IndexOneBased).KEY
     End Property
 
-    Public Property Get Item(KeyOrOneBasedIndex)
+    Public Function IsItemObject(ByVal KeyOrOneBasedIndex) As Boolean
+        Dim Index As Long
+        If VarType(KeyOrOneBasedIndex) = vbString Then
+            Index = FindIndex(KeyOrOneBasedIndex, CalcHash(KeyOrOneBasedIndex))
+            If Index = 0 Then Err.Raise 457
+        Else
+            Index = KeyOrOneBasedIndex
+            If Index < 1 Or Index > lCount Then Err.Raise 9
+        End If
+        
+        If IsObject(DataTable(Index).value) Then
+            IsItemObject = True
+        Else
+            IsItemObject = False
+        End If
+    End Function
+
+    Public Property Get Item(ByVal KeyOrOneBasedIndex)
         Dim Index As Long
         If VarType(KeyOrOneBasedIndex) = vbString Then
             Index = FindIndex(KeyOrOneBasedIndex, CalcHash(KeyOrOneBasedIndex))
@@ -179,7 +206,11 @@ Attribute VB_Exposed = False
         End If
     End Property
 
-    Public Property Let Item(KeyOrOneBasedIndex, newItem)
+    Public Property Get Items() As KVP()
+        Items = DataTable
+    End Property
+
+    Public Property Let Item(ByVal KeyOrOneBasedIndex, newItem)
         Dim Index As Long
         If VarType(KeyOrOneBasedIndex) = vbString Then
             Index = FindIndex(KeyOrOneBasedIndex, CalcHash(KeyOrOneBasedIndex))
@@ -196,44 +227,44 @@ Attribute VB_Exposed = False
         End If
     End Property
 
-    Public Property Set Item(KeyOrOneBasedIndex, newItem)
+    Public Property Set Item(ByVal KeyOrOneBasedIndex, newItem)
         Item(KeyOrOneBasedIndex) = newItem
     End Property
 
-    Private Function FindIndex(Key, ByVal HashValue As Long) As Long
+    Private Function FindIndex(ByVal KEY, ByVal HashValue As Long) As Long
         Dim i As Long, CM As VbCompareMethod
         With HashTable(HashValue)
             CM = CompareMode
             For i = 1 To UBound(.DataIndexes)
-                If StrComp(Key, DataTable(.DataIndexes(i)).Key, CM) = 0 Then
+                If StrComp(KEY, DataTable(.DataIndexes(i)).KEY, CM) = 0 Then
                     FindIndex = .DataIndexes(i): Exit Function
                 End If
             Next i
         End With
     End Function
 
-    Public Function CalcHash(Key) As Long
-        Dim i As Long, l As Long, b() As Byte
+    Public Function CalcHash(ByVal KEY) As Long
+        Dim i As Long, L As Long, B() As Byte
         If CompareMode Then
-            b = LCase$(Key)
+            B = LCase$(KEY)
         Else
-            b = Key
+            B = KEY
         End If
-        l = 7919
-        For i = UBound(b) To 0 Step -1
-            l = (i + b(i) + l) * 37 And &H7FFFFF
+        L = 7919
+        For i = UBound(B) To 0 Step -1
+            L = (i + B(i) + L) * 37 And &H7FFFFF
         Next i
-        CalcHash = l * b(0) Mod lHashTblSize
+        CalcHash = L * B(0) Mod lHashTblSize
     End Function
 
 Friend Function CheckHashDistribution() As String
-    Dim i As Long, UB As Long, cc As Long, Min As Long, Max As Long
+    Dim i As Long, ub As Long, cc As Long, Min As Long, Max As Long
     Min = &H7FFFFFFF
     For i = 0 To UBound(HashTable)
-        UB = UBound(HashTable(i).DataIndexes)
-        If UB Then
-            If Min > UB Then Min = UB
-            If Max < UB Then Max = UB
+        ub = UBound(HashTable(i).DataIndexes)
+        If ub Then
+            If Min > ub Then Min = ub
+            If Max < ub Then Max = ub
             cc = cc + 1
         End If
     Next i

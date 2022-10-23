@@ -24,12 +24,40 @@ Public Const CFG_P_LOG As String = "0000016"
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
 '   GENERALIZED TYPES
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
+    Public Type KVP
+      KEY As String
+      value As Variant
+    End Type
+
+
+    Public Enum DateDiffType
+        dtSecond
+        dtMinute
+        dtHour
+        dtday
+        dtWeek
+        dtMonth
+        dtYear
+        dtQuarter
+        dtDayOfYear
+        dtWeekday
+        dtDate_NoTime
+    End Enum
+
     Public Enum NullableBool
         [_Default] = 0
         triNULL = 0
         triTRUE = 1
         triFALSE = 2
     End Enum
+
+Public Enum ExtendedBool
+    ebTRUE = 2 ^ 0
+    ebFALSE = 2 ^ 1
+    ebPartial = 2 ^ 2
+    ebERROR = 2 ^ 3
+    ebNULL = 2 ^ 4
+End Enum
 
 Public Enum CopyOptions
     [_coError] = 0
@@ -111,13 +139,18 @@ Public Enum ReportPeriod
     frpCalMonth = 4
 End Enum
 
-    Public Enum strMatchEnum
-        smEqual = 0
-        smNotEqualTo = 1
-        smContains = 2
-        smStartsWithStr = 3
-        smEndWithStr = 4
-    End Enum
+Public Enum strMatchEnum
+    smEqual = 0
+    smNotEqualTo = 1
+    smContains = 2
+    smStartsWithStr = 3
+    smEndWithStr = 4
+End Enum
+
+Public Type LocationStart
+    Left As Long
+    Top As Long
+End Type
 
 Public Type ArrInformation
     Rows As Long
@@ -145,72 +178,7 @@ Public Type RngInfo
     Areas As Long
 End Type
 
-' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
-'   ENUMS FOR WORKING WITH pbPerf
-' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
-'       ___ ___ ___ ___ ___ ___ ___ ___ ___ ___ ___ ___
-'           Flag Enum Items that are used when calling
-'           SetPerf(options as ftPerStates)
-'           FlagEnums can be 'added' (like how the Msgbox arguments work)
-Public Enum ftPerfOption
-    poINVALID = 0
-    ' CLEAR Control -- returns to default user interaction mode
-            poClearControl = 2 ^ 0
-        ' Use any combination of these option with 'poClearControl'
-        ' E.g.:    SetPerf poClearControl + poForeFinalSheet + poKeepTraceQueued
-            poIgnoreSheetProtect = 2 ^ 1 ' Do not Protect Active Sheet
-            poKeepTraceQueued = 2 ^ 2 ' Do not write out queued Trace Info
-            poForceFinalSheet = 2 ^ 3 ' For User to 'Land' On Specific Sheet
-            poBypassCloseChecks = 2 ^ 4 ' Disable Any 'OnClosing' Checking (In case of Error 51 -- Internal Error)
-    
-    ' SUSPEND Control -- Default 'turns everything off, but you can
-    ' selective adjust if needed
-            poSuspendControl = 2 ^ 5
-     ' Use any combination of these options with 'poSuspendControl'
-     ' E.g.:    SetPerf poSuspendControl + poCalcModeManual + poDoNotDisable_Alerts
-            poCalcModeManual = 2 ^ 6 ' Keep Calculation (Defaults to Automantic) on Manual Mode on next 'poClearControl' is called
-            poDoNotDisable_Screen = 2 ^ 7 ' Do Not Disable Screen During 'SuspendControl'
-            poDoNotDisable_Interaction = 2 ^ 8 ' Do Not Disable User Interaction During 'SuspendControl'
-            poDoNotDisable_Alerts = 2 ^ 9 ' Do Not Disable Alerts During 'Suspend Control
-            
-    ' CHECK/VALIDATE SuspendControl -- This ensures all the Application 'Performance' properties
-    '   are set to the  values applied during the last ' SetPerf poSuspendControl'
-    '   It's common to need to change a performance property while code is running -- for example there may
-    '   be a screen update you wish to perform. After the code requiring manual adjustments to these properties
-    '   rather than needing to remember what to set everything back to , simply call ' SetPerf poCheckControl '
-    '   poCheckControl can be used as often as needed while the Default 'SuspendControl' or
-    '   custom 'SuspendControl' values are being used. (Returns to 'Default User Control' any time the 'SetPerf poClearControl' is called
-            poCheckControl = 2 ^ 10
-    
-    ' MISC. Control Operation
-    '   The 'Performance' State Only has 2 'modes':
-    '    - Default User Interaction mode (Events ON, Screen Updating ON, etc)
-    '    - SuspendControl mode (Using either the Default SuspendControl configuration (Which allows tweaking some properties), or
-    '    - a custom ftPerfStates Type that you have set. (See the 'SetPerfCustom' Function for more into on that
-    '  The the current Performance Mode is in 'SuspendControl', an error will be raised if you try to set a new 'SuspendControl' configuration
-    '  In the vent you need to change the performance options in the middle of your code, you can call 'SetPerf poOverride' to clear
-    '  the current PerfState before applying a new one.
-            poOverride = 2 ^ 11
-End Enum
-        
-Public Type ftPerfStates
-    IsPerfState As Boolean
-    IsDefault As Boolean
-    Events As Boolean
-    Interactive As Boolean
-    Screen As Boolean
-    alerts As Boolean
-    Cursor As XlMousePointer
-    calc As XlCalculation
-End Type
-Public Enum ModifySuspendState
-    EnableEvents = 2 ^ 0
-    EnableInteractive = 2 ^ 1
-    EnableScreenUpdate = 2 ^ 2
-    EnableAlerts = 2 ^ 3
-    CalculationAuto = 2 ^ 4
-    CalculationManual = 2 ^ 5
-End Enum
+
 
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
 '   GENERALIZED ENUMS
@@ -263,7 +231,7 @@ Public Enum RangeFunctionOperator
     Min = 1
     Max = 2
     Sum = 3
-    count = 4
+    Count = 4
     CountUnique = 5
     CountBlank = 6
 End Enum
@@ -273,11 +241,6 @@ Public Enum btnLocationEnum
     ToTheRight
 End Enum
 
-Public Enum LogLevelEnum
-    info = 1
-    warning = 2
-    Error = 3
-End Enum
 
 Public Enum color
     Aqua = 42
@@ -428,5 +391,154 @@ Public Enum HolidayEnum
     holidayName = 1
     holidayDT = 2
 End Enum
+Public Enum HolCalendars
+    hcCallId = 1
+    hcDescription
+    hcHolidayName
+    hcHolidayDt
+    hcDayOfWeek
+End Enum
+Public Enum BeepType
+    btMsgBoxOK = 0
+    btMsgBoxChoice = 1
+    btError = 2
+    btBusyWait = 3
+    btButton = 4
+    btForced = 5
+End Enum
+
+Private lBypassOnCloseCheck As Boolean
+Private logUploadPath As String
+
+
+
+
+'   ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'                                   PRIVATE VS OPEN
+'   ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+#If privateVersion Then
+'   ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'                   *** PRIVATE *** IMPLEMENTATION OF COMMON FUNCTIONS
+'   ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+
+    Public Function ProtectSht(ByRef ws As Worksheet, Optional ByVal forceProtect As Boolean = False) As Boolean
+        ProtectSht = ProtectShtPriv(ws, forceProtect:=forceProtect)
+    End Function
+    Public Function UnprotectSht(ByRef ws As Worksheet) As Boolean
+        UnprotectSht = UnprotectSHTPriv(ws)
+    End Function
+    Public Property Get byPassOnCloseCheck() As Boolean
+        byPassOnCloseCheck = lBypassOnCloseCheck
+        If IsUpgrader Then byPassOnCloseCheck = True
+    End Property
+    Public Property Let byPassOnCloseCheck(bypassCheck As Boolean)
+        lBypassOnCloseCheck = bypassCheck
+    End Property
+    Public Property Get DevUserNames() As String
+        DevUserNames = DEV_USERNAME
+    End Property
+    Public Sub ftBeep(bpType As BeepType)
+        Dim doBeep    As Boolean
+        Select Case bpType
+            Case BeepType.btMsgBoxOK
+                doBeep = (Setting2(seBeepMsgBoxOK) = True)
+            Case BeepType.btError, BeepType.btForced
+                doBeep = True
+            Case BeepType.btMsgBoxChoice
+                doBeep = (Setting2(seBeepMsgBoxChoice) = True)
+            Case BeepType.btBusyWait
+                doBeep = (Setting2(seBeepBusyWait) = True)
+            Case BeepType.btButton
+                doBeep = (Setting2(seBeepButton) = True)
+        End Select
+        If doBeep Then
+            Beep
+        End If
+    End Sub
+    Public Property Get LogFileUploadPath() As String
+        If Len(logUploadPath) = 0 Then logUploadPath = Setting2(seLogFileUploadPath)
+        LogFileUploadPath = logUploadPath
+    End Property
+    Public Property Get AppVersion() As Variant
+        AppVersion = FinToolVersion
+    End Property
+    
+
+
+'   ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'                   *** END PRIVATE *** IMPLEMENTATION OF COMMON FUNCTIONS
+'   ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+#Else
+'   ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'                   *** PUBLIC *** IMPLEMENTATION OF COMMON FUNCTIONS
+'   ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+    Public Function ProtectSht(ByRef ws As Worksheet, Optional ByVal forceProtect As Boolean = False) As Boolean
+        ProtectSht = True
+        Debug.Print "pbCommon.ProtectSht - Not Implemented in Open Source Version"
+    End Function
+    Public Function UnprotectSht(ByRef ws As Worksheet) As Boolean
+        UnprotectSht = True
+        Debug.Print "pbCommon.UnprotectSht - Not Implemented in Open Source Version"
+    End Function
+    Public Property Get byPassOnCloseCheck() As Boolean
+        byPassOnCloseCheck = lBypassOnCloseCheck
+    End Property
+    Public Property Let byPassOnCloseCheck(bypassCheck As Boolean)
+        lBypassOnCloseCheck = bypassCheck
+    End Property
+    Public Property Get DevUserNames() As String
+        DevUserNames = "*"
+    End Property
+    Public Sub ftBeep(bpType As BeepType)
+        Dim doBeep    As Boolean
+        Select Case bpType
+            Case BeepType.btMsgBoxOK
+            Case BeepType.btError, BeepType.btForced
+            Case BeepType.btMsgBoxChoice
+            Case BeepType.btBusyWait
+            Case BeepType.btButton
+        End Select
+        Beep
+    End Sub
+    Public Property Get LogFileUploadPath() As String
+        Err.Raise ERR_NOT_IMPLEMENTED_YET, Source:="pbCommon.LogFileUploadPath"
+    End Property
+    Public Property Get AppVersion() As Variant
+        AppVersion = CDbl(1)
+        Err.Raise ERR_NOT_IMPLEMENTED_YET, Source:="pbCommon.AppVersion"
+    End Property
+    
+    
+
+'   ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'                   *** END PUBLIC *** IMPLEMENTATION OF COMMON FUNCTIONS
+'   ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+#End If
+
+
+
+
+Public Property Get IsDEV() As Boolean
+    Dim retV As Boolean
+    Dim devNames() As Variant
+    devNames = ArrArray(Split(DevUserNames, "|", , vbTextCompare), aoNone)
+    Dim ai As ArrInformation
+    ai = ArrayInfo(devNames)
+    If ai.Dimensions > 0 Then
+        Dim i As Long
+        For i = ai.LBound_first To ai.Ubound_first
+            If StringsMatch(ENV_LogName, Trim(devNames(i, 1)), smContains) Then
+                retV = True
+                Exit For
+            End If
+        Next i
+    End If
+    IsDEV = retV
+    If Not IsDeveloper = retV Then IsDeveloper = retV
+End Property
+
+
 
 
