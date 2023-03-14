@@ -57,6 +57,7 @@ On Error GoTo E:
     
     BeforeEdit
     lstObjRng.value = srcArray
+    UpdateListObjRange = True
     
 Finalize:
     On Error Resume Next
