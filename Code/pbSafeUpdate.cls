@@ -17,7 +17,7 @@ Attribute VB_Exposed = False
 ' @license GNU General Public License v3.0
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
 '
-' This class is designed work as a 'Default Instance Variabe' (see url below)
+' This class is designed work as a 'Default Instance Variable' (see url below)
 ' https://learn.microsoft.com/en-us/openspecs/microsoft_general_purpose_programming_languages/ms-vbal/189fb41b-cc3a-4999-a6d2-ba89f72d2870
 '
 ' If this code is copy/pasted, then you'll need to export this class, edit the top portion so
@@ -34,6 +34,43 @@ Option Base 1
 'to the wrong workbook
 
 Private movedFrom As Range
+Private isSingleton As Boolean
+
+' Use this function to perform update - BeforeEdit and AfterEdit are
+' called automatically
+Public Function UpdateListObjRange(lstObjRng As Range, srcArray) As Variant
+On Error GoTo E:
+    Dim dimension1 As Long, dimension2 As Long
+    Dim evts As Boolean, scrn As Boolean
+
+    dimension1 = (UBound(srcArray, 1) - LBound(srcArray, 1)) + 1
+    dimension2 = (UBound(srcArray, 2) - LBound(srcArray, 2)) + 1
+    
+    If Not dimension1 = lstObjRng.Rows.Count Or Not dimension2 = lstObjRng.Columns.Count Then
+        Err.Raise 1004, "pbSafeUpdate.UpdateListObjRange", "'srcArray' dimentions must match 'lstObjRng' row and column size"
+    End If
+        
+    evts = Application.EnableEvents
+    scrn = Application.ScreenUpdating
+    Application.EnableEvents = False
+    Application.ScreenUpdating = False
+    
+    BeforeEdit
+    lstObjRng.value = srcArray
+    
+Finalize:
+    On Error Resume Next
+    AfterEdit
+    Application.EnableEvents = evts
+    Application.ScreenUpdating = scrn
+    Exit Function
+E:
+    'Implement your desired error handling
+    'ErrorCheck
+    Err.Raise Err.number, Err.Source, Err.Description
+    Resume Finalize:
+
+End Function
 
 ' call this immediately before updating a listobject from an array
 ' no need to check anything before calling.  If the activecell is in a listobject,
@@ -41,6 +78,7 @@ Private movedFrom As Range
 ' The screen will NOT scroll to the new ActiveCell location
 ' syntax:  pbSafeupdate.BeforeEdit
 Public Function BeforeEdit()
+    If Not isSingleton Then Exit Function
     ClearValues
     If Not ActiveCell Is Nothing Then
         If Not ActiveCell.ListObject Is Nothing Then
@@ -55,7 +93,8 @@ End Function
 ' before the update, then the activecell will be moved back to that location
 ' syntax:  pbSafeupdate.AfterEdit
 Public Function AfterEdit()
-    'We can only move back if the movedFrom.Worksheet is the Active Worksheet
+   If Not isSingleton Then Exit Function
+     'We can only move back if the movedFrom.Worksheet is the Active Worksheet
     If movedFrom Is Nothing Then Exit Function
     If ActiveSheet Is Nothing Then Exit Function
     If Not ActiveSheet Is movedFrom.Worksheet Then
@@ -104,14 +143,11 @@ Private Function ClearValues()
     Set movedFrom = Nothing
 End Function
 
-Public Function TestMe()
-    Dim tArr
-    ReDim tArr(1 To 2, 1 To 2)
-    tArr(1, 1) = "WS1"
-    tArr(1, 2) = "A5"
-    tArr(2, 1) = "ws2"
-    tArr(2, 2) = "B7"
-    Debug.Print tArr(2, 2)
-    
-    
-End Function
+Private Sub Class_Initialize()
+    isSingleton = True
+    If Not Me Is pbSafeUpdate Then
+        isSingleton = False
+        Err.Raise 1004, Source:="pbSafeUpdate", Description:="pbSafeUpdate may not be created as a new Class Instance outside it's PredeclaredId 'pbSafeUpdate'"
+    End If
+End Sub
+
