@@ -21,6 +21,13 @@ Public Enum MapTypeEnum
     mtWorksheet = 1
     mtRangeOrListObject = 2
 End Enum
+Public Enum StaticMapTypeEnum
+    [_smtError] = 0
+    smtWorkookName = 2 ^ 0
+    smtWorksheetName = 2 ^ 1
+    smtManualValuePrefix = 2 ^ 2
+    smtManualValueSuffix = 2 ^ 3
+End Enum
 
  Public Enum strMatchEnum
      smEqual = 0
@@ -29,6 +36,11 @@ End Enum
      smStartsWithStr = 3
      smEndWithStr = 4
  End Enum
+
+    Private Enum ecComparisonType
+        ecOR = 0 'default
+        ecAnd
+    End Enum
 
 
 Private lTargetDataType As DataFormatEnum
@@ -168,6 +180,66 @@ Public Function AddDataMap(srcColumn, srcType As MapTypeEnum, destColumn, destTy
 
 End Function
 
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   Add Source Workbook Name and/or Source Worksheet Name,
+'       and/or Manual Value (First, or Last) as a data map, instead
+'       of mapping data from Source ListObject or Range
+'   [staticDataType] can be 1 or more enum arguments
+'   e.g
+'       AddStaticMap smtManualValuePrefix + smtWorksheetName, _
+'            manualValue:=Format(Now, "yyyymmddhhnnss")
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+Public Function AddStaticMap(destColumn, destType As MapTypeEnum, staticDataType As StaticMapTypeEnum, Optional manualValue, Optional delimiter As String = "_")
+    If lTargetLO Is Nothing And lTargetRNG Is Nothing Then
+        Err.Raise 1004, source:="pbConsolidateData.AddStaticMap", Description:="'ConfigureMaster' and 'ConfigureSource' not valid"
+    End If
+    If lSourceLO Is Nothing And lSourceRNG Is Nothing Then
+        Err.Raise 1004, source:="pbConsolidateData.AddStaticMap", Description:="'ConfigureMaster' and 'ConfigureSource' not valid"
+    End If
+    
+    If lMap Is Nothing Then
+        Set lMap = New Collection
+    End If
+    
+    If staticDataType > 0 Then
+        Dim tmpVal
+        If EnumCompare(staticDataType, StaticMapTypeEnum.smtManualValuePrefix) And Not IsMissing(manualValue) Then
+            tmpVal = manualValue
+        End If
+        If EnumCompare(staticDataType, StaticMapTypeEnum.smtWorkookName) Then
+            tmpVal = tmpVal & IIf(Len(tmpVal) > 0, delimiter & lSourceSheet.Parent.Name, lSourceSheet.Parent.Name)
+        End If
+        If EnumCompare(staticDataType, StaticMapTypeEnum.smtWorksheetName) Then
+            tmpVal = tmpVal & IIf(Len(tmpVal) > 0, delimiter & lSourceSheet.Name, lSourceSheet.Name)
+        End If
+        If EnumCompare(staticDataType, StaticMapTypeEnum.smtManualValueSuffix) And Not IsMissing(manualValue) Then
+            tmpVal = tmpVal & IIf(Len(tmpVal) > 0, delimiter & manualValue, manualValue)
+        End If
+        
+        Dim destIndex As Long
+        If destType = mtRangeOrListObject Then
+            If StringsMatch(TypeName(destColumn), "String") And lTargetDataType = dfListObject Then
+                destIndex = lTargetLO.ListColumns(destColumn).Index
+            ElseIf IsNumeric(destColumn) Then
+                destIndex = destColumn
+            End If
+        ElseIf destType = mtWorksheet Then
+            If lTargetDataType = dfListObject Then
+                destIndex = destColumn - lTargetLO.Range.Column + 1
+                If destIndex < 1 Or destIndex > lTargetLO.ListColumns.Count Then
+                    Err.Raise 1004, source:="pbConsolidateData.AddDataMap", Description:="'Worksheet Column Index (" & destColumn & ") is not valid for " & lTargetLO.Name
+                End If
+            ElseIf lTargetDataType = dfRange Then
+                destIndex = destColumn - lTargetRNG.Column + 1
+                If destIndex < 1 Or destIndex > lTargetRNG.Columns.Count Then
+                    Err.Raise 1004, source:="pbConsolidateData.AddDataMap", Description:="'Worksheet Column Index (" & destColumn & ") is not valid for " & lTargetSheet.Name & "!" & lTargetRNG.Address
+                End If
+            End If
+        End If
+        lMap.Add Array("STATICMAP", tmpVal, destIndex)
+    End If
+End Function
+
 Public Function Execute()
     If lTargetLO Is Nothing And lTargetRNG Is Nothing Then
         Err.Raise 1004, source:="pbConsolidateData.Execute", Description:="'ConfigureMaster' and 'ConfigureSource' not valid"
@@ -193,7 +265,11 @@ Public Function Execute()
     For srcRowIDX = LBound(srcArray, 1) To UBound(srcArray, 1)
         tmpDestRow = NewDestRow
         For Each mapItem In lMap
-            tmpDestRow(1, mapItem(UBound(mapItem))) = srcArray(srcRowIDX, mapItem(LBound(mapItem)))
+            If StringsMatch(mapItem(LBound(mapItem)), "STATICMAP") Then
+                tmpDestRow(1, mapItem(UBound(mapItem))) = mapItem(LBound(mapItem) + 1)
+            Else
+                tmpDestRow(1, mapItem(UBound(mapItem))) = srcArray(srcRowIDX, mapItem(LBound(mapItem)))
+            End If
         Next mapItem
         tmpCol.Add tmpDestRow
     Next srcRowIDX
@@ -306,4 +382,10 @@ Private Function StringsMatch( _
     End Select
 End Function
 
+' ~~~ ~~ FLAG ENUM COMPARE ~~~ ~~~
+Private Function EnumCompare(theEnum As Variant, enumMember As Variant, Optional ByVal iType As ecComparisonType = ecComparisonType.ecOR) As Boolean
+    Dim c As Long
+    c = theEnum And enumMember
+    EnumCompare = IIf(iType = ecOR, c <> 0, c = enumMember)
+End Function
 
