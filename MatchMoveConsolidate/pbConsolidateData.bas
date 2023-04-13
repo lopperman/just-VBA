@@ -240,7 +240,9 @@ Public Function AddStaticMap(destColumn, destType As MapTypeEnum, staticDataType
     End If
 End Function
 
-Public Function Execute()
+Public Function Execute(Optional perfMode As Boolean = True)
+    On Error GoTo E:
+    
     If lTargetLO Is Nothing And lTargetRNG Is Nothing Then
         Err.Raise 1004, source:="pbConsolidateData.Execute", Description:="'ConfigureMaster' and 'ConfigureSource' not valid"
     End If
@@ -250,6 +252,8 @@ Public Function Execute()
     If lMap Is Nothing Then
         Err.Raise 1004, source:="pbConsolidateData.Execute", Description:="Column Mapping Not Configured ('AddDataMap')"
     End If
+    
+    Dim evts As Boolean, scrn As Boolean
     
     Dim srcArray() As Variant
     Dim tmpCol As New Collection
@@ -281,8 +285,29 @@ Public Function Execute()
         Next destColIdx
     Next destItem
     Set destRng = GetNewTargetRange(tmpCol.Count)
+    
+    If perfMode Then
+        evts = Application.EnableEvents
+        scrn = Application.ScreenUpdating
+        Application.EnableEvents = False
+        Application.ScreenUpdating = False
+    End If
     destRng.Value = destArray
+Finalize:
+    On Error Resume Next
     Reset
+    If perfMode Then
+        Application.EnableEvents = evts
+        Application.ScreenUpdating = scrn
+    End If
+    Exit Function
+E:
+    'Implement Your Error Handling Code
+    Beep
+    MsgBox "Error Occured in pbConsolidateData.Execute (" & Err.Number & " - " & Err.Description & ")"
+    Err.Clear
+    Resume Finalize:
+
 End Function
 
 Private Function GetNewTargetRange(newRowCount As Long) As Range
