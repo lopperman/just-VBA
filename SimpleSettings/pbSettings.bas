@@ -89,6 +89,27 @@ Public Function ShowSettingsSheet()
 End Function
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   Returns Number of Settings
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+Public Property Get SettingCount() As Long
+    CheckDict
+    SettingCount = lsettingDict.Count
+End Property
+
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   Returns All Settings Keys/Values in a 2-dimension array
+'   e.g.
+'       Dim tmpKey, tmpVal
+'       tmpKey = AllSettings(1,1) 'first setting key
+'       tmpVal = AllSettings(1,2) 'first setting value
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+Public Function AllSettings() As Variant
+    CheckDict
+    AllSettings = SettingLO.ListColumns(1).DataBodyRange.Resize(ColumnSize:=2).value
+End Function
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 '   Create or Update Setting [stgKey] to be [stgVal]
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 Private Function CreateOrUpdate(stgKey, stgVal)
@@ -140,6 +161,7 @@ Private Function CheckDict()
     End If
     If lsettingDict Is Nothing Then
       Set lsettingDict = New Dictionary
+      lsettingDict.CompareMode = TextCompare
       LoadSettingsDict
     End If
 End Function
