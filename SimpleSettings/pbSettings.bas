@@ -15,11 +15,15 @@ Option Explicit
 Option Compare Text
 Option Base 1
 
+
 Private Const SETTING_LSTOBJNAME As String = "tblPBSETTINGS"
-Private Const SETTING_WSNAME As String = "pb-Settings"
+Public Const SETTING_WSNAME As String = "pb-Settings"
 Private lsettingDict As Dictionary
 Private lLO As ListObject
 
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+' Enum for StringsMatch Function
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 Private Enum strMatchEnum
     smEqual = 0
     smNotEqualTo = 1
@@ -28,6 +32,11 @@ Private Enum strMatchEnum
     smEndWithStr = 4
 End Enum
 
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+' Return Setting Value, if [keyName] Exists, otherwise
+'   If [defaultVal] was provided, return defaultVal, otherwise
+'   return Empty
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 Public Function GetValue(keyName, Optional defaultVal)
     CheckDict
     If KeyExists(keyName) Then
@@ -36,14 +45,26 @@ Public Function GetValue(keyName, Optional defaultVal)
         GetValue = defaultVal
     End If
 End Function
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   Create or Update Setting [keyName] to be[keyValue]
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 Public Function SetValue(keyName, keyValue)
     CheckDict
     CreateOrUpdate keyName, keyValue
 End Function
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   Return TRUE if [keyName] exists in Setting collection
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 Public Function KeyExists(keyName) As Boolean
     CheckDict
     KeyExists = lsettingDict.Exists(keyName)
 End Function
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   will delete setting [keyName] if it exists
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 Public Function Delete(keyName)
     CheckDict
     If KeyExists(keyName) Then
@@ -55,6 +76,10 @@ Public Function Delete(keyName)
         End If
     End If
 End Function
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   Make the Settings Sheet Temporarily Visible
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 Public Function ShowSettingsSheet()
     MsgBox "Settings Sheet Will Automatically be Hidden Next Time Any Settings Function Is Called"
     If Not SettingSheet Is Nothing Then
@@ -62,6 +87,10 @@ Public Function ShowSettingsSheet()
         SettingSheet.Activate
     End If
 End Function
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   Create or Update Setting [stgKey] to be [stgVal]
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 Private Function CreateOrUpdate(stgKey, stgVal)
     CheckDict
     Dim tArr As Variant, idx
@@ -86,6 +115,9 @@ Private Function CreateOrUpdate(stgKey, stgVal)
     SysMode evts, scrn, intr
 End Function
 
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   (Private) Get reference to the settings ListObject
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 Private Function SettingLO() As ListObject
     If lLO Is Nothing Then
         Set lLO = SettingSheet.ListObjects(SETTING_LSTOBJNAME)
@@ -93,6 +125,12 @@ Private Function SettingLO() As ListObject
     Set SettingLO = lLO
 End Function
 
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   (Private) Ensures SettingsSheet, Settings ListObject, and
+'       default values exist
+'   Loads all settings into dictionary for fast retrieval
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 Private Function CheckDict()
     If SettingSheet Is Nothing Then
         CreateSettingsSheet
@@ -106,6 +144,9 @@ Private Function CheckDict()
     End If
 End Function
 
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   (Private) Adds a new settings row to settings listobject
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 Private Function AddSettingRow(stgKey, stgVal)
     Dim evts As Boolean: evts = Application.EnableEvents
     Application.EnableEvents = False
@@ -116,6 +157,11 @@ Private Function AddSettingRow(stgKey, stgVal)
     Application.EnableEvents = evts
 End Function
 
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   (Private) Function that loads settings into dictionary
+'   If no settings rows exists, will create a row with
+'   'Version' Settings Key
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 Private Function LoadSettingsDict()
     Dim tArr As Variant, idx
     Set lsettingDict = Nothing
@@ -131,6 +177,11 @@ Private Function LoadSettingsDict()
         End If
     Next idx
 End Function
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   (Private) If Settings Worksheet does not exist, this method
+'   is used to create the new worksheet with settings listobject
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 Private Function CreateSettingsSheet() As Boolean
 On Error Resume Next
     Dim tWS As Worksheet
@@ -159,6 +210,9 @@ On Error Resume Next
     SysMode evts, scrn, intr
 End Function
 
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   (Private) Returns Settings Worksheet, if Found
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 Private Function SettingSheet() As Worksheet
     Dim ws As Worksheet
     For Each ws In ThisWorkbook.Worksheets
@@ -168,6 +222,11 @@ Private Function SettingSheet() As Worksheet
         End If
     Next ws
 End Function
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   (Private) Returns the last visible Worksheet in current
+'   workbook.
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 Private Function LastVisibleSheet() As Worksheet
     Dim lstIndex As Long
     Dim ws As Worksheet
@@ -179,12 +238,22 @@ Private Function LastVisibleSheet() As Worksheet
     Set LastVisibleSheet = ThisWorkbook.Worksheets(lstIndex)
 End Function
 
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   (Private) Used to turn off Events and Screen, or restore
+'   Events and Screen settings to previous values
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 Private Function SysMode(Optional evts As Boolean = False, Optional scrn As Boolean = False, Optional intr As Boolean = False)
     Application.EnableEvents = evts
     Application.ScreenUpdating = scrn
     Application.Interactive = intr
 End Function
 
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   (Private) my string comparison function
+'   Made private to not interfere with version you might have
+'   in other modules
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 Private Function StringsMatch( _
     ByVal checkString As Variant, ByVal _
     validString As Variant, _
