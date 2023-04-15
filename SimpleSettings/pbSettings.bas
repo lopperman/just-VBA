@@ -16,7 +16,6 @@ Option Compare Text
 Option Base 1
 
 Private Const SETTING_LSTOBJNAME As String = "tblPBSETTINGS"
-Private Const SETTING_WSCODENAME As String = "justVBASettings"
 Private Const SETTING_WSNAME As String = "pb-Settings"
 Private lsettingDict As Dictionary
 Private lLO As ListObject
@@ -134,7 +133,6 @@ Private Function LoadSettingsDict()
 End Function
 Private Function CreateSettingsSheet() As Boolean
 On Error Resume Next
-    Dim tWB As Workbook
     Dim tWS As Worksheet
     Dim tLO As ListObject
     Dim evts As Boolean, scrn As Boolean, intr As Boolean
@@ -142,14 +140,10 @@ On Error Resume Next
     scrn = Application.ScreenUpdating
     intr = Application.Interactive
     SysMode
-    Set tWB = Application.Workbooks.Add
-    Set tWS = tWB.Worksheets.Add
-    tWS.[_CodeName] = SETTING_WSCODENAME
+    Set tWS = ThisWorkbook.Worksheets.Add
     tWS.Name = SETTING_WSNAME
     tWS.Parent.Windows(1).DisplayGridlines = False
     tWS.Move After:=LastVisibleSheet
-    tWB.Close SaveChanges:=False
-    Set tWB = Nothing
     Set tWS = Nothing
     If Not SettingSheet Is Nothing Then
         With SettingSheet
@@ -168,7 +162,7 @@ End Function
 Private Function SettingSheet() As Worksheet
     Dim ws As Worksheet
     For Each ws In ThisWorkbook.Worksheets
-        If ws.CodeName = SETTING_WSCODENAME Then
+        If ws.Name = SETTING_WSNAME Then
             Set SettingSheet = ws
             Exit For
         End If
