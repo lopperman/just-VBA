@@ -23,180 +23,142 @@ Public Const CFG_PROTECT_PASSWORD_MISC As String = "0000015"
 Public Const CFG_PROTECT_PASSWORD_VBA = "0123210"
 Public Const TEMP_DIRECTORY_NAME2 As String = "VBATemp"
 
-
-
-
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 '   GENERALIZED TYPES
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
-    Public Type KVP
-      Key As String
-      Value As Variant
-    End Type
+Public Type KVP
+  Key As String
+  Value As Variant
+End Type
     
-    Public Type ftFound
-        matchExactFirstIDX As Long
-        matchExactLastIDX As Long
-        matchSmallerIDX As Long
-        matchLargerIDX As Long
-        realRowFirst As Long
-        realRowLast As Long
-        realRowSmaller As Long
-        realRowLarger As Long
-    End Type
+Public Type ftFound
+    matchExactFirstIDX As Long
+    matchExactLastIDX As Long
+    matchSmallerIDX As Long
+    matchLargerIDX As Long
+    realRowFirst As Long
+    realRowLast As Long
+    realRowSmaller As Long
+    realRowLarger As Long
+End Type
     
-    Public Type LocationStart
-        Left As Long
-        Top As Long
-    End Type
+Public Type LocationStart
+    Left As Long
+    Top As Long
+End Type
     
-    Public Type ArrInformation
-        Rows As Long
-        Columns As Long
-        Dimensions As Long
-        Ubound_first As Long
-        LBound_first As Long
-        UBound_second As Long
-        LBound_second As Long
-        IsArray As Boolean
-    End Type
-    Public Type AreaStruct
-        RowStart As Long
-        RowEnd As Long
-        ColStart As Long
-        ColEnd As Long
-        rowCount As Long
-        columnCount As Long
-    End Type
-    Public Type RngInfo
-        Rows As Long
-        Columns As Long
-        AreasSameRows As Boolean
-        AreasSameColumns As Boolean
-        Areas As Long
-    End Type
+Public Type ArrInformation
+    Rows As Long
+    Columns As Long
+    Dimensions As Long
+    Ubound_first As Long
+    LBound_first As Long
+    UBound_second As Long
+    LBound_second As Long
+    IsArray As Boolean
+End Type
+    
+Public Type AreaStruct
+    RowStart As Long
+    RowEnd As Long
+    ColStart As Long
+    ColEnd As Long
+    rowCount As Long
+    columnCount As Long
+End Type
+    
+Public Type RngInfo
+    Rows As Long
+    Columns As Long
+    AreasSameRows As Boolean
+    AreasSameColumns As Boolean
+    Areas As Long
+End Type
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 '   GENERALIZED ENUMS
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
-    Public Enum DateDiffType
-        dtSecond
-        dtMinute
-        dtHour
-        dtDay
-        dtWeek
-        dtMonth
-        dtYear
-        dtQuarter
-        dtDayOfYear
-        dtWeekday
-        dtDate_NoTime
-        dtTimeString
-    End Enum
+Public Enum DateDiffType
+    dtSecond
+    dtMinute
+    dtHour
+    dtDay
+    dtWeek
+    dtMonth
+    dtYear
+    dtQuarter
+    dtDayOfYear
+    dtWeekday
+    dtDate_NoTime
+    dtTimeString
+End Enum
     
-    Public Enum NullableBool
-        [_Default] = 0
-        triNULL = 0
-        triTRUE = 1
-        triFALSE = 2
-    End Enum
+Public Enum NullableBool
+    [_Default] = 0
+    triNULL = 0
+    triTRUE = 1
+    triFALSE = 2
+End Enum
 
-    Public Enum ExtendedBool
-        ebTRUE = 2 ^ 0
-        ebFALSE = 2 ^ 1
-        ebPartial = 2 ^ 2
-        ebERROR = 2 ^ 3
-        ebNULL = 2 ^ 4
-    End Enum
-
-    Public Enum CopyOptions
-        [_coError] = 0
-        'Modifies What's Being Copied
-        coFormulas = 2 ^ 0
-        coVisibleCellsOnly = 2 ^ 1
-        coUniqueRows = 2 ^ 2
-        coUniqueCols = 2 ^ 3
-        
-        'Modifies Target Structure
-        coIncludeListObjHeaders = 2 ^ 4 'Valid LstObj, and LstObjCols only
-        coCreateListObj = 2 ^ 5
-        coPullRowsTogether = 2 ^ 6 'Only Valid Range w/multiple disparate areas
-        coPullColsTogether = 2 ^ 7 'Only ValidRange w/multiple disparate areas, OR LstCols with disparate cols
-        
-        'Modifies Format
-        coMatchFontStyle = 2 ^ 8
-        coMatchInterior = 2 ^ 9
-        coMatchRowColSize = 2 ^ 10
-        coMatchMergeAreas = 2 ^ 11
-        coMatchLockedCells = 2 ^ 12
-        
-        coDROPUnmatchedLstObjCols = 2 ^ 13
-        coClearTargetLstObj = 2 ^ 14
-        coManualLstObjMap = 2 ^ 15
-        
-        'Create Destination
-        coNewWorkbook = 2 ^ 16
-    End Enum
-        
-    Public Enum CopyTo
-        ftRange
-        ftListObj
-        ftListObjCols
-        toNewWorksheet
-        toNewWorkbook
-    End Enum
-
-    Public Enum PicklistMode
-        plSingle = 0
-        plMultiple_MinimumNone = -1
-        plMultiple_MinimumOne = 1
-    End Enum
-
-    Public Enum ecComparisonType
-        ecOR = 0 'default
-        ecAnd
-    End Enum
-
-    Public Enum MergeRangeEnum
-        mrDefault_MergeAll = 0
-        mrUnprotect = 2 ^ 0
-        mrClearFormatting = 2 ^ 1
-        mrClearContents = 2 ^ 2
-        mrMergeAcrossOnly = 2 ^ 3
-    End Enum
-
-    Public Enum InitActionEnum
-        [_DefaultInvalid] = 0
-        iaAutoCode
-        iaEventResponse
-        iaButtonClick
-        iaManual
-    End Enum
-
-    Public Enum ReportPeriod
-        frpDay = 1
-        frpWeek = 2
-        frpGLPeriod = 3
-        frpCalMonth = 4
-    End Enum
+Public Enum ExtendedBool
+    ebTRUE = 2 ^ 0
+    ebFALSE = 2 ^ 1
+    ebPartial = 2 ^ 2
+    ebERROR = 2 ^ 3
+    ebNULL = 2 ^ 4
+End Enum
     
-    Public Enum strMatchEnum
-        smEqual = 0
-        smNotEqualTo = 1
-        smContains = 2
-        smStartsWithStr = 3
-        smEndWithStr = 4
-    End Enum
+Public Enum PicklistMode
+    plSingle = 0
+    plMultiple_MinimumNone = -1
+    plMultiple_MinimumOne = 1
+End Enum
 
-    Public Enum ftOperatingState
-        [_ftunknown] = -1
-        ftOpening = 0
-        ftRunning = 1
-        ftClosing = 2
-        ftUpgrading = 3
-        ftResetting = 4
-        ftImporting = 5
-    End Enum
+Public Enum ecComparisonType
+    ecOR = 0 'default
+    ecAnd
+End Enum
+
+Public Enum MergeRangeEnum
+    mrDefault_MergeAll = 0
+    mrUnprotect = 2 ^ 0
+    mrClearFormatting = 2 ^ 1
+    mrClearContents = 2 ^ 2
+    mrMergeAcrossOnly = 2 ^ 3
+End Enum
+
+Public Enum InitActionEnum
+    [_DefaultInvalid] = 0
+    iaAutoCode
+    iaEventResponse
+    iaButtonClick
+    iaManual
+End Enum
+
+Public Enum ReportPeriod
+    frpDay = 1
+    frpWeek = 2
+    frpGLPeriod = 3
+    frpCalMonth = 4
+End Enum
+    
+Public Enum strMatchEnum
+    smEqual = 0
+    smNotEqualTo = 1
+    smContains = 2
+    smStartsWithStr = 3
+    smEndWithStr = 4
+End Enum
+
+Public Enum ftOperatingState
+    [_ftunknown] = -1
+    ftOpening = 0
+    ftRunning = 1
+    ftClosing = 2
+    ftUpgrading = 3
+    ftResetting = 4
+    ftImporting = 5
+End Enum
     
     Public Enum ProtectionTemplate
         ptDefault = 0
@@ -380,9 +342,8 @@ Public Const TEMP_DIRECTORY_NAME2 As String = "VBATemp"
 
 Public Function DtAdd(intervalType As DateDiffType, _
     number As Variant, ByVal dt As Variant) As Variant
-    
     Dim retVal As Variant
-    
+    Attribute DtAdd.VB_Description="Add or Subtract time from date [dt] value.  Replaces VBA DateAdd.\n"    
     Select Case intervalType
         Case DateDiffType.dtDay
             retVal = DateAdd("d", number, dt)
@@ -1828,7 +1789,125 @@ Public Function TempDirName2(Optional dirName As String = vbNullString) As Strin
     TempDirName2 = IIf(Not dirName = vbNullString, dirName, TEMP_DIRECTORY_NAME2)
 End Function
 
+Public Property Get VisibleWorksheets() As Long
+    Dim tIdx As Long, retV As Long
+    For tIdx = 1 To ThisWorkbook.Worksheets.Count
+        If ThisWorkbook.Worksheets(tIdx).visible = xlSheetVisible Then
+            retV = retV + 1
+        End If
+    Next tIdx
+    VisibleWorksheets = retV
+End Property
 
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+'   MAKE SURE ALL 'NAMES' ARE VISIBLE IN NAMES MANAGER
+'    - ALL WORKSHEETS MUST BE UNPROTECTED
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+Public Function DEVMakeAllNamesVisible()
+    'This makes all the names visible, then can manually delete from
+    '   Formulas --> Name Manager
+    Dim nm As Name
+    For Each nm In ThisWorkbook.Names
+        nm.visible = True
+    Next nm
+    MsgBox "Check Formulas --> Name Manager to view names"
+End Function
 
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   Get All  'Environ' Settings, or
+'   Get 'Environ' Settings matches or partially matches 'filter'
+'   filter applied to [Key] by default, to apply to value(s), use
+'       filterKey:=False
+'   Returns Collection with [Key] = Environ Key, and
+'       [Item] = Environ Value
+'   If using filterKey with exactMatch:=True, will return 1 or no matching items
+'   When mutiple items are matched (exactMatch:=False),
+'       will return 0 to Many items
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   FYI: TO GET USERNAME:
+'       ON PC USE:  =GetEnvironSettings("username")
+'       ON MAC USE: =GetEnvironSettings("user")
+'
+'   (VBA.Interaction.Environ([KEY] is case sensitive, however using this
+'       'GetEnvironSettings' is not case sensitive)
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   EXAMPLE OF USAGE
+'       ** Print all Environ Key/Value values to Immediate Window
+'       Dim v As pbKeyVal
+'       For Each v In GetEnvironSettings
+'           Debug.Print v.Key, v.Value
+'       Next v
+'       ** Print all Environ Key/Value values using 'ToString' of pbKeyVal class
+'       Dim v As pbKeyVal
+'       For Each v In GetEnvironSettings
+'           Debug.Print v.ToString
+'       Next v
+'       ** Get Environ setting value for key=USER
+'       Dim v As pbKeyVal, tempCol as Collection
+'       Set tempCol = GetEnvironSettings("user", exactMatch:=True)
+'           THIS
+'       If tempCol.Count = 1 Then
+'           Debug.Print tempCol(1).Value
+'       End if
+'           OR THIS
+'       Set v = tempCol(1)
+'           Debug.Print v.Value
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+Public Function GetEnvironSettings( _
+    Optional filter As String, _
+    Optional exactMatch As Boolean = True, _
+    Optional filterKey As Boolean = True) As Collection
 
+    Dim tColl As New Collection, arrItem, eq As String, eqPosition As Long
+    Dim EnvString, i As Long, tKey, tVal, tFilterItem, canReturn As Boolean
+    i = 1
+    eq = "="
+    EnvString = Environ(i)
+    Do While EnvString <> vbNullString
+        canReturn = False
+        eqPosition = InStr(EnvString, eq)
+        If eqPosition > 0 Then
+            tKey = Left(EnvString, (eqPosition - 1))
+            tVal = Mid(EnvString, (eqPosition + 1))
+            If Not StringsMatch(filter, vbNullString) Then
+                tFilterItem = IIf(filterKey, tKey, tVal)
+                If exactMatch And StringsMatch(tFilterItem, filter, smEqual) Then
+                    canReturn = True
+                ElseIf Not exactMatch And StringsMatch(tFilterItem, filter, smContains) Then
+                    canReturn = True
+                End If
+            Else
+                canReturn = True
+            End If
+        End If
+        If canReturn Then
+            tColl.Add CreateKeyVal(tKey, tVal)
+        End If
+        
+        i = i + 1
+        EnvString = Environ(i)
+    Loop
+    
+    Set GetEnvironSettings = tColl
+    Set tColl = Nothing
 
+End Function
+
+Public Function NowWithMS() As String
+    NowWithMS = Format(Now, "yyyymmdd hh:mm:ss") & Right(Format(Timer, "0.000"), 4)
+End Function
+
+Public Function SysStates() As String
+    Dim tEv As String, tSc As String, tIn As String, tCa As String, retV As String
+    tEv = IIf(Events, "Evts=ON  ", "")
+    tSc = IIf(Application.ScreenUpdating, "Scrn=ON  ", "")
+    tIn = IIf(Application.Interactive, "Inter=ON  ", "")
+    tCa = IIf(Application.Calculation = xlCalculationAutomatic, "Calc: AUTO  ", "")
+    retV = Concat(tEv, tSc, tIn, tCa)
+    If Len(retV) = 0 Then
+        retV = "SysStates: (ALL OFF)"
+    Else
+        retV = Concat("SysStates: ( ", retV, ")")
+    End If
+    SysStates = retV
+End Function
