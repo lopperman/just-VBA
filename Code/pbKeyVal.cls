@@ -18,16 +18,16 @@ Option Explicit
 Option Base 1
 Option Compare Text
 
-Public Key
+Public key
 Public Value
 
 Public Property Get IsKeyObject() As Boolean
-     IsKeyObject = IsObject(Key)
+     IsKeyObject = IsObject(key)
 End Property
 Public Property Get IsValueObject() As Boolean
     IsValueObject = IsObject(Value)
 End Property
 Public Property Get ToString() As String
-    ToString = ConcatWithDelim(" ", "KeyType=", TypeName(Key), IIf(IsKeyObject, "'Object'", "'") & Key & "'") & ", " & _
+    ToString = ConcatWithDelim(" ", "KeyType=", TypeName(key), IIf(IsKeyObject, "'Object'", "'") & key & "'") & ", " & _
         ConcatWithDelim(" ", "ValueType=", TypeName(Value), IIf(IsValueObject, "'Object'", "'") & Value & "'")
 End Property

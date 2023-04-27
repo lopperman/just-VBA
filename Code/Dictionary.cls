@@ -7,32 +7,24 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
-Attribute VB_Description = "Drop-in replacement for Scripting.Dictionary on Mac\r\n\r\nDictionary v1.4.0\r\n(c) Tim Hall - https://github.com/timhall/VBA-Dictionary\r\nAuthor: tim.hall.engr@gmail.com\r\nLicense: MIT (http://www.opensource.org/licenses/mit-license.php)\r\n"
-Option Explicit
-Option Compare Text
-Option Base 0
-'
-'Private Const lbKEY As Long = 1
-
-' Dictionary v1.4.1
-' (c) Tim Hall - https://github.com/timhall/VBA-Dictionary
+Attribute VB_Description = "Drop-in replacement for Scripting.Dictionary on Mac\r\n(c) Tim Hall - https://github.com/vba-tools/vba-dictionary"
+''
+' # Dictionary
 '
 ' Drop-in replacement for Scripting.Dictionary on Mac
 '
-' @author: tim.hall.engr@gmail.com
-' @license: MIT (http://www.opensource.org/licenses/mit-license.php
-'
+' @class Dictionary
+' @author tim.hall.engr@gmail.com
+' @repository https://github.com/vba-tools/vba-dictionary
+' @license MIT
 ' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
+Option Explicit
 
-' --------------------------------------------- '
-' Constants and Private Variables
-' --------------------------------------------- '
-
-#Const UseScriptingDictionaryIfAvailable = False
+#Const UseScriptingDictionaryIfAvailable = True
 
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
 
-' dict_KeyValue 1: FormattedKey, 1: OriginalKey, 2: Value
+' dict_KeyValue 0: FormattedKey, 1: OriginalKey, 2: Value
 Private dict_pKeyValues As Collection
 Private dict_pKeys() As Variant
 Private dict_pItems() As Variant
@@ -45,19 +37,18 @@ Private dict_pDictionary As Object
 
 #End If
 
-' --------------------------------------------- '
-' Types
-' --------------------------------------------- '
-
 Public Enum CompareMethod
     BinaryCompare = VBA.vbBinaryCompare
     TextCompare = VBA.vbTextCompare
     DatabaseCompare = VBA.vbDatabaseCompare
 End Enum
 
-' --------------------------------------------- '
-' Properties
-' --------------------------------------------- '
+' Enables 'For Each' On Dictionary Class
+' enumerates dict_pKeyValues collection
+'Property Get NewEnum() As IUnknown
+'  Attribute NewEnum.VB_UserMemId = -4
+'  Set NewEnum = dict_pKeyValues.[_NewEnum]
+'End Property
 
 Public Property Get CompareMode() As CompareMethod
 Attribute CompareMode.VB_Description = "Set or get the string comparison method."
@@ -67,7 +58,7 @@ Attribute CompareMode.VB_Description = "Set or get the string comparison method.
     CompareMode = dict_pDictionary.CompareMode
 #End If
 End Property
-Public Property Let CompareMode(value As CompareMethod)
+Public Property Let CompareMode(Value As CompareMethod)
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
     If Me.Count > 0 Then
         ' Can't change CompareMode for Dictionary that contains data
@@ -75,9 +66,9 @@ Public Property Let CompareMode(value As CompareMethod)
         Err.Raise 5 ' Invalid procedure call or argument
     End If
 
-    dict_pCompareMode = value
+    dict_pCompareMode = Value
 #Else
-    dict_pDictionary.CompareMode = value
+    dict_pDictionary.CompareMode = Value
 #End If
 End Property
 
@@ -90,12 +81,12 @@ Attribute Count.VB_Description = "Get the number of items in the dictionary.\n"
 #End If
 End Property
 
-Public Property Get Item(KEY As Variant) As Variant
+Public Property Get Item(key As Variant) As Variant
 Attribute Item.VB_Description = "Set or get the item for a given key."
 Attribute Item.VB_UserMemId = 0
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
     Dim dict_KeyValue As Variant
-    dict_KeyValue = dict_GetKeyValue(KEY)
+    dict_KeyValue = dict_GetKeyValue(key)
 
     If Not IsEmpty(dict_KeyValue) Then
         If VBA.IsObject(dict_KeyValue(2)) Then
@@ -107,53 +98,49 @@ Attribute Item.VB_UserMemId = 0
         ' Not found -> Returns Empty
     End If
 #Else
-    If VBA.IsObject(dict_pDictionary.Item(KEY)) Then
-        Set Item = dict_pDictionary.Item(KEY)
+    If VBA.IsObject(dict_pDictionary.Item(key)) Then
+        Set Item = dict_pDictionary.Item(key)
     Else
-        Item = dict_pDictionary.Item(KEY)
+        Item = dict_pDictionary.Item(key)
     End If
 #End If
 End Property
-Public Property Let Item(KEY As Variant, value As Variant)
+Public Property Let Item(key As Variant, Value As Variant)
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
-    If Me.Exists(KEY) Then
-        dict_ReplaceKeyValue dict_GetKeyValue(KEY), KEY, value
+    If Me.Exists(key) Then
+        dict_ReplaceKeyValue dict_GetKeyValue(key), key, Value
     Else
-        dict_AddKeyValue KEY, value
+        dict_AddKeyValue key, Value
     End If
 #Else
-    dict_pDictionary.Item(KEY) = value
+    dict_pDictionary.Item(key) = Value
 #End If
 End Property
-Public Property Set Item(KEY As Variant, value As Variant)
+Public Property Set Item(key As Variant, Value As Variant)
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
-    If Me.Exists(KEY) Then
-        dict_ReplaceKeyValue dict_GetKeyValue(KEY), KEY, value
+    If Me.Exists(key) Then
+        dict_ReplaceKeyValue dict_GetKeyValue(key), key, Value
     Else
-        dict_AddKeyValue KEY, value
+        dict_AddKeyValue key, Value
     End If
 #Else
-    Set dict_pDictionary.Item(KEY) = value
+    Set dict_pDictionary.Item(key) = Value
 #End If
 End Property
 
-Public Property Let KEY(previous As Variant, Updated As Variant)
-Attribute KEY.VB_Description = "Change a key to a different key."
+Public Property Let key(Previous As Variant, Updated As Variant)
+Attribute key.VB_Description = "Change a key to a different key."
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
     Dim dict_KeyValue As Variant
-    dict_KeyValue = dict_GetKeyValue(previous)
+    dict_KeyValue = dict_GetKeyValue(Previous)
 
     If Not VBA.IsEmpty(dict_KeyValue) Then
         dict_ReplaceKeyValue dict_KeyValue, Updated, dict_KeyValue(2)
     End If
 #Else
-    dict_pDictionary.KEY(previous) = Updated
+    dict_pDictionary.key(Previous) = Updated
 #End If
 End Property
-
-' ============================================= '
-' Public Methods
-' ============================================= '
 
 ''
 ' Add an item with the given key
@@ -161,17 +148,17 @@ End Property
 ' @param {Variant} Key
 ' @param {Variant} Item
 ' --------------------------------------------- '
-Public Sub Add(KEY As Variant, Item As Variant)
+Public Sub Add(key As Variant, Item As Variant)
 Attribute Add.VB_Description = "Add a new key and item to the dictionary."
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
-    If Not Me.Exists(KEY) Then
-        dict_AddKeyValue KEY, Item
+    If Not Me.Exists(key) Then
+        dict_AddKeyValue key, Item
     Else
         ' This key is already associated with an element of this collection
         Err.Raise 457
     End If
 #Else
-    dict_pDictionary.Add KEY, Item
+    dict_pDictionary.Add key, Item
 #End If
 End Sub
 
@@ -181,12 +168,12 @@ End Sub
 ' @param {Variant} Key
 ' @return {Boolean}
 ' --------------------------------------------- '
-Public Function Exists(KEY As Variant) As Boolean
+Public Function Exists(key As Variant) As Boolean
 Attribute Exists.VB_Description = "Determine if a given key is in the dictionary."
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
-    Exists = Not IsEmpty(dict_GetKeyValue(KEY))
+    Exists = Not IsEmpty(dict_GetKeyValue(key))
 #Else
-    Exists = dict_pDictionary.Exists(KEY)
+    Exists = dict_pDictionary.Exists(key)
 #End If
 End Function
 
@@ -233,11 +220,11 @@ End Function
 '
 ' @param {Variant} Key
 ' --------------------------------------------- '
-Public Sub Remove(KEY As Variant)
+Public Sub Remove(key As Variant)
 Attribute Remove.VB_Description = "Remove a given key from the dictionary."
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
     Dim dict_KeyValue As Variant
-    dict_KeyValue = dict_GetKeyValue(KEY)
+    dict_KeyValue = dict_GetKeyValue(key)
 
     If Not VBA.IsEmpty(dict_KeyValue) Then
         dict_RemoveKeyValue dict_KeyValue
@@ -246,7 +233,7 @@ Attribute Remove.VB_Description = "Remove a given key from the dictionary."
         Err.Raise 32811
     End If
 #Else
-    dict_pDictionary.Remove KEY
+    dict_pDictionary.Remove key
 #End If
 End Sub
 
@@ -257,6 +244,7 @@ Public Sub RemoveAll()
 Attribute RemoveAll.VB_Description = "Remove all information from the dictionary."
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
     Set dict_pKeyValues = New Collection
+
     Erase dict_pKeys
     Erase dict_pItems
 #Else
@@ -265,8 +253,6 @@ Attribute RemoveAll.VB_Description = "Remove all information from the dictionary
 End Sub
 
 ' ============================================= '
-' Private Functions
-' ============================================= '
 
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
 
@@ -274,7 +260,6 @@ Private Function dict_GetKeyValue(dict_Key As Variant) As Variant
     On Error Resume Next
     dict_GetKeyValue = dict_pKeyValues(dict_GetFormattedKey(dict_Key))
     Err.Clear
-    If Err.number <> 0 Then Err.Clear
 End Function
 
 Private Sub dict_AddKeyValue(dict_Key As Variant, dict_Value As Variant, Optional dict_Index As Long = -1)

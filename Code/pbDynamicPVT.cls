@@ -50,8 +50,8 @@ Public Function Reset()
     End If
 End Function
 
-Public Property Get SourceTable() As ListObject
-    Set SourceTable = lSrcTbl
+Public Property Get sourceTable() As ListObject
+    Set sourceTable = lSrcTbl
 End Property
 
 Public Function SetSourceTable(lstObj As ListObject)
@@ -63,11 +63,11 @@ Public Function FieldNames() As Dictionary
     Dim d As Dictionary
     Set d = New Dictionary
     Dim tmpARR As Variant
-    tmpARR = WorksheetFunction.Sort(SourceTable.HeaderRowRange.value)
+    tmpARR = WorksheetFunction.Sort(sourceTable.HeaderRowRange.Value)
     
     Dim idx As Long
-    For idx = 1 To SourceTable.ListColumns.Count
-        d.Add SourceTable.ListColumns(idx).Name, SourceTable.ListColumns(idx).Name
+    For idx = 1 To sourceTable.ListColumns.Count
+        d.Add sourceTable.ListColumns(idx).Name, sourceTable.ListColumns(idx).Name
     Next idx
     Set FieldNames = d
 
@@ -82,7 +82,7 @@ Public Function AddPageFields(Optional flds As Variant)
             
         Dim pkg As Package
         Set pkg = BuildPackage(pbPivotTable.DynamicPivot, "AddPageFields", VbMethod)
-        Wom.Picklist.Initialize "Choose Page Field(s)", "Select 1 or more page fields (used for filtering only on Pivot Table)", FieldNames, plMultiple_MinimumOne, pkg
+        Wom.picklist.Initialize "Choose Page Field(s)", "Select 1 or more page fields (used for filtering only on Pivot Table)", FieldNames, plMultiple_MinimumOne, pkg
         Exit Function
     End If
     
@@ -110,7 +110,7 @@ Public Function AddRowFields(Optional flds As Variant)
             
         Dim pkg As Package
         Set pkg = BuildPackage(pbPivotTable.DynamicPivot, "AddRowFields", VbMethod)
-        Wom.Picklist.Initialize "Choose Row Field(s)", "Select 1 or more Row fields", FieldNames, plMultiple_MinimumOne, pkg
+        Wom.picklist.Initialize "Choose Row Field(s)", "Select 1 or more Row fields", FieldNames, plMultiple_MinimumOne, pkg
         Exit Function
     End If
     
@@ -136,7 +136,7 @@ Public Function AddDataFields(Optional flds As Variant)
             
         Dim pkg As Package
         Set pkg = BuildPackage(pbPivotTable.DynamicPivot, "AddDataFields", VbMethod)
-        Wom.Picklist.Initialize "Choose Data Field(s)", "Select 1 or more Data (Summary) fields", FieldNames, plMultiple_MinimumOne, pkg
+        Wom.picklist.Initialize "Choose Data Field(s)", "Select 1 or more Data (Summary) fields", FieldNames, plMultiple_MinimumOne, pkg
         Exit Function
     End If
     
@@ -159,7 +159,7 @@ Public Function ConfigureDataFields(flds As Variant, Optional summaryType As Var
         curFld = flds(LBound(flds))
         Set pkg = BuildPackage(pbPivotTable.DynamicPivot, "ConfigureDataFields", VbMethod)
         pkg.UpdateArgs flds
-        Wom.Picklist.Initialize "Choose Summary Type for: " & curFld, "Choose Function to Summarize Field: " & curFld, GetConsolidationNames, plSingle, pkg
+        Wom.picklist.Initialize "Choose Summary Type for: " & curFld, "Choose Function to Summarize Field: " & curFld, GetConsolidationNames, plSingle, pkg
         Exit Function
     End If
     
@@ -175,7 +175,7 @@ Public Function ConfigureDataFields(flds As Variant, Optional summaryType As Var
         curFld = flds(LBound(flds) + lDataFieldConsolFunctions.Count)
         Set pkg = BuildPackage(pbPivotTable.DynamicPivot, "ConfigureDataFields", VbMethod)
         pkg.UpdateArgs flds
-        Wom.Picklist.Initialize "Choose Summary Type for: " & curFld, "Choose Function to Summarize Field: " & curFld, GetConsolidationNames, plSingle, pkg
+        Wom.picklist.Initialize "Choose Summary Type for: " & curFld, "Choose Function to Summarize Field: " & curFld, GetConsolidationNames, plSingle, pkg
         Exit Function
     End If
     
@@ -263,7 +263,7 @@ Public Function Subtotals(Optional flds As Variant)
         If d.Count > 0 Then
             Dim pkg As Package
             Set pkg = BuildPackage(pbPivotTable.DynamicPivot, "Subtotals", VbMethod)
-            Wom.Picklist.Initialize "Add Subtotals", "Choose fields to display subtotals", d, plMultiple_MinimumNone, pkg
+            Wom.picklist.Initialize "Add Subtotals", "Choose fields to display subtotals", d, plMultiple_MinimumNone, pkg
         End If
         Exit Function
     
@@ -299,7 +299,7 @@ Public Function AddColumnFields(Optional flds As Variant)
             
         Dim pkg As Package
         Set pkg = BuildPackage(pbPivotTable.DynamicPivot, "AddColumnFields", VbMethod)
-        Wom.Picklist.Initialize "Choose Column Field(s)", "Select 1 or more Column fields", FieldNames, plMultiple_MinimumOne, pkg
+        Wom.picklist.Initialize "Choose Column Field(s)", "Select 1 or more Column fields", FieldNames, plMultiple_MinimumOne, pkg
         Exit Function
     End If
     

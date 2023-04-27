@@ -91,7 +91,7 @@ Private l_CallArgs As Collection
 Public Property Get ActionType() As InitActionEnum
     ActionType = l_ActionType
 End Property
-Public Property Let ActionType(InitAction As InitActionEnum)
+Public Property Let ActionType(ByVal InitAction As InitActionEnum)
     If l_ActionType > 0 Then
         RaiseError ERR_CANNOT_CHANGE_PACKAGE_PROPERTY, errorDesc:="pbPackage Property 'ActionType' cannot be changed after being set"
     End If
@@ -107,7 +107,7 @@ End Property
 Public Property Get BypassRequiredAction() As Boolean
     BypassRequiredAction = l_bypassReqAction
 End Property
-Public Property Let BypassRequiredAction(byPassReqActn As Boolean)
+Public Property Let BypassRequiredAction(ByVal byPassReqActn As Boolean)
     l_bypassReqAction = byPassReqActn
 End Property
 
@@ -126,7 +126,7 @@ End Property
 Public Property Get ReturnResult() As Boolean
     ReturnResult = l_returnResult
 End Property
-Public Property Let ReturnResult(rtRslt As Boolean)
+Public Property Let ReturnResult(ByVal rtRslt As Boolean)
     l_returnResult = rtRslt
 End Property
 Public Property Get PackageResult() As Variant
@@ -135,7 +135,7 @@ End Property
 Public Property Get IgnoreCleanup() As Boolean
     IgnoreCleanup = l_DoNotCleanUp
 End Property
-Public Property Let IgnoreCleanup(ignore As Boolean)
+Public Property Let IgnoreCleanup(ByVal ignore As Boolean)
     l_DoNotCleanUp = ignore
 End Property
 
@@ -178,9 +178,9 @@ End Property
 
 '   Target Worksheet (Optional)
 '   If set, will make visible and active during 'AfterExecute' Function
-Public Property Get TargetSheet() As Worksheet
+Public Property Get targetSheet() As Worksheet
     If Not l_targetSheet Is Nothing Then
-        Set TargetSheet = l_targetSheet
+        Set targetSheet = l_targetSheet
     End If
 End Property
 Public Function SetTargetSheet(tarSheet As Worksheet)
@@ -189,7 +189,7 @@ Public Function SetTargetSheet(tarSheet As Worksheet)
     End If
     Set l_targetSheet = tarSheet
 End Function
-Public Property Let ProtectTargetSheet(protTarget As Boolean)
+Public Property Let ProtectTargetSheet(ByVal protTarget As Boolean)
     l_protectTarget = protTarget
 End Property
 Public Property Get ProtectTargetSheet() As Boolean
@@ -208,8 +208,8 @@ Private Property Get Target() As Worksheet
             Set Target = l_RedirectTarget
         End If
     End If
-    If Target Is Nothing And Not TargetSheet Is Nothing Then
-        Set Target = TargetSheet
+    If Target Is Nothing And Not targetSheet Is Nothing Then
+        Set Target = targetSheet
     End If
 End Property
 
@@ -217,10 +217,10 @@ End Property
 '   A friendly short desc of what the package is.
 '   If the Package is being constructed due to click a Button, then
 '   Task Name should be the name of the Button.
-Public Property Get TaskName() As String
-    TaskName = l_taskName
+Public Property Get taskName() As String
+    taskName = l_taskName
 End Property
-Public Property Let TaskName(tskName As String)
+Public Property Let taskName(ByVal tskName As String)
     If Len(l_taskName) > 0 And StrComp(l_taskName, tskName, vbTextCompare) <> 0 Then
         RaiseError ERR_CANNOT_CHANGE_PACKAGE_PROPERTY, errorDesc:="pbPackage Property 'TaskName' cannot be changed after being set"
     End If
@@ -257,7 +257,7 @@ End Function
 Public Property Get RestoreDefaultState() As Boolean
     RestoreDefaultState = l_RestoreDefaultState
 End Property
-Public Property Let RestoreDefaultState(restDefault As Boolean)
+Public Property Let RestoreDefaultState(ByVal restDefault As Boolean)
    If l_IsManaged Then
         RaiseError ERR_CANNOT_CHANGE_PACKAGE_PROPERTY, errorDesc:="pbPackage.RestoreDefaultState cannot be set for managed packages"
    End If
@@ -278,7 +278,7 @@ Private Property Get DefaultPackageState() As ftPerfStates
     defState.Screen = False
     DefaultPackageState = defState
 End Property
-Public Function ModifyExecutionState(adjust As ModifySuspendState)
+Public Function ModifyExecutionState(ByVal adjust As ModifySuspendState)
 
     If EnumCompare(adjust, ModifySuspendState.CalculationAuto + ModifySuspendState.CalculationManual, ecAnd) Then
         RaiseError ERR_CANNOT_CHANGE_PACKAGE_PROPERTY, errorDesc:="pbPackage.ModifyExecutionState: Cannot Set Calcuation to Manual AND Auto"
@@ -335,7 +335,7 @@ On Error GoTo E:
         For idx = unpAI.LBound_first To unpAI.Ubound_first
             Set tmpWS = l_UnprotectSheets(idx, 1)
             If tmpWS.ProtectContents Then
-                pbUnprotectSheet tmpWS
+                UnprotectSht tmpWS
             End If
         Next idx
     End If
@@ -362,7 +362,7 @@ Private Function AfterExecute()
         If Not SourceSheet Is Nothing Then
             If CanHideSource Then SourceSheet.visible = xlSheetVeryHidden
         End If
-        If ProtectTargetSheet Then pbProtectSheet Target
+        If ProtectTargetSheet Then ProtectSht Target
     End If
 
     If IsManaged = False And IgnoreCleanup = False Then
@@ -387,7 +387,7 @@ Finalize:
     
     DoExecute = Not failed
     
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
     Exit Function
 E:
     failed = True
@@ -408,7 +408,7 @@ On Error GoTo E:
 '   If fail, package will not be run
     
     If ValidProjectConfig And Setting2(seMustCheckReqActions) Then
-        DebugPrint "Starting RunRequiredAction for " & Me.TaskName
+        DebugPrint "Starting RunRequiredAction for " & Me.taskName
         ShowBusy rightSideMessage:="Checking for required actions"
         Wom.PerformRequiredAction
     End If
@@ -416,7 +416,7 @@ On Error GoTo E:
 Finalize:
     On Error Resume Next
     RunRequiredAction = Not failed
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
     Exit Function
 E:
     failed = True
@@ -435,7 +435,7 @@ Public Property Get CanRedirect() As Boolean
     CanRedirect = l_ExecuteCompleted = 0
 End Property
 
-Public Function RedirectTarget(newTargetWS As Worksheet, Optional RedirectOnFail As Boolean = True, Optional protectWkSht As Boolean = False)
+Public Function RedirectTarget(newTargetWS As Worksheet, Optional ByVal RedirectOnFail As Boolean = True, Optional ByVal protectWkSht As Boolean = False)
     If Not CanRedirect Then
         RaiseError ERR_INVALID_PACKAGE_OPERATION, "pbPackage.REdirectTarget cannot set new target after Execution has finished"
     End If
@@ -453,14 +453,14 @@ Public Property Get CallBySet() As Boolean
     CallBySet = Len(l_CallProcName) > 0
 End Property
 
-Public Function SetCallByNamePublicMethod(procName As String)
+Public Function SetCallByNamePublicMethod(ByVal procName As String)
     Set l_CallObject = Nothing
     l_CallObjectName = "[PUBLIC]"
     l_CallProcName = procName
     l_CallType = VbMethod
 End Function
 
-Public Function SetCallByName(obj As Object, procName As String, callType As VbCallType)
+Public Function SetCallByName(obj As Object, ByVal procName As String, ByVal callType As VbCallType)
     If Not obj Is Nothing Then
         Set l_CallObject = obj
         l_CallObjectName = TypeName(obj)
@@ -480,7 +480,7 @@ Public Function UpdateArgs(ParamArray args() As Variant)
 End Function
 Public Property Get ArgsCount() As Long
     If Not l_CallArgs Is Nothing Then
-        ArgsCount = l_CallArgs.count
+        ArgsCount = l_CallArgs.Count
     Else
         ArgsCount = 0
     End If
@@ -554,7 +554,7 @@ Finalize:
     
     If failed Then l_failed = True
     ExecuteCallByName = Not failed
-    If Err.Number <> 0 Then Err.Clear
+    If Err.number <> 0 Then Err.Clear
     Exit Function
 E:
     failed = True

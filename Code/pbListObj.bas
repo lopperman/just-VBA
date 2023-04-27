@@ -1,14 +1,11 @@
 Attribute VB_Name = "pbListObj"
-' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
-' pbListObj v1.0.0
-' (c) Paul Brower - https://github.com/lopperman/VBA-pbUtil
-'
-' General  Helper Utilities for Working with ListObnects
-'
-' @module pbListObj
-' @author Paul Brower
-' @license GNU General Public License v3.0
-' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'  Utility Methods for ListObjects
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'  author (c) Paul Brower https://github.com/lopperman/just-VBA
+'  module pbListObj.bas
+'  license GNU General Public License v3.0
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 '
 '   KEY FUNCTIONS IN THIS MODULE
 '
@@ -28,6 +25,124 @@ Attribute VB_Name = "pbListObj"
 Option Explicit
 Option Compare Text
 Option Base 1
+Option Private Module
+
+Public Function FindAndReplaceMatchingCols(lstColumnName As String, oldVal, newVal, valType As VbVarType, Optional wkbk As Workbook, Optional strMatch As strMatchEnum = strMatchEnum.smEqual) As Boolean
+    If wkbk Is Nothing Then
+        Set wkbk = ThisWorkbook
+    End If
+    Dim tWS As Worksheet, tLO As ListObject
+    For Each tWS In wkbk.Worksheets
+        For Each tLO In tWS.ListObjects
+            If hasData(tLO) And ListColumnIndex(tLO, lstColumnName) > 0 Then
+                FindAndReplaceListCol tLO, lstColumnName, oldVal, newVal, valType, strMatch:=strMatch
+            End If
+        Next tLO
+    Next tWS
+End Function
+
+Public Function FindAndReplaceListCol(lstObj As ListObject, lstColIdxOrName, oldVal, newVal, valType As VbVarType, Optional strMatch As strMatchEnum = strMatchEnum.smEqual) As Long
+    ' ** NOTE ABOUT WORKSHEET PROTECTION **
+    ' Although you do need to unprotect a sheet in some cases, you do NOT need to unprotect anything for this method to work,
+    '   as long as your code to protect your worksheets sets the 'UserInterfaceOnly' parameter to TRUE
+    ' VBA code can make certain changes to worksheets,** AS LONG AS ** the protection code has been called since the
+    '  workbook was opened. (Worksheet may still be locked and prevent users for editing, but VBA will not be able to
+    '  make changes unless the protection call has been call
+    ' (I'm adding this note in because a lot of people follow the UNPROTECT --> MAKE CHANGES --> REPROTECT.  This IS needed
+    '  in certain situations, like adding rows to a list object.  You just don't need that here)
+    ' HOWEVER, you likely **DO** need to 'reprotect'.
+    
+    'Returns Count of items changed
+    On Error GoTo E:
+    Dim failed As Boolean
+    
+    Dim ERR_TYPE_MISMATCH As Long: ERR_TYPE_MISMATCH = 13
+    Dim ERR_REPROTECT_SHEET As Long: ERR_REPROTECT_SHEET = 0
+    
+    
+    
+    Dim colidx As Long, evts As Boolean, itemValid As Boolean
+    evts = Events
+    If StringsMatch(TypeName(lstColIdxOrName), "String") Then
+        colidx = ListColumnIndex(lstObj, CStr(lstColIdxOrName))
+    End If
+    If colidx > 0 And colidx <= lstObj.ListColumns.Count And hasData(lstObj) Then
+        Select Case valType
+            Case VbVarType.vbArray, VbVarType.vbDataObject, VbVarType.vbEmpty, VbVarType.vbError, VbVarType.vbObject, VbVarType.vbUserDefinedType, VbVarType.vbVariant
+                Err.Raise ERR_TYPE_MISMATCH, Source:="pbListObj.FindAndReplaceListCol", Description:="VbVarType: " & valType & " is not supported"
+        End Select
+    
+        Dim tmpARR, changedCount As Long, tmpIdx As Long, tmpValue As Variant
+        tmpARR = ArrRange(lstObj.ListColumns(colidx).DataBodyRange, aoNone)
+        
+        For tmpIdx = LBound(tmpARR) To UBound(tmpARR)
+            itemValid = False
+            tmpValue = tmpARR(tmpIdx, 1)
+            If valType = vbBoolean Then
+                If CBool(tmpValue) = CBool(oldVal) Then itemValid = True
+            ElseIf valType = vbString Then
+                If StringsMatch(tmpValue, oldVal, strMatch) Then itemValid = True
+            ElseIf valType = vbDate Then
+                If CDate(tmpValue) = CDate(oldVal) Then itemValid = True
+            ElseIf IsNumeric(oldVal) Then
+                If valType = vbDouble Then
+                    If CDbl(tmpValue) = CDbl(oldVal) Then itemValid = True
+                ElseIf valType = vbByte Then
+                    If CByte(tmpValue) = CByte(oldVal) Then itemValid = True
+                ElseIf valType = vbCurrency Then
+                    If CCur(tmpValue) = CCur(oldVal) Then itemValid = True
+                ElseIf valType = vbInteger Then
+                    If CInt(tmpValue) = CInt(oldVal) Then itemValid = True
+                ElseIf valType = vbLong Then
+                    If CLng(tmpValue) = CLng(oldVal) Then itemValid = True
+                ElseIf valType = vbSingle Then
+                    If CSng(tmpValue) = CSng(oldVal) Then itemValid = True
+                ElseIf valType = vbDecimal Then
+                    If VarType(tmpValue) = vbDecimal And VarType(oldVal) = vbDecimal Then
+                        If tmpValue = oldVal Then itemValid = True
+                    End If
+                End If
+                If Not itemValid Then
+                    If IsNumeric(tmpValue) Then
+                        If tmpValue = oldVal Then itemValid = True
+                    End If
+                End If
+            End If
+            
+            If itemValid Then
+                tmpARR(tmpIdx, 1) = newVal
+                changedCount = changedCount + 1
+            End If
+        Next tmpIdx
+    
+        If changedCount > 0 Then
+            EventsOff
+            If lstObj.Range.Worksheet.ProtectContents Then
+                ' You must call your code to PROTECT worksheet: lst.Range.Worksheet
+                ' make sure UserInterfaceOnly:=True is included
+                ProtectSht lstObj.Range.Worksheet
+            End If
+            LogDEV ConcatWithDelim(" ", "replacing", changedCount, "items in", lstObj.Name, "table", "," & lstObj.ListColumns(colidx).Name, "column", "OldValue:=", oldVal, "NewValue:=", newVal)
+            lstObj.ListColumns(colidx).DataBodyRange.Value = tmpARR
+        End If
+    End If
+        
+Finalize:
+    On Error Resume Next
+    Events = evts
+    If Not failed Then
+        FindAndReplaceListCol = changedCount
+    End If
+    
+    If Err.number <> 0 Then Err.Clear
+    Exit Function
+E:
+    failed = True
+    ErrorCheck
+    Resume Finalize:
+End Function
+
+
 
 '   ~~~ ~~~ Sort's a List Object by [lstColIdx] Ascending.  If already
 '                   sorted Ascending, sorts Descending
@@ -45,7 +160,7 @@ Public Function UserSort(lstObj As ListObject, lstColIdx As Long)
             clearPreviousSort = True
         Else
             If lstObj.Sort.SortFields.Count = 1 Then
-                If lstObj.Sort.SortFields(1).KEY.column - hdrCol + 1 <> lstColIdx Then
+                If lstObj.Sort.SortFields(1).key.column - hdrCol + 1 <> lstColIdx Then
                     clearPreviousSort = True
                 End If
             End If
@@ -171,7 +286,7 @@ Public Function ReplaceFormulasWithStatic(lstObj As ListObject) As Boolean
     Dim lc As listColumn
     For Each lc In lstObj.ListColumns
         If lc.DataBodyRange(1, 1).HasFormula Then
-            ReplaceListColFormulaWithStatic lstObj, lc.Index
+            ReplaceListColFormulaWithStatic lstObj, lc.index
         End If
     Next lc
     Set lc = Nothing
@@ -181,18 +296,18 @@ Public Function ReplaceListColFormulaWithStatic(lstObj As ListObject, column As 
 '   Replaces listColumn formula with static values
 '   Column = Name of ListColumn or Index of ListColumn
     
-    Dim tARR As Variant
+    Dim tArr As Variant
     If Not lstObj.ListColumns(column).DataBodyRange Is Nothing Then
         If lstObj.ListColumns(column).DataBodyRange(1, 1).HasFormula Then
-            tARR = ListColumnAsArray(lstObj, lstObj.ListColumns(column).Name)
-            If ArrDimensions(tARR) = 2 Then
+            tArr = ListColumnAsArray(lstObj, lstObj.ListColumns(column).Name)
+            If ArrDimensions(tArr) = 2 Then
                 lstObj.ListColumns(column).DataBodyRange.ClearContents
-                lstObj.ListColumns(column).DataBodyRange.value = tARR
+                lstObj.ListColumns(column).DataBodyRange.Value = tArr
             End If
         End If
     End If
     
-    If ArrDimensions(tARR) > 0 Then Erase tARR
+    If ArrDimensions(tArr) > 0 Then Erase tArr
     
     
 End Function
@@ -326,22 +441,45 @@ Public Function ListColumnAsArray(lstObj As ListObject, colName As String) As Va
     End If
 End Function
 
+
+Public Function FindMatchingListColumns(colName As String, Optional matchType As strMatchEnum = strMatchEnum.smEqual) As Collection
+'   for any matching column, return collection of array {[listObjectName], [listColumnName]}
+
+    Dim retCol As New Collection
+
+    Dim tWS As Worksheet, tLO As ListObject, tCol As listColumn
+    For Each tWS In ThisWorkbook.Worksheets
+        For Each tLO In tWS.ListObjects
+            For Each tCol In tLO.ListColumns
+                If StringsMatch(tCol.Name, colName, matchType) Then
+                    retCol.Add Array(tLO.Name, tCol.Name)
+                End If
+            Next
+        Next
+    Next
+
+    Set FindMatchingListColumns = retCol
+    
+    Set retCol = Nothing
+
+End Function
+
 Public Function ListColumnExists(ByRef lstObj As ListObject, lstColName As String) As Boolean
 '   Return true If 'lstColName' is a valid ListColumn in 'lstObj'
     ListColumnExists = ListColumnIndex(lstObj, lstColName) > 0
 End Function
 
 Public Function ListColumnIndex(ByRef lstObj As ListObject, lstColName As String) As Long
-    Dim retV As Long
-    Dim colIDX As Long
-    For colIDX = 1 To lstObj.ListColumns.Count
-        If StrComp(LCase(lstColName), LCase(lstObj.ListColumns(colIDX).Name), vbTextCompare) = 0 Then
-            retV = colIDX
+    Dim lstCol As listColumn
+    For Each lstCol In lstObj.ListColumns
+        If StringsMatch(lstCol.Name, lstColName) Then
+            ListColumnIndex = lstCol.index
             Exit For
         End If
-    Next colIDX
-    ListColumnIndex = retV
+    Next lstCol
 End Function
+
+
 
 Public Function AddColumnIfMissing(lstObj As ListObject, colName As String, Optional position As Long = -1, Optional numberFormat As String = vbNullString) As Boolean
 '   Add column 'colName' to 'lstObj', if missing. Optionally provide ListColumn position, and NumberFormat for data display
@@ -396,7 +534,7 @@ On Error Resume Next
         Else
             If Not fmlaRng Is Nothing Then
                 retV = fmlaRng.Count
-                fmlaRng.value = Empty
+                fmlaRng.Value = Empty
             End If
         End If
     End If
@@ -536,7 +674,7 @@ End Function
 '@param {Array<String>} Headers to look in
 '@param {Array<Variant>} Key to lookup
 '@returns {Long} Row index containing the key data
-Function getFirstRow(ByVal lo As ListObject, headers, values, Optional cachedDict As Dictionary, Optional forceRebuild As Boolean = False) As Long
+Function getFirstRow(ByVal lo As ListObject, headers, Values, Optional cachedDict As Dictionary, Optional forceRebuild As Boolean = False) As Long
    
 '    forceRebuild = True
    
@@ -546,7 +684,7 @@ Function getFirstRow(ByVal lo As ListObject, headers, values, Optional cachedDic
    Next chi
   
     If Not cachedDict Is Nothing Then
-        Dim vID As String: vID = Join(values, "|") & "|"
+        Dim vID As String: vID = Join(Values, "|") & "|"
         If cachedDict.Exists(vID) Then
             getFirstRow = cachedDict(vID).Item(1)
         Else
@@ -559,8 +697,8 @@ Function getFirstRow(ByVal lo As ListObject, headers, values, Optional cachedDic
         If forceRebuild Or oIndex Is Nothing Or sID <> (lo.Name & "|" & Join(headers, "|")) Then
             Set oIndex = getIndex(lo, headers)
         End If
-        If oIndex.Exists(Join(values, "|") & "|") Then
-            getFirstRow = oIndex(Join(values, "|") & "|").Item(1)
+        If oIndex.Exists(Join(Values, "|") & "|") Then
+            getFirstRow = oIndex(Join(Values, "|") & "|").Item(1)
         End If
     End If
   
@@ -579,7 +717,7 @@ On Error GoTo E:
     If IsNumeric(headers(chi)) Then headers(chi) = lo.ListColumns(headers(chi)).Name
    Next chi
   
-  Dim v: v = lo.Range.value
+  Dim v: v = lo.Range.Value
   Dim iLB As Long: iLB = LBound(headers)
   Dim iUB As Long: iUB = UBound(headers)
   
@@ -623,8 +761,6 @@ E:
   Resume
 End Function
 
-
-
 Public Function ListRowIdxFromWksht(lstObj As ListObject, worksheetRow As Long) As Long
     Dim hdrRow As Long
     hdrRow = lstObj.HeaderRowRange.Row + (1 - lstObj.HeaderRowRange.Rows.Count)
@@ -639,4 +775,122 @@ Public Function ListColIdxFromWksht(lstObj As ListObject, worksheetCol As Long) 
         ListColIdxFromWksht = worksheetCol - firstCol + 1
     End If
 End Function
+
+Public Function CopyTableToNewWorkbook(lstObj As ListObject, Optional newListObjName) As ListObject
+On Error GoTo E:
+    Dim failed As Boolean
+    Dim evts As Boolean: evts = Events
+    EventsOff
+    Dim wk As Workbook
+    Dim ws As Worksheet
+    Dim lo As ListObject
+    Set wk = Workbooks.Add
+    Set ws = wk.Worksheets(1)
+    Dim arrData() As Variant, tarRng As Range
+    arrData = ArrListObj(lstObj, aoIncludeListObjHeaderRow)
+    Set tarRng = ws.Range("A1")
+    Set tarRng = tarRng.Resize(rowSize:=lstObj.Range.Rows.Count, ColumnSize:=lstObj.Range.Columns.Count)
+    tarRng.Value = arrData
+    Set lo = ws.ListObjects.Add(SourceType:=xlSrcRange, Source:=tarRng, XlListObjectHasHeaders:=xlYes)
+    If Not IsMissing(newListObjName) Then
+        lo.Name = CStr(newListObjName)
+    End If
+    Dim sc As listColumn, tc As listColumn
+    For Each sc In lstObj.ListColumns
+        For Each tc In lo.ListColumns
+            If StringsMatch(tc.Name, sc.Name) Then
+                If Not IsNull(sc.DataBodyRange.HorizontalAlignment) Then
+                    tc.DataBodyRange.HorizontalAlignment = sc.DataBodyRange.HorizontalAlignment
+                End If
+                If Not IsNull(sc.DataBodyRange.VerticalAlignment) Then
+                    tc.DataBodyRange.VerticalAlignment = sc.DataBodyRange.VerticalAlignment
+                End If
+                If Not IsNull(sc.DataBodyRange.numberFormat) Then
+                    tc.DataBodyRange.numberFormat = sc.DataBodyRange.numberFormat
+                End If
+            End If
+        Next tc
+    Next sc
+    lo.Range.EntireColumn.AutoFit
+Finalize:
+    On Error Resume Next
+    Events = evts
+    If Not failed Then
+        Set CopyTableToNewWorkbook = lo
+    End If
+    Exit Function
+E:
+    failed = True
+    ErrorCheck
+    Resume Finalize:
+End Function
+
+Public Function RemoveTableColumns(lstObj As ListObject, ParamArray colNames() As Variant)
+    Dim msg As String
+    msg = ConcatWithDelim(" ", "You are about to permanently remove ListColumns from the *", lstObj.Name, "* table in the *", lstObj.Range.Worksheet.Parent.Name, "* workbook.", vbNewLine, "Continue?")
+    If MsgBox_FT(msg, vbYesNo + vbQuestion + vbDefaultButton2, "DELETE LIST COLUMNS") = vbYes Then
+    
+        Dim i As Long, isInvalid As Boolean
+        For i = LBound(colNames) To UBound(colNames)
+            If StringsMatch(TypeName(colNames(i)), "String") = False Then
+                isInvalid = True
+                Exit For
+            End If
+        Next i
+        If isInvalid Then
+            Err.Raise 1004, Source:="pbListObj.RemoveTableColumns", Description:="colNames must be actual column names in list object"
+            Exit Function
+        End If
+        Dim cName
+        For Each cName In colNames
+            If ListColumnExists(lstObj, CStr(cName)) Then
+                lstObj.ListColumns(cName).Delete
+            End If
+        Next cName
+        lstObj.Range.EntireColumn.AutoFit
+    End If
+End Function
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   Creates a new 'Activity' Column for [lstObj], and finds all
+'   ListColumns that are formatted as Date/DateTime, and
+'   creates a list of ColumnNames with datetime value from
+'   found datetime listcolumns
+'   Results in new ListColumn are ordered by Date Asc
+'   Example:  If ListObject contained 'CreateDt','StatusDt'
+'   ListColumns (formatted as datetime), the new Activity
+'   Column might look like the following for a given row:
+'       CreateDt - 04/20/23 08:15:31 AM
+'       StatusDt - 04/21/23 04:13:05 PM
+'   Any ListColumns you wish to be EXCLUDED from summary
+'   can be included in the [colNamesExclude] Argument
+'   If [activityColumnName] already exists, all values for that
+'   column will be cleared before summarization
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'Public Function AddDateSummaryListColumn( _
+'    lstObj As ListObject, _
+'    copyToNewWkbk As Boolean, _
+'    activityColumnName As String, _
+'    ParamArray colNamesExclude() As Variant)
+'
+'    If lstObj.listRows.Count = 0 Then
+'        Err.Raise 1004, Source:="pbListObj.AddDateSummaryListColumn", Description:="ListObject does not contain any rows"
+'    End If
+'
+'    Dim lo As ListObject
+'    If copyToNewWkbk Then
+'        Set lo = CopyTableToNewWorkbook(lstObj)
+'    Else
+'        Set lo = lstObj
+'    End If
+'    If ListColumnExists(lo, activityColumnName) Then
+'        lo.ListColumns(activityColumnName).DataBodyRange.ClearContents
+'    Else
+'        AddColumnIfMissing lo, activityColumnName, 1
+'    End If
+'
+'
+'
+'End Function
+
 

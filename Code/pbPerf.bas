@@ -470,10 +470,11 @@ Public Function RestoreDefaultAppSettingsOnly()
         .Calculation = xlCalculationAutomatic
         .EnableAnimations = True
         .EnableMacroAnimations = True
+        .StatusBar = False
         .EnableEvents = True
     End With
-    Application.StatusBar = False
     lPerfState.IsPerfState = False
+    
 End Function
 
 Private Property Get MustHideSheets() As Boolean

@@ -16,10 +16,15 @@ Attribute VB_Name = "pbError"
 Option Explicit
 Option Compare Text
 Option Base 1
+Option Private Module
+
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   CUSTOM ERROR CONSTANTS
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 
 '   *** GENERIC ERRORS ONLY
 '   *** STARTS AT 1001 - (513-1000 RESERVED FOR APPLICATION SPECIFIC ERRORS)
-
 Public Const ERR_OBSOLETE As Long = vbObjectError + 1001
 Public Const ERR_MISSING_EXPECTED_WORKSHEET As Long = vbObjectError + 1002
 Public Const ERR_HOME_SHEET_NOT_SET As Long = vbObjectError + 1003
@@ -44,22 +49,19 @@ Public Const ERR_EXPECTED_MANUAL_CALC_NOT_FOUND = vbObjectError + 1019
 Public Const ERR_WORKSHEET_OBJECT_NOT_FOUND = vbObjectError + 1020
 Public Const ERR_NOT_IMPLEMENTED_YET = vbObjectError + 1021
 'CLASS INSTANCE PROHIBITED, FOR CLASS MODULE WITH Attribute VB_PredeclaredId = True
-    Public Const ERR_CLASS_INSTANCE_PROHIBITED = vbObjectError + 1022
+Public Const ERR_CLASS_INSTANCE_PROHIBITED = vbObjectError + 1022
 Public Const ERR_CONTROL_STATE = vbObjectError + 1023
 Public Const ERR_PREVIOUS_PerfState_EXISTS = vbObjectError + 1024
 Public Const ERR_FORCED_WORKSHEET_NOT_FOUND = vbObjectError + 1025
 Public Const ERR_CANNOT_CHANGE_PACKAGE_PROPERTY = vbObjectError + 1026
 Public Const ERR_INVALID_PACKAGE_OPERATION = vbObjectError + 1027
 
-'If you have a method to close a 'wait' screen, put the name here, otherwise should be ""
-'Private Const CLOSE_WAIT_SCREEN_METHOD As String = "CloseBusy"
-'If you have a method to protect active sheet, put the name here, otherwise should be ""
-'Private Const PROTECT_ACTIVE_SHEET_METHOD As String = "ProtectActiveSheet"
 
 Private l_lastError As Date
 Private l_currentErrCount As Long
 Private l_totalErrrorCount As Long
-Private l_IsDeveloper As Boolean
+
+Public lastErrorTMP As Variant
 
 Public Enum ErrorOptionsEnum
     ftDefaults = 2 ^ 0
@@ -69,14 +71,6 @@ Public Enum ErrorOptionsEnum
     ftERR_DoNotCloseBusy = 2 ^ 4
     ftERR_ResponseAllowBreak = 2 ^ 5
 End Enum
-
-Public Property Get IsDeveloper() As Boolean
-    IsDeveloper = l_IsDeveloper
-End Property
-Public Property Let IsDeveloper(devMode As Boolean)
-    l_IsDeveloper = devMode
-End Property
-
 
 Public Function ErrorCheck(Optional Source As String, Optional options As ErrorOptionsEnum, Optional customErrorMsg As String) As Long
     Dim errNumber As Long, errDESC As Variant, errorInfo As String, ignoreError As Boolean, errERL As Long
@@ -251,6 +245,7 @@ On Error Resume Next
         If IsDEV Then
             Beep
             Stop
+            
             Exit Function
         End If
          

@@ -36,9 +36,9 @@ Option Base 1
 Private movedFrom As Range
 Private isSingleton As Boolean
 
-' Use this function to perform update - BeforeEdit and AfterEdit are
-' called automatically
-Public Function UpdateListObjRange(lstObjRng As Range, srcArray) As Variant
+'' Use this function to perform update - BeforeEdit and AfterEdit are
+'' called automatically
+Public Function UpdateListObjRange(lstObjRng As Range, srcArray)
 On Error GoTo E:
     Dim dimension1 As Long, dimension2 As Long
     Dim evts As Boolean, scrn As Boolean
@@ -56,7 +56,7 @@ On Error GoTo E:
     Application.ScreenUpdating = False
     
     BeforeEdit
-    lstObjRng.value = srcArray
+    lstObjRng.Value = srcArray
     UpdateListObjRange = True
     
 Finalize:
@@ -66,8 +66,8 @@ Finalize:
     Application.ScreenUpdating = scrn
     Exit Function
 E:
-    'Implement your desired error handling
-    'ErrorCheck
+    ''Implement your desired error handling
+    ''ErrorCheck
     Err.Raise Err.number, Err.Source, Err.Description
     Resume Finalize:
 

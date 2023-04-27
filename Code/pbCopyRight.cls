@@ -1,81 +1,114 @@
-Attribute VB_Name = "pbRangeArray"
-' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
-' pbRangeArray v1.0.0
-' (c) Paul Brower - https://github.com/lopperman/VBA-pbUtil
-'
-' General  Helper Utilities for Working with Arrays and Ranges
-'
-' @module pbRangeArray
-' @author Paul Brower
-' @license GNU General Public License v3.0
-' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '
-'
-'   KEY FUNCTIONS IN THIS MODULE
-'
-'   * NOTE:  Some Functions Require an Empty Worksheet to manipulate data. If Worksheet name "pbTmpUtilSheet"
-'       does not exist, it will be created with 'VeryHidden' .Visible Property
-'
-'   NOTE:  Any Arr[X] Can use any of the following options, passed in with the ArrayOptionFlags Parameter
-'       aoNone = (no additional changes)
-'       aoUnique = (returns unique combinations -- row based)
-'       aoUniqueNoSort = (Ignores sorting in final unique list)
-'       aoAreaSizesMustMatch = (requires Rows OR Columns to match for all Areas in Range)
-'       aoVisibleRangeOnly = (if source of array is range, limit array to visible range(s) only)
-'
-'   ~~~ GET ARRAY (Arr[X] Functions) ~~~
-'   ArrRange: (get 1-based, minimum 2D array from Range (supports multiple Range Areas), with options available)
-'       Note: multiple range areas where Rows do not match, ** AND ** Columns do not match may cause error
-'   ArrArray: (converts any array to 1-based, minimum 2D array, with options available)
-'   ArrParams: (converts 'ParamArray' argument to 1-based, 2D array)
-'   ArrListObj: (get 1-based, 2D array from entire ListObject DataBodyRange, with options available)
-'   ArrListCols: (get 1-based, 2D array from specified ListObject list columns, with options available)
-'
-'   ~~~ GET ARRAY (Other) ~~~
-'   GetUniqueSortedListCol: (Returns unique 1-based, 2D array from specific ListObject ListColumn)
-'       ReturnType = Array (default), Dictionary, or Collection
-'   RangeTo1DArray: (return all cells in Range as 1-based,** 1 Dimensional ** array)
-'
-'   ~~~ INFORMATIONAL ~~~
-'   ArrayInfo: (returns information about array)
-'   ArrDimensions: (return number of dimensions for any array)
-'   IsArrInit: (returns true if array is initialized with data)
-'   RangeArea: (return info about Range area; allows 1 Area ONLY)
-'   RangeInfo: (return information about Range; summarizes ** ALL ** range areas)
-
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "pbCopyRight"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = False
+Attribute VB_Exposed = False
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'  'COPY' DATA THE RIGHT WAY
+'   (DOES NOT USE [RANGE].COPY/PASTE) -- EVER
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'  author (c) Paul Brower https://github.com/lopperman/just-VBA
+'  module pbCopyRight
+'  license GNU General Public License v3.0
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 Option Explicit
 Option Compare Text
 Option Base 1
-Option Private Module
 
-Private Const TMP_RANGE_UTIL_WORKSHEET As String = "pbTmpUtilSheet"
+Private Enum ArrayOptionFlags
+    aoNone = 0
+    aoUnique = 2 ^ 0
+    aoUniqueNoSort = 2 ^ 1
+    aoAreaSizesMustMatch = 2 ^ 2
+    aoVisibleRangeOnly = 2 ^ 3
+    aoIncludeListObjHeaderRow = 2 ^ 4
+End Enum
+Private Type ArrInformation
+    Rows As Long
+    Columns As Long
+    Dimensions As Long
+    Ubound_first As Long
+    LBound_first As Long
+    UBound_second As Long
+    LBound_second As Long
+    IsArray As Boolean
+End Type
+Private Type AreaStruct
+    RowStart As Long
+    RowEnd As Long
+    ColStart As Long
+    ColEnd As Long
+    rowCount As Long
+    columnCount As Long
+End Type
+Private Type RngInfo
+    Rows As Long
+    Columns As Long
+    AreasSameRows As Boolean
+    AreasSameColumns As Boolean
+    Areas As Long
+End Type
+Private Enum strMatchEnum
+    smEqual = 0
+    smNotEqualTo = 1
+    smContains = 2
+    smStartsWithStr = 3
+    smEndWithStr = 4
+End Enum
 
-Private Function TmpUtilSheet() As Worksheet
-    
-    If WorksheetExists(TMP_RANGE_UTIL_WORKSHEET) = False Then
-        Dim retWS As Worksheet
-        
-        Set retWS = Excel.Application.Worksheets.Add(After:=Worksheets(Worksheets.Count))
-        retWS.Name = TMP_RANGE_UTIL_WORKSHEET
-        retWS.visible = xlSheetVeryHidden
-        Set TmpUtilSheet = retWS
-        Set retWS = Nothing
-        
-    Else
-        Set TmpUtilSheet = ThisWorkbook.Worksheets(TMP_RANGE_UTIL_WORKSHEET)
+
+Private Const TEMP_UTIL_SHEET As String = "justVBATempUtil"
+Private lTempSheet As Worksheet
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'   GET HIDDEN TEMP WORKSHEET
+'   USED TO SORT 2D ARRAYS
+'   * CREATES NEW HIDDEN WORKSHEET IF NEEDED
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+Private Property Get TempSheet() As Worksheet
+    Dim shtExists As Boolean, evtsOn As Boolean
+    If lTempSheet Is Nothing Then
+        Dim tWS As Worksheet
+        For Each tWS In ThisWorkbook.Worksheets
+            If StringsMatch(tWS.Name, TEMP_UTIL_SHEET) Then
+                Set lTempSheet = tWS
+                shtExists = True
+                Exit For
+            End If
+        Next tWS
+        If Not shtExists Then
+            'Add To End
+            evtsOn = Application.EnableEvents
+            Application.EnableEvents = False
+            Set lTempSheet = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Worksheets(ThisWorkbook.Worksheets.Count))
+            Application.EnableEvents = evtsOn
+        End If
     End If
-End Function
+    If Not lTempSheet Is Nothing Then
+        If Not lTempSheet.visible = xlSheetVeryHidden Then
+            lTempSheet.visible = xlSheetVeryHidden
+        End If
+        Set TempSheet = lTempSheet
+    End If
+End Property
 
-
-
-Public Function ArrRange(rng As Range, flags As ArrayOptionFlags) As Variant
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+'  UTILITIES (Renamed with prefix added to not conflict
+'   with copies just-VBA common modules)
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+Private Function ArrRange(rng As Range, flags As ArrayOptionFlags) As Variant
     Dim retArray As Variant
     Dim Unique As Boolean
     Dim aInfo As ArrInformation
     Dim tmpValue As Variant
-    Dim RngInfo As RngInfo
-    RngInfo = RangeInfo(rng)
+    Dim RInfo As RngInfo
+    RInfo = RangeInfo(rng)
     If EnumCompare(flags, aoAreaSizesMustMatch) Then
-        If RngInfo.AreasSameColumns = False And RngInfo.AreasSameRows = False Then
+        If RInfo.AreasSameColumns = False And RInfo.AreasSameRows = False Then
             RaiseError ERR_INVALID_RANGE_SIZE, "Range Areas must all be the same size (ftRangeArray.ArrRange)"
         End If
     End If
@@ -116,24 +149,13 @@ Public Function ArrRange(rng As Range, flags As ArrayOptionFlags) As Variant
     
 
 End Function
-Public Function ArrListObj(lstObj As ListObject, flags As ArrayOptionFlags) As Variant
+Private Function ArrListObj(lstObj As ListObject, flags As ArrayOptionFlags) As Variant
 '   Returns 1-based, 2D array from entire ListObject Data Body Range, with options
 ' (don't need to deal with state here)
-    If EnumCompare(flags, ArrayOptionFlags.aoIncludeListObjHeaderRow) Then
-        If lstObj.ShowTotals = True Then
-            Dim rng As Range
-            Set rng = lstObj.Range
-            Set rng = rng.Resize(rowSize:=rng.Rows.Count - 1)
-            ArrListObj = ArrRange(rng, flags)
-        Else
-            ArrListObj = ArrRange(lstObj.Range, flags)
-        End If
-    Else
-        ArrListObj = ArrRange(lstObj.DataBodyRange, flags)
-    End If
+    ArrListObj = ArrRange(lstObj.DataBodyRange, flags)
 End Function
 
-Public Function RangeInfo(rg As Range) As RngInfo
+Private Function RangeInfo(rg As Range) As RngInfo
     Dim retV As RngInfo
     If rg Is Nothing Then
         retV.Rows = 0
@@ -151,7 +173,7 @@ Public Function RangeInfo(rg As Range) As RngInfo
     RangeInfo = retV
 End Function
 
-Public Function RangeArea(rg As Range) As AreaStruct
+Private Function RangeArea(rg As Range) As AreaStruct
 '   Return info about Range area
 '   Range with 1 Area allowed, otherwise error
     If rg.Areas.Count <> 1 Then
@@ -171,7 +193,7 @@ Public Function RangeArea(rg As Range) As AreaStruct
 End Function
 
 
-Public Function RangeToUniqueArray(rng As Range, Optional sorted As Boolean = True, Optional excludeEmpty As Boolean = True) As Variant()
+Private Function RangeToUniqueArray(rng As Range, Optional sorted As Boolean = True, Optional excludeEmpty As Boolean = True) As Variant()
     Dim d As New Dictionary
     d.CompareMode = TextCompare
     Dim i As Long, rngArea, rngCell, tmpVal
@@ -222,7 +244,7 @@ Public Function RangeToUniqueArray(rng As Range, Optional sorted As Boolean = Tr
     End If
 End Function
 
-Public Function RangeTo1DArray(ByVal rng As Range) As Variant()
+Private Function RangeTo1DArray(ByVal rng As Range) As Variant()
 'TODO:  Optimizae to build 1D array from Arrays from each Area in rng
     
 
@@ -241,7 +263,7 @@ Public Function RangeTo1DArray(ByVal rng As Range) As Variant()
     
 End Function
 
-Public Function GetUniqueSortedListCol(lstObj As ListObject, lstCol As Variant, Optional returnType As ListReturnType = ListReturnType.lrtArray) As Variant
+Private Function GetUniqueSortedListCol(lstObj As ListObject, lstCol As Variant, Optional returnType As ListReturnType = ListReturnType.lrtArray) As Variant
 '   Returns unique 1-based, 2D array from specific ListObject ListColumn
 '   Return Type = Array (default), Dictionary, or Collection
     If lstObj.listRows.Count = 0 Then Exit Function
@@ -282,10 +304,8 @@ Public Function GetUniqueSortedListCol(lstObj As ListObject, lstCol As Variant, 
     
     
 End Function
-Public Function ArrListCols(lstObj As ListObject, flags As ArrayOptionFlags, ParamArray listCols() As Variant) As Variant
+Private Function ArrListCols(lstObj As ListObject, flags As ArrayOptionFlags, ParamArray listCols() As Variant) As Variant
 '   Get Array from specific ListObject listColum(s)
-    
-
     Dim idx As Long, rng As Range, inclHeader As Boolean
     inclHeader = EnumCompare(flags, aoIncludeListObjHeaderRow)
     If lstObj.listRows.Count > 0 Then
@@ -316,44 +336,8 @@ Public Function ArrListCols(lstObj As ListObject, flags As ArrayOptionFlags, Par
     
 End Function
 
-Public Function ArrParams(ParamArray vals() As Variant) As Variant
-'   Build standard array from ParamsArray so it can be passed as Variant() to other functions
-    ArrParams = ArrArray(vals, aoNone)
-    
-'    If IsMissing(vals) Or UBound(vals) = -1 Then
-'        'return empty array
-'        ArrParams = Array()
-'        Exit Function
-'    ElseIf LBound(vals) = 0 And UBound(vals) = 0 Then
-'        If VarType(vals(0)) = vbArray + vbVariant Then
-'            If UBound(vals(0)) = -1 Then
-'                ArrParams = Array()
-'                Exit Function
-'            End If
-'        End If
-'    End If
-'    'NEED TO CHECK FOR ARR(0) = 0 TO -1
-'    Dim tmp As Variant, vIDX As Long, offset As Long
-'    If LBound(vals) = UBound(vals) Then
-'        If ArrDimensions(vals(LBound(vals))) > 0 Then
-'            tmp = ArrArray(vals(LBound(vals)), aoNone)
-'        Else
-'            ReDim tmp(1 To 1, 1 To 1)
-'            tmp(1, 1) = vals(LBound(vals))
-'        End If
-'    Else
-'        If LBound(vals) = 0 Then offset = 1
-'        ReDim tmp(1 To (UBound(vals) - LBound(vals) + 1), 1 To 1)
-'        For vIDX = LBound(vals) To UBound(vals)
-'            tmp(vIDX + offset, 1) = vals(vIDX)
-'        Next vIDX
-'    End If
-'
-'    ArrParams = tmp
-'    If ArrDimensions(tmp) > 0 Then Erase tmp
 
-End Function
-Public Function ArrArray(ByVal arr As Variant, flags As ArrayOptionFlags, Optional zeroBasedAsColumns As Boolean = False) As Variant
+Private Function ArrArray(ByVal arr As Variant, flags As ArrayOptionFlags, Optional zeroBasedAsColumns As Boolean = False) As Variant
 '   By default, a zero-based array will become multiple rows.  Set 'zeroBasedAsColumns' to create 1 row with multiple columns
     Dim retArray As Variant
     Dim Unique As Boolean
@@ -411,7 +395,7 @@ Public Function ArrArray(ByVal arr As Variant, flags As ArrayOptionFlags, Option
     
     
 End Function
-Public Function IsArrInit(inpt As Variant) As Boolean
+Private Function IsArrInit(inpt As Variant) As Boolean
 '   Returns True if Array is initialized and has data
     IsArrInit = ArrDimensions(inpt) > 0
 End Function
@@ -450,7 +434,7 @@ On Error Resume Next
 End Function
     
 
-Public Function ArrayInfo(arr As Variant) As ArrInformation
+Private Function ArrayInfo(arr As Variant) As ArrInformation
 '   Returns Information about array dimensions
 '   Note: Use Arr[X] Functions in pbRangeArray (e.g. 'ArrRange', 'ArrArray', 'ArrListObject') to ensure all arrays
 '       are 1-based, 2-dimensional - required for populating worksheet ranges in a 'table style rows/columns' convention
@@ -486,7 +470,7 @@ Finalize:
     If Err.number <> 0 Then Err.Clear
 End Function
 
-Public Function ArrDimensions(ByRef checkArr As Variant) As Long
+Private Function ArrDimensions(ByRef checkArr As Variant) As Long
 '   RETURNS Array Dimensions Count
 '   RETURNS 0 'checkArr' argument is not an Array
 '   Example Use:
@@ -517,13 +501,7 @@ Finalize:
     If Err.number <> 0 Then Err.Clear
 End Function
 
-' ***** PRIVATE FUNCTIONS ***** ' ***** PRIVATE FUNCTIONS ***** ' ***** PRIVATE FUNCTIONS ***** ' ***** PRIVATE FUNCTIONS *****
-' ***** PRIVATE FUNCTIONS ***** ' ***** PRIVATE FUNCTIONS ***** ' ***** PRIVATE FUNCTIONS ***** ' ***** PRIVATE FUNCTIONS *****
-
 Private Function UniqueRC1Arr(ByVal arr As Variant, flags As ArrayOptionFlags) As Variant
-    
-    
-    
     Dim retArray As Variant
     Dim fixARR As Variant
     Dim aInfo As ArrInformation
@@ -546,7 +524,7 @@ Private Function UniqueRC1Arr(ByVal arr As Variant, flags As ArrayOptionFlags) A
     
     ClearTempRangeUtil
     
-    With TmpUtilSheet
+    With TempSheet
         Set tmpRng = .Range("A1")
         Set tmpRng = tmpRng.Resize(rowSize:=aInfo.Rows, ColumnSize:=aInfo.Columns)
         tmpRng.Value = arr
@@ -603,20 +581,14 @@ Private Function UniqueRC1Arr(ByVal arr As Variant, flags As ArrayOptionFlags) A
 
 End Function
 
-Public Function DEVARR(pArr As Variant) As Variant
 
-    DEVARR = ConvertArrToRCArr(pArr)
-
-End Function
 
 Private Function BuildRC1(rng As Range) As Variant
 On Error GoTo E:
     Dim failed As Boolean
     Dim retArray As Variant
     Dim rgInfo As RngInfo
-    
     rgInfo = RangeInfo(rng)
-    
     If rgInfo.Areas = 1 Then
         If rgInfo.Columns = 1 And rgInfo.Rows = 1 Then
             ReDim retArray(1 To 1, 1 To 1)
@@ -630,24 +602,19 @@ On Error GoTo E:
             GoTo Finalize:
         End If
     End If
-    
     'Areas > 1
     If rgInfo.AreasSameRows = False And rgInfo.AreasSameColumns = False Then
         RaiseError ERR_INVALID_RANGE_SIZE, "All areas in Range must have matching RowCount or ColumnCount (ftRangeArray.BuildRC1)"
     End If
-    
     ReDim retArray(1 To rgInfo.Rows, 1 To rgInfo.Columns)
-    
     ' ***** ***** ***** ***** ***** ***** ***** ***** *****
     Dim areaInfo As AreaStruct
     Dim idxAREA As Long, rngArea As Range, idxAreaRow As Long, idxAreaCol As Long
     Dim idxArrayRow As Long, idxArrayCol As Long
     Dim arrayRowOffset As Long, arrayColOffset As Long
     ' ***** ***** ***** ***** ***** ***** ***** ***** *****
-    
     arrayRowOffset = 0
     arrayColOffset = 0
-    
     If rgInfo.AreasSameRows Then
         ' *** *** *** *** *** ***
         ' *** SAME ROWS *** *
@@ -676,18 +643,14 @@ On Error GoTo E:
             arrayRowOffset = arrayRowOffset + areaInfo.rowCount
         Next idxAREA
     End If
-
 Finalize:
     On Error Resume Next
-    
     If Not failed Then
         BuildRC1 = retArray
     End If
-    
     If ArrDimensions(retArray) > 0 Then
         Erase retArray
     End If
-    
     Set rngArea = Nothing
     If Err.number <> 0 Then Err.Clear
     Exit Function
@@ -695,7 +658,6 @@ E:
     failed = True
     ErrorCheck
     Resume Finalize:
-    
 End Function
 
 Private Function ConvertArrToRCArr(ByVal arr As Variant, Optional zeroBasedAsColumns As Boolean = False) As Variant
@@ -706,7 +668,6 @@ Private Function ConvertArrToRCArr(ByVal arr As Variant, Optional zeroBasedAsCol
         ConvertArrToRCArr = retV
         Exit Function
     End If
-    
     If ArrDimensions(arr) = 1 Then
         If zeroBasedAsColumns = False Then
             isBase0 = LBound(arr) = 0
@@ -762,19 +723,210 @@ Private Function ConvertArrToRCArr(ByVal arr As Variant, Optional zeroBasedAsCol
     End If
 End Function
 
-
-
 Private Function ClearTempRangeUtil()
-    
-    
-    
-    With TmpUtilSheet
+    With TempSheet
         .Cells.EntireColumn.ColumnWidth = .StandardWidth
         .Cells.EntireRow.RowHeight = .StandardHeight
         .Cells.Clear
     End With
-    
-    
-    
 End Function
+
+' ~~~ ~~ FLAG ENUM COMPARE ~~~ ~~~
+Private Function EnumCompare(theEnum As Variant, enumMember As Variant, Optional ByVal iType As ecComparisonType = ecComparisonType.ecOR) As Boolean
+    Dim c As Long
+    c = theEnum And enumMember
+    EnumCompare = IIf(iType = ecOR, c <> 0, c = enumMember)
+End Function
+
+Private Function StringsMatch( _
+    ByVal checkString As Variant, ByVal _
+    validString As Variant, _
+    Optional smEnum As strMatchEnum = strMatchEnum.smEqual, _
+    Optional compMethod As VbCompareMethod = vbTextCompare) As Boolean
+    Dim str1, str2
+    str1 = CStr(checkString)
+    str2 = CStr(validString)
+    Select Case smEnum
+        Case strMatchEnum.smEqual
+            StringsMatch = StrComp(str1, str2, compMethod) = 0
+        Case strMatchEnum.smNotEqualTo
+            StringsMatch = StrComp(str1, str2, compMethod) <> 0
+        Case strMatchEnum.smContains
+            StringsMatch = InStr(1, str1, str2, compMethod) > 0
+        Case strMatchEnum.smStartsWithStr
+            StringsMatch = InStr(1, str1, str2, compMethod) = 1
+        Case strMatchEnum.smEndWithStr
+            If Len(str2) > Len(str1) Then
+                StringsMatch = False
+            Else
+                StringsMatch = InStr(Len(str1) - Len(str2) + 1, str1, str2, compMethod) = Len(str1) - Len(str2) + 1
+            End If
+    End Select
+End Function
+
+Private Function RangeRowCount(ByVal rng As Range) As Long
+    Dim tmpCount As Long
+    Dim rowDict As Dictionary
+    Dim rCount As Long, areaIDX As Long, rwIDX As Long
+    If rng Is Nothing Then
+        GoTo Finalize:
+    End If
+    'Check first if all First/Count are the same, if they are, no need to loop through everything
+    If AreasMatchRows(rng) Then
+        tmpCount = rng.Areas(1).Rows.Count
+    Else
+        Set rowDict = New Dictionary
+        For areaIDX = 1 To rng.Areas.Count
+            For rwIDX = 1 To rng.Areas(areaIDX).Rows.Count
+                Dim realRow As Long
+                realRow = rng.Areas(areaIDX).Rows(rwIDX).Row
+                rowDict(realRow) = realRow
+            Next rwIDX
+        Next areaIDX
+        tmpCount = rowDict.Count
+    End If
+Finalize:
+    RangeRowCount = tmpCount
+    Set rowDict = Nothing
+End Function
+
+'returns 0 if any area has different numbers of columns than another
+Private Function RangeColCount(ByVal rng As Range) As Long
+    Dim tmpCount As Long
+    Dim colDict As Dictionary
+    Dim firstCol As Long, areaIDX As Long, colidx As Long
+    If rng Is Nothing Then
+        GoTo Finalize:
+    End If
+    If AreasMatchCols(rng) Then
+        tmpCount = rng.Areas(1).Columns.Count
+    Else
+        Set colDict = New Dictionary
+        For areaIDX = 1 To rng.Areas.Count
+            firstCol = rng.Areas(areaIDX).column
+            colDict(firstCol) = firstCol
+            For colidx = 1 To rng.Areas(areaIDX).Columns.Count
+                If colidx > 1 Then colDict(firstCol + (colidx - 1)) = firstCol + (colidx - 1)
+            Next colidx
+        Next areaIDX
+        tmpCount = colDict.Count
+    End If
+    
+Finalize:
+    RangeColCount = tmpCount
+    Set colDict = Nothing
+End Function
+
+Private Function AreasMatchRows(rng As Range) As Boolean
+    If rng Is Nothing Then
+        AreasMatchRows = True
+        Exit Function
+    End If
+    Dim retV As Boolean
+    If rng.Areas.Count = 1 Then
+        retV = True
+    Else
+        Dim firstRow As Long, firstCount As Long, noMatch As Boolean, aIDX As Long
+        firstRow = rng.Areas(1).Row
+        firstCount = rng.Areas(1).Rows.Count
+        For aIDX = 2 To rng.Areas.Count
+            With rng.Areas(aIDX)
+                If .Row <> firstRow Or .Rows.Count <> firstCount Then
+                    noMatch = True
+                    Exit For
+                End If
+            End With
+        Next aIDX
+        retV = Not noMatch
+    End If
+    AreasMatchRows = retV
+End Function
+
+Private Function AreasMatchCols(rng As Range) As Boolean
+    Dim retV As Boolean
+    If rng.Areas.Count = 1 Then
+        retV = True
+    Else
+        Dim firstCol As Long, firstCount As Long, noMatch As Boolean, aIDX As Long
+        firstCol = rng.Areas(1).column
+        firstCount = rng.Areas(1).Columns.Count
+        For aIDX = 2 To rng.Areas.Count
+            With rng.Areas(aIDX)
+                If .column <> firstCol Or .Columns.Count <> firstCount Then
+                    noMatch = True
+                    Exit For
+                End If
+            End With
+        Next aIDX
+        retV = Not noMatch
+    End If
+    AreasMatchCols = retV
+End Function
+
+Private Function ContiguousRows(rng As Range) As Boolean
+'RETURNS TRUE IF HAS 1 AREA OR ALL AREAS SHARE SAME FIRST/LAST ROW
+    Dim retV As Boolean
+    If rng Is Nothing Then
+        ContiguousRows = True
+        Exit Function
+    End If
+    If rng.Areas.Count = 1 Then
+        retV = True
+    Else
+        'If any Area is outside the min/max row of any other area then return false
+        Dim loop1 As Long, loop2 As Long, isDiffRange As Boolean
+        Dim l1Start As Long, l1End As Long, l2Start As Long, l2End As Long
+        For loop1 = 1 To rng.Areas.Count
+            l1Start = rng.Areas(loop1).Row
+            l1End = l1Start + rng.Areas(loop1).Rows.Count - 1
+            For loop2 = 1 To rng.Areas.Count
+                l2Start = rng.Areas(loop2).Row
+                l2End = l1Start + rng.Areas(loop2).Rows.Count - 1
+                If l1Start < l2Start Or l1End > l2End Then
+                    isDiffRange = True
+                End If
+                If isDiffRange Then Exit For
+            Next loop2
+            If isDiffRange Then Exit For
+        Next loop1
+    End If
+    retV = Not isDiffRange
+    ContiguousRows = retV
+End Function
+
+Private Function ContiguousColumns(rng As Range) As Boolean
+'RETURNS TRUE IF HAS 1 AREA OR ALL AREAS SHARE SAME FIRST/LAST COLUMN
+    Dim retV As Boolean
+    If rng Is Nothing Then
+        ContiguousColumns = True
+        Exit Function
+    End If
+    If rng.Areas.Count = 1 Then
+        retV = True
+    Else
+        'If any Area is outside the min/max row of any other area then return false
+        Dim loop1 As Long, loop2 As Long, isDiffRange As Boolean
+        Dim l1Start As Long, l1End As Long, l2Start As Long, l2End As Long
+        For loop1 = 1 To rng.Areas.Count
+            l1Start = rng.Areas(loop1).column
+            l1End = l1Start + rng.Areas(loop1).Columns.Count - 1
+            For loop2 = 1 To rng.Areas.Count
+                l2Start = rng.Areas(loop2).column
+                l2End = l1Start + rng.Areas(loop2).Columns.Count - 1
+                If l1Start < l2Start Or l1End > l2End Then
+                    isDiffRange = True
+                End If
+                If isDiffRange Then Exit For
+            Next loop2
+            If isDiffRange Then Exit For
+        Next loop1
+    End If
+    retV = Not isDiffRange
+    ContiguousColumns = retV
+End Function
+
+
+
+
+
 

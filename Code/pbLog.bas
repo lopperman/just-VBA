@@ -12,8 +12,6 @@ Option Private Module
 Option Base 1
 Option Compare Text
 
-
-
 Private lLog As pbEventLog
 Private shtDown As Boolean
 
@@ -33,8 +31,20 @@ Public Enum LogLevelEnum
     llDev = 100
 End Enum
 
-
-
+Public Function LogLevelToString(logLvl As LogLevelEnum) As String
+    Select Case logLvl
+        Case LogLevelEnum.llTrace
+            LogLevelToString = "TRC"
+        Case LogLevelEnum.llWarn
+            LogLevelToString = "WRN"
+        Case LogLevelEnum.llError
+            LogLevelToString = "ERR"
+        Case LogLevelEnum.llINFO
+            LogLevelToString = "INF"
+        Case LogLevelEnum.llDev
+            LogLevelToString = "DEV"
+    End Select
+End Function
 
 Public Property Get InfoLogCount() As Long
     InfoLogCount = logCountInfo
@@ -133,11 +143,11 @@ On Error GoTo E:
         For i = fai.LBound_first To fai.Ubound_first
             Dim fName As String: fName = curFiles(i, 1)
             If StringsMatch(fName, "_", smContains) And Len(fName) > 20 Then
-                Dim tDt As String: tDt = Right(fName, 20)
-                If Mid(tDt, 1, 1) = "_" And Mid(tDt, 10, 1) = "_" Then
-                    tDt = Mid(tDt, 2, 8)
+                Dim tDT As String: tDT = Right(fName, 20)
+                If Mid(tDT, 1, 1) = "_" And Mid(tDT, 10, 1) = "_" Then
+                    tDT = Mid(tDT, 2, 8)
                     Dim testDate As Variant
-                    testDate = DateSerial(Int(Mid(tDt, 1, 4)), Int(Mid(tDt, 5, 2)), Int(Mid(tDt, 7, 2)))
+                    testDate = DateSerial(Int(Mid(tDT, 1, 4)), Int(Mid(tDT, 5, 2)), Int(Mid(tDT, 7, 2)))
                     If DateDiff("d", testDate, Date) > 15 Then
                         DeleteLogFile fName
                         filesDeleted = filesDeleted + 1
@@ -222,7 +232,7 @@ End Function
 
 Public Function SetLogOptions(ByVal lvl As LogLevelEnum)
     On Error Resume Next
-    If Not shtDown And (DebugMode Or DebugInfo) Then
+    If Not shtDown And (DebugMode) Then
         If Not lLog Is Nothing Then
             lLog.LogFlash lvl
         Else
@@ -235,7 +245,7 @@ End Function
 
 Public Function LogInfo(ByVal msg As String, Optional force As Boolean = False)
     On Error Resume Next
-    If Not shtDown And (DebugMode Or DebugInfo) Then
+    If Not shtDown And (DebugMode) Then
         logCountInfo = logCountInfo + 1
         LogInstance.Log llINFO, msg, force
     End If
@@ -243,7 +253,7 @@ Public Function LogInfo(ByVal msg As String, Optional force As Boolean = False)
 End Function
 Public Function LogTrace(ByVal msg As String, Optional force As Boolean = False)
     On Error Resume Next
-    If Not shtDown And (DebugMode Or DebugInfo) Then
+    If Not shtDown And (DebugMode) Then
         logCountTrace = logCountTrace + 1
         LogInstance.Log llTrace, msg, force
     End If
@@ -279,7 +289,7 @@ Public Function LogDEV(ByVal msg As String)
     If Not shtDown Then
         LogInstance.Log llDev, msg, True
     End If
-    If IsDEV Then Debug.Print msg
+    'If IsDEV Then Debug.Print msg
     If Err.number <> 0 Then Err.Clear
 
 End Function
@@ -302,18 +312,18 @@ On Error Resume Next
     daAI = ArrayInfo(dataArray)
     If daAI.Rows > 0 Then
         'EVENT TYPE, DATE, TIME, SYSSTATES, MSG
-        Dim idx As Long, colIDX As Long, newARR As Variant
-        ReDim newARR(1 To daAI.Rows, 1 To 5)
+        Dim idx As Long, colidx As Long, newArr As Variant
+        ReDim newArr(1 To daAI.Rows, 1 To 5)
         
         Dim tLine As Variant
         For idx = daAI.LBound_first To daAI.Ubound_first
                 tLine = ArrArray(Split(dataArray(idx, 1), ", "), aoNone, True)
                 If UBound(tLine, 2) = 5 Then
-                    newARR(idx, 1) = tLine(1, 1)
-                    newARR(idx, 2) = tLine(1, 2)
-                    newARR(idx, 3) = "TM " & CStr(tLine(1, 3))
-                    newARR(idx, 4) = tLine(1, 5)
-                    newARR(idx, 5) = tLine(1, 4)
+                    newArr(idx, 1) = tLine(1, 1)
+                    newArr(idx, 2) = tLine(1, 2)
+                    newArr(idx, 3) = "TM " & CStr(tLine(1, 3))
+                    newArr(idx, 4) = tLine(1, 5)
+                    newArr(idx, 5) = tLine(1, 4)
                 End If
         Next idx
     End If
@@ -329,7 +339,7 @@ On Error Resume Next
     lWS.Range("C1") = "TIME"
     lWS.Range("D1") = "LOG MSG"
     lWS.Range("E1") = "SYSTRC"
-    lWS.Range("A2:E2").Resize(rowSize:=UBound(newARR)).value = newARR
+    lWS.Range("A2:E2").Resize(rowSize:=UBound(newArr)).Value = newArr
     
     If Err.number <> 0 Then Err.Clear
 

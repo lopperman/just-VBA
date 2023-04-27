@@ -43,6 +43,7 @@ Attribute VB_Exposed = False
     Private lCount As Long, lDtUpper As Long, lHashTblSize As Long
     Public CompareMode As VbCompareMethod, UniqueKeys As Boolean
 
+
     Private Sub Class_Initialize()
       UniqueKeys = True
       CompareMode = vbTextCompare

@@ -34,7 +34,7 @@ Public Property Let LogLevel(lgLvl As LogLevelEnum)
     lLogLevel = lgLvl
 End Property
 Public Property Get LogLevel() As LogLevelEnum
-    If DebugMode Or DebugInfo Then
+    If DebugMode Then
         lLogLevel = llINFO
     Else
         lLogLevel = llWarn
@@ -54,24 +54,14 @@ Public Property Get CurrentLogFileFullName() As String
     End If
 End Property
 
-
 Public Function LogLevelString(Optional logLvl As LogLevelEnum) As String
     If IsMissing(logLvl) Or logLvl = 0 Then
         logLvl = LogLevel
     End If
-    Select Case logLvl
-        Case LogLevelEnum.llTrace
-            LogLevelString = "TRC"
-        Case LogLevelEnum.llWarn
-            LogLevelString = "WRN"
-        Case LogLevelEnum.llError
-            LogLevelString = "ERR"
-        Case LogLevelEnum.llINFO
-            LogLevelString = "INF"
-        Case LogLevelEnum.llDev
-            LogLevelString = "DEV"
-    End Select
+    LogLevelString = pbLog.LogLevelToString(logLvl)
 End Function
+
+
 
 Public Function Log(ByVal lvl As LogLevelEnum, ByVal msg As String, Optional force As Boolean = False)
     If force = False And lvl < LogLevel Then Exit Function
@@ -108,16 +98,12 @@ End Property
 
 Private Function SystemStates() As String
     Dim tEv As String, tSc As String, tIn As String, tCa As String, retV As String
-    tEv = IIf(Events, "Evts=ON  ", "")
-    tSc = IIf(Application.ScreenUpdating, "Scrn=ON  ", "")
-    tIn = IIf(Application.Interactive, "Inter=ON  ", "")
-    tCa = IIf(Application.Calculation = xlCalculationAutomatic, "Calc: AUTO  ", "")
-    retV = Concat(tEv, tSc, tIn, tCa)
-    If Len(retV) = 0 Then
-        retV = "SysStates: (ALL OFF)"
-    Else
-        retV = Concat("SysStates: ( ", retV, ")")
-    End If
+    tEv = IIf(Events, "Evts=Y", "Evtn=N")
+    tSc = IIf(Application.ScreenUpdating, "Scrn=Y", "Scrn=N")
+    tIn = IIf(Application.Interactive, "Intr=Y", "Intr=N")
+    tCa = IIf(Application.Calculation = xlCalculationAutomatic, "Calc=Y", "Calc=N")
+    retV = ConcatWithDelim(" ", tEv, tSc, tIn, tCa)
+    retV = Concat("SysStates:(", retV, ")")
     SystemStates = retV
 End Function
 
@@ -231,6 +217,22 @@ Private Sub Class_Terminate()
     End If
 End Sub
 
+Public Function ToggleLogMode()
+    ToggleLogLevel
+    MsgBox_FT "Log Level Set To: " & FriendlyDebugMode, vbOKOnly + vbInformation, "LOG LEVEL"
+End Function
+
+Public Function ViewCurrentLog()
+    Dim logName As String
+    logName = CurrentLogFileFullName
+    If StringsMatch(logName, ".log", smEndWithStr) Then
+        LogInfo "Flushing Pending Writes ...", True
+        LogInfo "Flushing Pending Writes ...", True
+        LogInfo "Flushing Pending Writes ...", True
+        ViewFormattedLog FileNameFromFullPath(logName)
+    End If
+End Function
+
 Public Function ViewFormattedLog(Optional logName As Variant)
 #If privateVersion Then
     On Error GoTo E:
@@ -243,7 +245,7 @@ Public Function ViewFormattedLog(Optional logName As Variant)
         If IsMissing(logName) Then
             Set pkg = BuildPackage(LogInstance, "ViewFormattedLog", VbMethod)
             Set pkg.targetSheet = wsDebug
-            Wom.Picklist.Initialize "Select Log File", "Select log file to format and view", pbLog.LogFiles, plSingle, pkg
+            Wom.picklist.Initialize "Select Log File", "Select log file to format and view", pbLog.LogFiles, plSingle, pkg
             Exit Function
         End If
         
@@ -262,15 +264,15 @@ Public Function ViewFormattedLog(Optional logName As Variant)
         DoEvents
         Set logWB = Nothing
         Set logWB = Workbooks.Add
-        Dim newARR As Variant
-        ReDim newARR(1 To UBound(logARR) + 1, 1 To 5)
+        Dim newArr As Variant
+        ReDim newArr(1 To UBound(logARR) + 1, 1 To 5)
         Dim idx As Long
         Dim rw As String, rwarr As Variant, offsetIdx As Long
-        newARR(1, 1) = "TYPE"
-        newARR(1, 2) = "LogDate"
-        newARR(1, 3) = "LogTime"
-        newARR(1, 4) = "SysStates"
-        newARR(1, 5) = "LogMessage"
+        newArr(1, 1) = "TYPE"
+        newArr(1, 2) = "LogDate"
+        newArr(1, 3) = "LogTime"
+        newArr(1, 4) = "SysStates"
+        newArr(1, 5) = "LogMessage"
         Dim lbRow As Long
         For idx = ai.LBound_first To ai.Ubound_first
             offsetIdx = idx + 1
@@ -278,28 +280,27 @@ Public Function ViewFormattedLog(Optional logName As Variant)
             rwarr = Split(rw, ",", compare:=vbTextCompare)
             lbRow = LBound(rwarr)
             If UBound(rwarr) - LBound(rwarr) + 1 = 5 Then
-                newARR(offsetIdx, 1) = rwarr(lbRow)
-                newARR(offsetIdx, 2) = rwarr(lbRow + 1)
-                newARR(offsetIdx, 3) = rwarr(lbRow + 2)
-                newARR(offsetIdx, 4) = rwarr(lbRow + 3)
-                newARR(offsetIdx, 5) = rwarr(lbRow + 4)
+                newArr(offsetIdx, 1) = rwarr(lbRow)
+                newArr(offsetIdx, 2) = rwarr(lbRow + 1)
+                newArr(offsetIdx, 3) = rwarr(lbRow + 2)
+                newArr(offsetIdx, 4) = rwarr(lbRow + 3)
+                newArr(offsetIdx, 5) = rwarr(lbRow + 4)
                 
             Else
-                newARR(offsetIdx, 1) = rw
+                newArr(offsetIdx, 1) = rw
             End If
         Next idx
         Dim tarRng As Range
         Set tarRng = logWB.Worksheets(1).Range("A5:E5")
-        Set tarRng = tarRng.Resize(rowSize:=UBound(newARR))
-        tarRng.value = newARR
+        Set tarRng = tarRng.Resize(rowSize:=UBound(newArr))
+        tarRng.Value = newArr
         Dim lo As ListObject
         Set logWS = logWB.Worksheets(1)
         Set lo = logWS.ListObjects.Add(SourceType:=xlSrcRange, Source:=tarRng, XlListObjectHasHeaders:=xlYes)
         logWS.Name = "FinToolLog"
         lo.Name = "tblFTLog"
         lo.Range.EntireColumn.AutoFit
-        logWB.Worksheets(1).Range("A1").value = "Source Path: " & fullPath
-        
+        logWB.Worksheets(1).Range("A1").Value = "Source Path: " & fullPath
         
         DoEvents
         logWB.Activate
@@ -342,15 +343,15 @@ Private Function SubmitLogFile(logName As String)
     BusyWait "Formatting as new file for upload: " & fullPath
     Set logWB = Nothing
     Set logWB = Workbooks.Add
-    Dim newARR As Variant
-    ReDim newARR(1 To UBound(logARR) + 1, 1 To 5)
+    Dim newArr As Variant
+    ReDim newArr(1 To UBound(logARR) + 1, 1 To 5)
     Dim idx As Long
     Dim rw As String, rwarr As Variant, offsetIdx As Long
-    newARR(1, 1) = "TYPE"
-    newARR(1, 2) = "LogDate"
-    newARR(1, 3) = "LogTime"
-    newARR(1, 4) = "SysStates"
-    newARR(1, 5) = "LogMessage"
+    newArr(1, 1) = "TYPE"
+    newArr(1, 2) = "LogDate"
+    newArr(1, 3) = "LogTime"
+    newArr(1, 4) = "SysStates"
+    newArr(1, 5) = "LogMessage"
     Dim lbRow As Long
     For idx = ai.LBound_first To ai.Ubound_first
         offsetIdx = idx + 1
@@ -358,27 +359,27 @@ Private Function SubmitLogFile(logName As String)
         rwarr = Split(rw, ",", compare:=vbTextCompare)
         lbRow = LBound(rwarr)
         If UBound(rwarr) - LBound(rwarr) + 1 = 5 Then
-            newARR(offsetIdx, 1) = rwarr(lbRow)
-            newARR(offsetIdx, 2) = rwarr(lbRow + 1)
-            newARR(offsetIdx, 3) = rwarr(lbRow + 2)
-            newARR(offsetIdx, 4) = rwarr(lbRow + 3)
-            newARR(offsetIdx, 5) = rwarr(lbRow + 4)
+            newArr(offsetIdx, 1) = rwarr(lbRow)
+            newArr(offsetIdx, 2) = rwarr(lbRow + 1)
+            newArr(offsetIdx, 3) = rwarr(lbRow + 2)
+            newArr(offsetIdx, 4) = rwarr(lbRow + 3)
+            newArr(offsetIdx, 5) = rwarr(lbRow + 4)
             
         Else
-            newARR(offsetIdx, 1) = rw
+            newArr(offsetIdx, 1) = rw
         End If
     Next idx
     Dim tarRng As Range
     Set tarRng = logWB.Worksheets(1).Range("A5:E5")
-    Set tarRng = tarRng.Resize(rowSize:=UBound(newARR))
-    tarRng.value = newARR
+    Set tarRng = tarRng.Resize(rowSize:=UBound(newArr))
+    tarRng.Value = newArr
     Dim lo As ListObject
     Set logWS = logWB.Worksheets(1)
     Set lo = logWS.ListObjects.Add(SourceType:=xlSrcRange, Source:=tarRng, XlListObjectHasHeaders:=xlYes)
     logWS.Name = "FinToolLog"
     lo.Name = "tblFTLog"
     lo.Range.EntireColumn.AutoFit
-    logWB.Worksheets(1).Range("A1").value = "Source Path: " & fullPath
+    logWB.Worksheets(1).Range("A1").Value = "Source Path: " & fullPath
     
     DoEvents
     logWB.Windows(1).DisplayGridlines = False
@@ -413,7 +414,7 @@ On Error GoTo E:
     If IsMissing(LogFiles) Then
         Set pkg = BuildPackage(LogInstance, "UploadLogs", VbMethod)
         Set pkg.targetSheet = wsDebug
-        Wom.Picklist.Initialize "Select Log File(s) For Upload", "Select 1 or more log files to upload", pbLog.LogFiles, plMultiple_MinimumOne, pkg
+        Wom.picklist.Initialize "Select Log File(s) For Upload", "Select 1 or more log files to upload", pbLog.LogFiles, plMultiple_MinimumOne, pkg
         Exit Function
     End If
     

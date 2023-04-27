@@ -24,7 +24,7 @@ Public Sub resetTimer()
     timerStart = 0
     timerStop = 0
 End Sub
-Public Sub StartTimer(Optional ByVal swKey As Variant)
+Public Sub startTimer(Optional ByVal swKey As Variant)
     If Not IsMissing(swKey) Then
         If Not IsObject(swKey) Then l_key = swKey
     End If
@@ -60,8 +60,8 @@ End Property
 Public Property Get totalSeconds() As Double
     totalSeconds = Round(timerStop - timerStart, 6)
 End Property
-Public Function Result() As String
-    Result = CStr(totalSeconds) & " seconds"
+Public Function result() As String
+    result = CStr(totalSeconds) & " seconds"
 End Function
 Public Function ResultAsTime() As String
 On Error Resume Next

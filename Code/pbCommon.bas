@@ -27,7 +27,7 @@ Public Const TEMP_DIRECTORY_NAME2 As String = "VBATemp"
 '   GENERALIZED TYPES
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 Public Type KVP
-  Key As String
+  key As String
   Value As Variant
 End Type
     
@@ -343,7 +343,7 @@ End Enum
 Public Function DtAdd(intervalType As DateDiffType, _
     number As Variant, ByVal dt As Variant) As Variant
     Dim retVal As Variant
-    Attribute DtAdd.VB_Description="Add or Subtract time from date [dt] value.  Replaces VBA DateAdd.\n"    
+    
     Select Case intervalType
         Case DateDiffType.dtDay
             retVal = DateAdd("d", number, dt)
@@ -604,7 +604,7 @@ End Function
     End Sub
     Public Property Get AppVersion() As Variant
         AppVersion = CDbl(1)
-        Err.Raise 1004, source:="pbCommon.AppVersion", Description:="Not Implemented"
+        Err.Raise 1004, Source:="pbCommon.AppVersion", Description:="Not Implemented"
     End Property
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 '   *** END PUBLIC *** IMPLEMENTATION OF COMMON
@@ -1854,7 +1854,7 @@ End Function
 '           Debug.Print v.Value
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
 Public Function GetEnvironSettings( _
-    Optional filter As String, _
+    Optional Filter As String, _
     Optional exactMatch As Boolean = True, _
     Optional filterKey As Boolean = True) As Collection
 
@@ -1869,11 +1869,11 @@ Public Function GetEnvironSettings( _
         If eqPosition > 0 Then
             tKey = Left(EnvString, (eqPosition - 1))
             tVal = Mid(EnvString, (eqPosition + 1))
-            If Not StringsMatch(filter, vbNullString) Then
+            If Not StringsMatch(Filter, vbNullString) Then
                 tFilterItem = IIf(filterKey, tKey, tVal)
-                If exactMatch And StringsMatch(tFilterItem, filter, smEqual) Then
+                If exactMatch And StringsMatch(tFilterItem, Filter, smEqual) Then
                     canReturn = True
-                ElseIf Not exactMatch And StringsMatch(tFilterItem, filter, smContains) Then
+                ElseIf Not exactMatch And StringsMatch(tFilterItem, Filter, smContains) Then
                     canReturn = True
                 End If
             Else
