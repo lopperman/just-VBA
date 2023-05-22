@@ -75,13 +75,6 @@ End Function
 '
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
-'    Public Const PBCOMMON_LOG As Boolean = True
-'    Public Const LOG_DIR As String _
-'        = "PBCOMMONLOG"
-'    Public Const LOG_AUTO_PURGE As Boolean _
-'        = True
-'    Public Const LOG_MAXAGE_DAYS As Long _
-'        = 30
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 '   returns error object if not using pbcommong_log
