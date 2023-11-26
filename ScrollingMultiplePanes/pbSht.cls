@@ -15,20 +15,16 @@ Attribute VB_Exposed = False
 '  license GNU General Public License v3.0
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 
-'Public Function TestScrollPanes(wksName as string)
-'
-'    Dim ws As Worksheet
-'    Set ws = ThisWorkbook.Worksheets(wksName)
-'
-'    Dim pbs As New pbSht
-'    Dim splitOnRow as Long, splitOnCol as Long
-'    splitOnRow = 8
-'    splitOnCol = 0 '(meaning, no column split)
-'    pbs.Initialize ws, splitOnRow, splitOnCol
-'    'If ignoreInactive = False, the ScrollDefault will force sheet to be visible and active
-'    pbs.ScrollDefault ignoreInactive:=False
-'
-'End Function
+''  ** COPY THE BELOW 'TestScrollPanes' TO ANY BASIC MODULE TO TEST
+
+'    Public Function TestScrollPanes(wksName As String, splitRow As Long, splitCol As Long)
+'        Dim ws As Worksheet
+'        Set ws = ThisWorkbook.Worksheets(wksName)
+'        Dim pbs As New pbSht
+'        pbs.Initialize ws, splitRow, splitCol
+'        'If ignoreInactive = False, the ScrollDefault will force sheet to be visible and active
+'        pbs.ScrollDefault ignoreInactive:=False
+'    End Function
 
 Option Explicit
 Option Compare Text
