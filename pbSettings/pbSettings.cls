@@ -28,22 +28,44 @@ Attribute VB_Exposed = False
 ''
 ''  To Use:
 ''      01 - import pbSettings.cls into your Workbook project
-''      02 - Copy the function below into a new or existing a basic module:
+''      02 - Copy the functions below into a new or existing a basic module:
 ''
-''            Public Function pbStg() As pbSettings
-''                Static stgObj As pbSettings
-''                If stgObj Is Nothing Then
-''                    Set stgObj = New pbSettings
-''                End If
-''                If stgObj.ValidConfig Then
-''                    Set pbStg = stgObj
-''                End If
-''            End Function
+
+'        Public Property Get pbSettingsReady() As Boolean
+'            On Error Resume Next
+'            If Not pbStg Is Nothing Then
+'                pbSettingsReady = pbStg.ValidConfig
+'            End If
+'        End Property
+
+'        Public Function pbStg() As pbSettings
+'            On Error Resume Next
+'            Static stgObj As pbSettings
+'            If stgObj Is Nothing Then
+'                Set stgObj = New pbSettings
+'            End If
+'            If Err.number = 0 Then
+'                If Not stgObj Is Nothing Then
+'                    If stgObj.ValidConfig Then
+'                        Set pbStg = stgObj
+'                    End If
+'                End If
+'            Else
+'                Err.Clear
+'            End If
+'        End Function
+
+''      03 - The line of code below will trigger the 'First Run' and set everything
+''              up for pbSettings:
 ''
-''      03 - Follow instructions for 'FIRST RUN'
+'           If pbSettingsReady = True Then
+'               ' all action can now be used by calling: pbStg.[Method]
+'           End if
+''
 ''
 ''      Create A Setting:  pbStg.Setting("TEST SETTING") = Now
 ''      Get A Setting Value:  myVal = pbStg.Setting("TEST_SETTING")
+''      Delete Setting: pbStg.Delete("TEST_SETTING")
 ''
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 
@@ -58,6 +80,7 @@ Option Base 1
 ''  BEHAVIOR OF THE pbSettings Worksheet and ListObject
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Private Const PBSTG_HIDE As String = "PBSTG_AUTOHIDE"
+    Private Const PBSTG_WS_CODENAME As String = "PBSTG_WS_CODE_NAME"
 #If Mac Then
     Private Const PBSTG_OS As String = "MAC"
 #Else
@@ -74,6 +97,9 @@ Option Base 1
         
     Private Const PBSETTINGS_TEMPLATE_PATH As String _
         = "https://github.com/lopperman/just-VBA/raw/main/Templates/pbSettingsTemplate.xlsx"
+        
+    Private Const SETTINGS_SHEET_WEAKNAME As String _
+        = "pbSettings"
         
     Private Const SETTINGS_SHEET_CODENAME As String _
         = "pbSTGWS"
@@ -163,8 +189,27 @@ Option Base 1
 ''      it is set using: Setting([stgKey]) = [stgVal]
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Function Exists(ByVal settingKey, Optional isOSSpecific As Boolean = False, Optional isUSERSpecific As Boolean = False) As Boolean
+        If Not ValidConfig Then Exit Function
         Exists = Index(CheckKey(settingKey, isOSSpecific, isUSERSpecific)) > 0
     End Function
+    
+    Public Property Get AutoHide() As Boolean
+        If Not ValidConfig Then Exit Property
+        AutoHide = Setting(PBSTG_HIDE)
+    End Property
+    Public Property Let AutoHide(hideSheetDefault As Boolean)
+        If Not ValidConfig Then Exit Property
+        Setting(PBSTG_HIDE) = hideSheetDefault
+        If hideSheetDefault = False And l_ws.visible <> xlSheetVisible Then
+            ''  Disable App Events
+            Dim evts As Boolean: evts = Application.EnableEvents: Application.EnableEvents = False
+            l_ws.visible = xlSheetVisible
+            ''  Restore App Events to prior setting
+            Application.EnableEvents = evts
+        Else
+            CheckSettingsHealth
+        End If
+    End Property
     
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''  Setting Value Property Getter
@@ -178,6 +223,7 @@ Option Base 1
 ''      be return using: [settingValue] = CBool([settingValue])
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Property Get Setting(ByVal stgKey)
+        If Not ValidConfig Then Exit Property
         Dim tmpIdx As Long: tmpIdx = Index(stgKey)
         Dim resp, respType
         If tmpIdx > 0 Then
@@ -201,6 +247,7 @@ Option Base 1
 ''          but would need to return it as a date: 12/3/23 9:35:40 PM
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Property Let Setting(ByVal stgKey, ByVal stgVal)
+        If Not ValidConfig Then Exit Property
         On Error Resume Next
         Dim tmpIdx As Long: tmpIdx = Index(stgKey)
         Dim resp, respType
@@ -231,6 +278,7 @@ Option Base 1
 ''  Setting Property Getter for OS-specific setting
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Property Get SettingForOS(ByVal stgKey)
+        If Not ValidConfig Then Exit Property
         SettingForOS = Setting(BuildOSSpecificKey(stgKey))
     End Property
     
@@ -238,6 +286,7 @@ Option Base 1
 ''  Setting Property Setter for OS-specific setting
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Property Let SettingForOS(ByVal stgKey, ByVal stgVal)
+        If Not ValidConfig Then Exit Property
         Setting(BuildOSSpecificKey(stgKey)) = stgVal
     End Property
     
@@ -245,6 +294,7 @@ Option Base 1
 ''  Setting Property Getter for USER-specific setting
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Property Get SettingForUser(ByVal stgKey)
+        If Not ValidConfig Then Exit Property
         SettingForUser = Setting(BuildUSERSpecificKey(stgKey))
     End Property
     
@@ -252,6 +302,7 @@ Option Base 1
 ''  Setting Property Setter for USER-specific setting
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Property Let SettingForUser(ByVal stgKey, ByVal stgVal)
+        If Not ValidConfig Then Exit Property
         Setting(BuildUSERSpecificKey(stgKey)) = stgVal
     End Property
     
@@ -262,6 +313,7 @@ Option Base 1
 ''          "TEST_USER_[LoginName]"
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Function CheckKey(ByVal stgKey, isOSSpecific As Boolean, isUSERSpecific As Boolean)
+        If Not ValidConfig Then Exit Function
         If isOSSpecific And isUSERSpecific Then Err.Raise 1004, Description:="A pbSetting Key cannot be both OS and User specific"
         If isOSSpecific Then
             CheckKey = BuildOSSpecificKey(stgKey)
@@ -276,6 +328,7 @@ Option Base 1
 ''  Returns timestamp when Setting [stgKey] was last modified
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Function SettingUpdated(ByVal stgKey, Optional isOSSpecific As Boolean = False, Optional isUSERSpecific As Boolean = False)
+        If Not ValidConfig Then Exit Function
         stgKey = CheckKey(stgKey, isOSSpecific, isUSERSpecific)
         If Exists(stgKey) Then
             SettingUpdated = CDate(l_lo.listRows(Index(stgKey)).Range(1, SettingCols.scUpdated))
@@ -327,6 +380,7 @@ Option Base 1
 ''  Force Setting Value to Go Through 'Val()' Function
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Function ForceNumericFormat(ByVal stgKey, Optional isOSSpecific As Boolean = False, Optional isUSERSpecific As Boolean = False)
+        If Not ValidConfig Then Exit Function
         stgKey = CheckKey(stgKey, isOSSpecific, isUSERSpecific)
         If Exists(stgKey) Then
             l_lo.listRows(Index(stgKey)).Range(1, SettingCols.scSettingType) = TypeEnum.teNumeric
@@ -339,6 +393,7 @@ Option Base 1
 ''      an error
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Function ForceDateFormat(ByVal stgKey, Optional isOSSpecific As Boolean = False, Optional isUSERSpecific As Boolean = False)
+        If Not ValidConfig Then Exit Function
         stgKey = CheckKey(stgKey, isOSSpecific, isUSERSpecific)
         If Exists(stgKey) Then
             l_lo.listRows(Index(stgKey)).Range(1, SettingCols.scSettingType) = TypeEnum.teDateTime
@@ -351,6 +406,7 @@ Option Base 1
 ''      an error
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Function ForceBooleanFormat(ByVal stgKey, Optional isOSSpecific As Boolean = False, Optional isUSERSpecific As Boolean = False)
+        If Not ValidConfig Then Exit Function
         stgKey = CheckKey(stgKey, isOSSpecific, isUSERSpecific)
         If Exists(stgKey) Then
             l_lo.listRows(Index(stgKey)).Range(1, SettingCols.scSettingType) = TypeEnum.teBoolean
@@ -361,6 +417,7 @@ Option Base 1
 ''  Force Setting Value to be returned as it was created (This is the Default)
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Function ForceGeneralFormat(ByVal stgKey, Optional isOSSpecific As Boolean = False, Optional isUSERSpecific As Boolean = False)
+        If Not ValidConfig Then Exit Function
         stgKey = CheckKey(stgKey, isOSSpecific, isUSERSpecific)
         If Exists(stgKey) Then
             l_lo.listRows(Index(stgKey)).Range(1, SettingCols.scSettingType) = TypeEnum.teGeneral
@@ -371,6 +428,7 @@ Option Base 1
 ''  Delete Setting with key [stgKey], if it exists
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Function Delete(ByVal stgKey, Optional isOSSpecific As Boolean = False, Optional isUSERSpecific As Boolean = False)
+        If Not ValidConfig Then Exit Function
         stgKey = CheckKey(stgKey, isOSSpecific, isUSERSpecific)
         If Index(stgKey) > 0 Then
             ''  Disable App Events
@@ -391,6 +449,7 @@ Option Base 1
 ''  Returns 0 if Missing
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Function Index(ByVal stgKey, Optional isOSSpecific As Boolean = False, Optional isUSERSpecific As Boolean = False) As Long
+        If Not ValidConfig Then Exit Function
         stgKey = CheckKey(stgKey, isOSSpecific, isUSERSpecific)
         If ValidConfig And Count > 0 Then
             Dim tmpIdx As Variant
@@ -414,18 +473,21 @@ Option Base 1
     ''  SETTINGS WORKSHEET REFERENCE
     ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Property Get pbSettingsSheet() As Worksheet
+        If Not ValidConfig Then Exit Property
         Set pbSettingsSheet = l_ws
     End Property
     ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     ''  SETTINGS LIST OBJECT REFERENCE
     ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Property Get pbSettingsListObj() As ListObject
+        If Not ValidConfig Then Exit Property
         Set pbSettingsListObj = l_lo
     End Property
     ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     ''  Earliest Modified Date for any Setting
     ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Property Get ModifiedEarliestDate() As Variant
+        If Not ValidConfig Then Exit Property
         If ValidConfig Then
             Dim modified As Variant
             modified = CDate(WorksheetFunction.Min(l_lo.ListColumns(SettingCols.scUpdated).DataBodyRange))
@@ -436,6 +498,7 @@ Option Base 1
     ''  Earliest Modified Date for any Setting
     ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Property Get ModifiedLatestDate() As Variant
+        If Not ValidConfig Then Exit Property
         If ValidConfig Then
             Dim modified As Variant
             modified = CDate(WorksheetFunction.Max(l_lo.ListColumns(SettingCols.scUpdated).DataBodyRange))
@@ -450,15 +513,15 @@ Option Base 1
 ''  Returns the Count of Unique Settings
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Property Get Count() As Long
-        If ValidConfig Then
-            Count = l_lo.listRows.Count
-        End If
+        If Not ValidConfig Then Exit Property
+        Count = l_lo.listRows.Count
     End Property
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''  Exports Settings that match [wildcardsearch] if provided, otherwise all
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Function ExportSettings(Optional wildcardSearch As Variant)
+        If Not ValidConfig Then Exit Function
         If Count > 0 Then
             Dim exportArr() As Variant, iRow, iCol, newWB As Workbook, newWS As Worksheet
             Dim tmpIndexes As New Collection
@@ -530,12 +593,25 @@ Option Base 1
         Dim tmpLO As ListObject
         Dim lstCol As ListColumn
         If wksht Is Nothing Then
+            '' First Try to Find by 'CodeName'
+            Dim findCodeName: findCodeName = SETTINGS_SHEET_CODENAME
+            If Exists(PBSTG_WS_CODENAME) Then
+                findCodeName = Setting(PBSTG_WS_CODENAME)
+            End If
             For Each tmpWS In ThisWorkbook.Worksheets
-                If StringsMatchPriv(tmpWS.CodeName, SETTINGS_SHEET_CODENAME) Then
+                If StringsMatchPriv(tmpWS.CodeName, findCodeName) Then
                     Set l_ws = tmpWS
                     Exit For
                 End If
             Next
+            If l_ws Is Nothing Then
+                For Each tmpWS In ThisWorkbook.Worksheets
+                    If StringsMatchPriv(tmpWS.Name, SETTINGS_SHEET_WEAKNAME) Then
+                        Set l_ws = tmpWS
+                        Exit For
+                    End If
+                Next
+            End If
         Else
             If Not wksht.Parent Is ThisWorkbook Then
                 Set wksht = Nothing
@@ -618,15 +694,16 @@ Option Base 1
 '              '12/2/23 10:36:37 PM' as a Variant of type Date)
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Private Function CheckSettingsHealth()
+        Dim evts As Boolean: evts = Application.EnableEvents: Application.EnableEvents = False
         If l_lo.ShowTotals Then l_lo.ShowTotals = False
         CheckSort
         CheckRequiredSettings
         If Setting(PBSTG_HIDE) = True And l_ws.visible = xlSheetVisible And OtherSheetsVisible Then
-            Dim evts As Boolean: evts = Application.EnableEvents: Application.EnableEvents = False
             l_ws.visible = xlSheetVeryHidden
-            Application.EnableEvents = evts
         End If
         CheckDuplicates
+        l_lo.Range.EntireColumn.AutoFit
+        Application.EnableEvents = evts
     End Function
 
 
@@ -727,6 +804,10 @@ Option Base 1
         If Exists(PBSTG_HIDE) = False Then
             Setting(PBSTG_HIDE) = True
         End If
+        If Exists(PBSTG_WS_CODENAME) = False Then
+            Setting(PBSTG_WS_CODENAME) = l_ws.CodeName
+        End If
+        
     End Function
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
@@ -849,25 +930,11 @@ Option Base 1
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 '   ONLY USED IN 'FIRST RUN'
-'   Attempt to Open 'just-VBA' pbSettings Template and copy a
-'   settingsSheet in current project
+'   Create settings sheet
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Private Function CreateSettingsSheet() As Boolean
         On Error Resume Next
         Dim tmplSheet As Worksheet
-        Set tmplSheet = TemplateSheet
-        If tmplSheet Is Nothing Then
-            Dim userResp As Variant
-            userResp = MsgBox("A standard MS Excel File ('pbSettingsTemplate.xlsx') needs to be downloaded from: " _
-                & vbNewLine & PBSETTINGS_TEMPLATE_PATH & vbNewLine _
-                & "Click YES to download the file now, otherwise click NO.  When the 'pbSettingsTemplate.xlsx' file has been downloaded, " _
-                & "open the file in excel, and run this process again -- it will detect the settings page and  make a copy in this workbook.", _
-                vbYesNo + vbDefaultButton2 + vbQuestion, "File Needed")
-            If userResp = vbYes Then
-                OpenTemplate
-            End If
-            Exit Function
-        End If
         Dim evts As Boolean, intr As Boolean, curs As Variant
         evts = Application.EnableEvents
         intr = Application.Interactive
@@ -876,70 +943,44 @@ Option Base 1
         Application.EnableEvents = False
         Application.Interactive = False
         Application.Cursor = XlMousePointer.xlWait
-        With tmplSheet
-            .Copy Before:=ThisWorkbook.Worksheets(ThisWorkbook.Worksheets.Count)
-            DoEvents
+        
+        Set tmplSheet = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Worksheets(ThisWorkbook.Worksheets.Count))
+        tmplSheet.Name = SETTINGS_SHEET_WEAKNAME
+        tmplSheet.Activate
+        ThisWorkbook.Windows(1).DisplayGridlines = False
+                
+        Dim tRng As Range
+        Set tRng = tmplSheet.Range("A6").Resize(ColumnSize:=ArrSize(ExpectedColsArr))
+        tRng.Value = ExpectedColsArr
+        Set tRng = tRng.Resize(RowSize:=2)
+        Dim lstObj As ListObject
+        Set lstObj = tmplSheet.ListObjects.Add(SourceType:=xlSrcRange, Source:=tRng, XlListObjectHasHeaders:=xlYes, TableStyleName:="TableStyleMedium2")
+        lstObj.Name = SETTINGS_LO
+        With lstObj.listRows(1)
+            .Range(1, SettingCols.scSettingKey) = PBSTG_HIDE
+            .Range(1, SettingCols.scSettingValue) = True
+            .Range(1, SettingCols.scSettingType) = TypeEnum.teBoolean
+            .Range(1, SettingCols.scUpdated) = Now()
         End With
-        tmplSheet.Parent.Close SaveChanges:=False
+        lstObj.HeaderRowRange.HorizontalAlignment = xlHAlignCenter
+        lstObj.HeaderRowRange.VerticalAlignment = xlVAlignCenter
+        lstObj.HeaderRowRange.Font.Bold = True
+        lstObj.ListColumns(SettingCols.scSettingKey).DataBodyRange.Font.Bold = True
+        lstObj.ListColumns(SettingCols.scSettingKey).DataBodyRange.Font.color = 16724484
+        
         Set tmplSheet = Nothing
         If Err.number = 0 Then
-            l_validCfg = VerifySettingsSheet
+            Set l_ws = lstObj.Range.Worksheet
+            Set l_lo = lstObj
+            CreateSettingsSheet = VerifySettingsSheet
         End If
         Application.EnableEvents = evts
         Application.Interactive = intr
         Application.Cursor = curs
+        Application.StatusBar = False
         If Err.number <> 0 Then Err.Clear
     End Function
     
-' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
-'   USE FOR 'FIRST RUN'
-'   Find the expected Worksheet that will copied (with CodeName)
-'   if the template file was downloaded and is open, and
-'   The current workbook does not have the 'pbSTGWS' Worksheet yet
-' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
-    Private Function TemplateSheet() As Worksheet
-        Dim tWB As Workbook, tWS As Worksheet
-        Dim respWS As Worksheet
-         For Each tWB In Application.Workbooks
-            For Each tWS In tWB.Worksheets
-                If StringsMatchPriv(tWS.CodeName, SETTINGS_SHEET_CODENAME) Then
-                    If StringsMatchPriv(tWS.Parent.Name, ThisWorkbook.Name) = False Then
-                        Set respWS = tWS
-                        Exit For
-                    End If
-                End If
-            Next
-            If Not respWS Is Nothing Then
-                Exit For
-            End If
-         Next
-         Set TemplateSheet = respWS
-         Set tWB = Nothing
-         Set tWS = Nothing
-         Set respWS = Nothing
-         
-    End Function
-    
-' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
-'   USE FOR 'FIRST RUN'
-'   Open PBSETTINGS_TEMPLATE_PATH
-'       ("https://github.com/lopperman/just-VBA/raw/main/Templates/pbSettingsTemplate.xlsx")
-'   This file is a simple .xlsx file with single sheet that contains a single
-'   ListObject, with a Single Row
-'   Primary Reason for addin the sheet this way is that you cannot reliably
-'       add a new Worksheet with VBA and set the 'CodeName'
-'   'pbSettings' will copy the sheet/listobject from the pbSettingsTemplate
-'   file -- if it is missing in your workbook, AND the pbSettingsTemplate
-'   has been downloaded and is currently Open
-' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
-    Private Function OpenTemplate()
-    On Error Resume Next
-        Application.DisplayAlerts = False
-        ThisWorkbook.FollowHyperlink Address:=PBSETTINGS_TEMPLATE_PATH
-        OpenTemplate = Err.number = 0
-        If Err.number <> 0 Then Err.Clear
-        Application.DisplayAlerts = True
-    End Function
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 '   END OF 'FIRST RUN' METHODS
