@@ -287,6 +287,111 @@ _Managed different setting values between users_
 
 ***
 
+###  ValidConfig
+
+    Public Property Get ValidConfig() As Boolean
+
+_DESCRIPTION_
+
+ReadOnly - Returns True if pbSettings Is Ready to Use
+
+_EXAMPLES:_
+ 
+_Return pbSettings ValidConfiguration Status_
+
+```
+    Dim isValid as Boolean
+    isValid = pbStg.ValidConfig
+```
+
+***
+
+## Object Model **Methods**
+***
+###  CheckKey
+```
+      Public Function CheckKey(ByVal stgKey, isOSSpecific As Boolean, isUSERSpecific As Boolean)
+```
+
+_DESCRIPTION_
+```
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''  Exposed for convenience -- return name of setting key
+''      e.g. CheckKey("TEST",true,false) = "TEST_OS_MAC" OR "TEST_OS_PC"
+''      e.g. CheckKey("TEST",false,true) =
+''          "TEST_USER_[LoginName]"
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~
+```
+
+###  Delete
+
+    Public Function Delete(ByVal stgKey, Optional isOSSpecific As Boolean = False, Optional isUSERSpecific As Boolean = False)
+
+_DESCRIPTION_
+
+Deletes a Setting, if it exists
+
+_EXAMPLES:_
+ 
+```
+    'DELETE SETTING KEY: "testSetting"
+    pbStg.Delete "testSetting", False, False
+
+    'DELETE SETTING KEY: "testSetting_OS_PC", or "testSetting_OS_MAC"
+    pbStg.Delete "testSetting", True, False
+
+    'DELETE SETTING KEY: "testSetting_USER_browerp"
+    '** ASSUMES CURRENT USER LOGIN IS 'browerp'
+    pbStg.Delete "testSetting", False, True
+
+```
+***
+
+###  Exists
+
+    Public Function Delete(ByVal stgKey, Optional isOSSpecific As Boolean = False, Optional isUSERSpecific As Boolean = False)
+
+_DESCRIPTION_
+
+Returns True if setting key exists
+
+_EXAMPLES:_
+ 
+```
+    Dim keyExists as Boolean
+
+    'Return True if 'testSetting' key exists
+    keyExists = pbStg.Exists("testSetting")
+
+    'Return True if 'testSetting_OS_PC' key exists, and is being tested on a PC
+    keyExists = pbStg.Exists("testSetting",isOSSpecific:=True)
+
+    'Return True if 'testSetting_USER_ browerp' key exists, and is being tested by user 'browerp'
+    keyExists = pbStg.Exists("testSetting",isUserSpecific:=True)
+
+```
+***
+
+###  ExportSettings
+
+    Public Function ExportSettings(Optional wildcardSearch As Variant)
+
+_DESCRIPTION_
+
+Exports all settings to a new Workbook
+If `wildcardSearch' has a value, then any setting where any column value contains `wildcardSearch` will be exported
+
+_EXAMPLES:_
+ 
+```
+    'Export All Settings
+    pbStg.ExportSettings
+
+    'Export settings containing "_OS_"
+    pbStg.ExportSettings "_OS_"
+```
+***
+
 
 
 
