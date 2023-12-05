@@ -225,6 +225,68 @@ _Create, Update, Get Settings Values_
 
 ***
 
+###  SettingForOS
+
+    Public Property Get SettingForOS(ByVal stgKey)
+    Public Property Let SettingForOS(ByVal stgKey, ByVal stgVal)
+
+_DESCRIPTION_
+
+Gets or sets a Setting Value for a setting specific to PC or MAC OS
+For example a PC user and Mac user might need differerent DEFAULT_ZOOM settings.  Example below shows how to implement this.
+
+_EXAMPLES:_
+ 
+_Managed different setting values between MAC and PC_
+
+```
+    'For a PC user, this example would create a `DEFAULT_ZOOM_OS_PC' Key
+    'For a MAC user, this example would create a `DEFAULT_ZOOM_OS_MAC' Key
+
+    Dim settingKey as String
+    settingKey = "DEFAULT_ZOOM"
+    pbStg.SettingForOS(settingKey) = 100
+
+    Dim settingValue as Variant
+    settingValue = pbStg.SettingForOS(settingKey)
+
+    'to see how the key was created, you can use the 'CheckKey' method
+
+```
+
+***
+
+###  SettingForUser
+
+    Public Property Get SettingForUser(ByVal stgKey)
+    Public Property Let SettingForUser(ByVal stgKey, ByVal stgVal)
+
+_DESCRIPTION_
+
+Gets or sets a Setting Value for a setting specific to current User
+For example a user might need differerent DEFAULT_ZOOM settings.  Example below shows how to implement this.
+
+_EXAMPLES:_
+ 
+_Managed different setting values between users_
+
+```
+    'For a user JohnSmith, this example would create a `DEFAULT_ZOOM_USER_JOHNSMITH' Key
+    'For a JetLi, this example would create a `DEFAULT_ZOOM_USER_JETLI' Key
+
+    Dim settingKey as String
+    settingKey = "DEFAULT_ZOOM"
+    pbStg.SettingForUser(settingKey) = 100
+
+    Dim settingValue as Variant
+    settingValue = pbStg.SettingForUser(settingKey)
+
+    'to see how the key was created, you can use the 'CheckKey' method
+
+```
+
+***
+
 
 
 
