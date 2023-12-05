@@ -123,7 +123,6 @@ _Get Earliest Modified Date_
 
 ***
 
-
 ###  ModifiedLatestDate
 
     Public Property Get ModifiedLatestDate() As Variant
@@ -143,3 +142,87 @@ _Get Latest Modified Date_
 ```
 
 ***
+
+###  pbSettingsListObj
+
+    Public Property Get pbSettingsListObj() As ListObject
+
+_DESCRIPTION_
+
+Read Only - Returns `ListObject`
+Returns the pbSettings ListObject
+
+_EXAMPLES:_
+ 
+_Get pbSettings ListObject_ 
+
+```
+    Dim lo as ListObject
+    Set lo = pbStg.pbSettingsListObj
+```
+
+***
+
+###  pbSettingsSheet
+
+    Public Property Get pbSettingsSheet() As Worksheet
+
+_DESCRIPTION_
+
+Read Only - Returns `Worksheet`
+Returns the pbSettings Worksheet
+
+_EXAMPLES:_
+ 
+_Get pbSettings Worksheet_ 
+
+```
+    Dim ws as Worksheet
+    Set ws = pbStg.pbSettingsSheet
+```
+
+***
+
+###  Setting
+
+    Public Property Get Setting(ByVal stgKey)
+    Public Property Let Setting(ByVal stgKey, ByVal stgVal)
+
+_DESCRIPTION_
+
+Gets or sets a Setting Value
+Returns `Variant` -- If 'SettingType' IS `teNumeric` or `teDateTime` or `teBoolean`, the returned Variant will be of type `Double, Date, or Boolean`
+
+        ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+        ''  Setting Value Property Getter
+        ''  If [stgKey] does not exist, returns an Empty Type
+        ''  e.g. If IsEmpty(Setting("invalidkey")) Then ....
+        ''  If Setting SettingType is '3' (TypeEnum.teDateTime = 3), the value will
+        ''    be converted using 'CDate' before it is returned
+        ''  If Setting SettingType is '1' (TypeEnum.teNumeric = 1), the value will
+        ''    be returned using:  [settingValue] = Val([settingValue])
+        ''  If Setting SettingType is '2' (TypeEnum.teBoolean = 2), the value will
+        ''      be return using: [settingValue] = CBool([settingValue])
+        ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+
+
+_EXAMPLES:_
+ 
+_Create, Update, Get Settings Values_ 
+
+```
+    Dim settingKey as String
+    settingKey = "testDateSetting"
+    pbStg.Setting(settingKey) = Now()
+
+    Dim settingValue as Variant
+    settingValue = pbStg.Setting(settingKey)
+
+    If pbStg.Setting(settingKey) < Now() Then
+        pbStg.Setting(settingKey) = Now()
+    End If
+```
+
+
+
+
