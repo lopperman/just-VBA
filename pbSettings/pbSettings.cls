@@ -204,6 +204,7 @@ Option Base 1
             ''  Disable App Events
             Dim evts As Boolean: evts = Application.EnableEvents: Application.EnableEvents = False
             l_ws.visible = xlSheetVisible
+            l_lo.Range.EntireColumn.AutoFit
             ''  Restore App Events to prior setting
             Application.EnableEvents = evts
         Else
@@ -698,7 +699,7 @@ Option Base 1
         If l_lo.ShowTotals Then l_lo.ShowTotals = False
         CheckSort
         CheckRequiredSettings
-        If Setting(PBSTG_HIDE) = True And l_ws.visible = xlSheetVisible And OtherSheetsVisible Then
+        If AutoHide And l_ws.visible = xlSheetVisible And OtherSheetsVisible Then
             l_ws.visible = xlSheetVeryHidden
         End If
         CheckDuplicates
@@ -802,7 +803,7 @@ Option Base 1
     Private Function CheckRequiredSettings()
         '' If 'PBSTG_AUTOHIDE' key does not exist, create it with default: True
         If Exists(PBSTG_HIDE) = False Then
-            Setting(PBSTG_HIDE) = True
+            AutoHide = True
         End If
         If Exists(PBSTG_WS_CODENAME) = False Then
             Setting(PBSTG_WS_CODENAME) = l_ws.CodeName
@@ -967,12 +968,12 @@ Option Base 1
         lstObj.HeaderRowRange.Font.Bold = True
         lstObj.ListColumns(SettingCols.scSettingKey).DataBodyRange.Font.Bold = True
         lstObj.ListColumns(SettingCols.scSettingKey).DataBodyRange.Font.color = 16724484
-        
         Set tmplSheet = Nothing
         If Err.number = 0 Then
             Set l_ws = lstObj.Range.Worksheet
             Set l_lo = lstObj
             CreateSettingsSheet = VerifySettingsSheet
+            AutoHide = True
         End If
         Application.EnableEvents = evts
         Application.Interactive = intr
