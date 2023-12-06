@@ -43,6 +43,32 @@ Recommended method for working with pbSettings is to add the 2 following methods
         'settings area is ready to be used
       End If
 ```
+### EXAMPLES / SCENARIOS FOR USING pbSettings
+
+_The examples below are actual implementations of how I (pbSettings author) use pbSettings_
+
+**BUTTON_BEEPS** 
+(and _MESSAGE_BEEPS_ and _INPUT_NEEDED_BEEPS_)
+
+Every time a user presses a command button, the code that executes checks settings _for the current user_ to determine if a `Beep` will occur when they press a button.
+
+I have a public constant that defines the button beep setting key:  
+```
+        Public Constant SETTING_BUTTON_BEEP as String = "BUTTON_BEEP"
+```
+In my 'startup' code settings are checked for default values for whatever user is logged in
+```
+        If pbStg.Exists(SETTING_BUTTON_BEEP,isUSERSpecific:=True) = False Then
+            pbStg.SettingForUser(SETTING_BUTTON_BEEP) = True
+        End if
+```
+If the login name for current users was "SmithJ", then the above code would create a new setting with setting key = "BUTTON_BEEPS_USER_SmithJ"
+
+In the method that gets called when a button is pressed, this code executes first -- which checks if it should play a beep for the current user:
+```
+        If pbStg.SettingForUser(SETTING_BUTTON_BEEP) Then Beep
+```
+
 ### Using pbSettings
 Creating, modifying, and obtaining settings information can be performed by typing the following anywhere in your VBA Project:
 ```
