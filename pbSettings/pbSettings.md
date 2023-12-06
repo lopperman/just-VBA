@@ -43,11 +43,11 @@ Recommended method for working with pbSettings is to add the 2 following methods
         'settings area is ready to be used
       End If
 ```
-### EXAMPLES / SCENARIOS FOR USING pbSettings
+## EXAMPLES / SCENARIOS FOR USING pbSettings
 
 _The examples below are actual implementations of how I (pbSettings author) use pbSettings_
 
-**BUTTON_BEEPS** 
+### **BUTTON_BEEPS** 
 (and _MESSAGE_BEEPS_ and _INPUT_NEEDED_BEEPS_)
 
 Every time a user presses a command button, the code that executes checks settings _for the current user_ to determine if a `Beep` will occur when they press a button.
@@ -67,6 +67,38 @@ If the login name for current users was "SmithJ", then the above code would crea
 In the method that gets called when a button is pressed, this code executes first -- which checks if it should play a beep for the current user:
 ```
         If pbStg.SettingForUser(SETTING_BUTTON_BEEP) Then Beep
+```
+
+### **WORKSHEET SPLIT ROWS** 
+
+I use pbSettings as part of how worksheets are formatted -- like automatically adding a split row.  I use row 6 as a default, but you could also use zero ('0') to _not_ add a split row by defaul.
+
+I don't use a public constant for this particular setting, as the `CodeName` of each worksheet is part of the key.  Here's the code I run at startup:
+```
+        If Not pbStg.Exists("DEFAULT_ROW_SPLIT") Then
+                pbStg.Setting("DEFAULT_ROW_SPLIT") = 6
+        End If
+        Dim ws as Worksheet, dfltRow
+        dfltRow = pbStg.Setting("DEFAULT_ROW_SPLIT")
+        For Each ws in ThisWorkbook.Worksheets
+                If Not pbStg.Exists(ws.CodeName & "_ROW_SPLIT") Then
+                        pbStg.Setting(ws.CodeName & "_ROW_SPLIT") = dfltRow
+                End If
+        Next
+```
+
+Separate code that gets executed when a Worksheet is activated, get's the Row Split setting and applies it if needed.
+Note:  This particular code only runs after the target worksheet is verified as being the active worksheet:
+```
+    With ActiveWindow
+        .FreezePanes = False
+        .Split = False
+        If pbStg.Setting(ActiveSheet.CodeName & "_ROW_SPLIT") > 0 Then
+            .SplitRow = pbStg.Setting(ActiveSheet.CodeName & "_ROW_SPLIT")
+            .FreezePanes = True
+        End If
+    End With
+
 ```
 
 ### Using pbSettings
