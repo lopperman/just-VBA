@@ -8,7 +8,6 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
-''
 ''  Manage Settings For Current Workbook and/or General Settings
 ''   for certain types of workbooks
 ''
@@ -18,63 +17,59 @@ Attribute VB_Exposed = False
 ''         which platform is being used (Mac/PC)
 ''      * Unique Workbook Settings based on Platform (Mac/PC)
 ''      * Unique Workbook Settings based on current user and platform
-''        (an example of a use case for this would be default zoom, or workbook window size)
-''
+''        (an example of a use case for this would be default zoom, or
+''        workbook window size)
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''  Online Documentation
+''  https://github.com/lopperman/just-VBA/blob/main/pbSettings/pbSettings.md
+''  Download pbSettings.cls Demo App
+''  https://github.com/lopperman/just-VBA/raw/main/pbSettings/pbSettings_Example.xlsm
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''  author (c) Paul Brower https://github.com/lopperman/just-VBA
 ''  class module pbSettings.cls
 ''  license GNU General Public License v3.0
+''  Created Dec-2023
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''
 ''  To Use:
 ''      01 - import pbSettings.cls into your Workbook project
 ''      02 - Copy the functions below into a new or existing a basic module:
 ''
-
-'        Public Property Get pbSettingsReady() As Boolean
-'            On Error Resume Next
-'            If Not pbStg Is Nothing Then
-'                pbSettingsReady = pbStg.ValidConfig
-'            End If
-'        End Property
-
-'        Public Function pbStg() As pbSettings
-'            On Error Resume Next
-'            Static stgObj As pbSettings
-'            If stgObj Is Nothing Then
-'                Set stgObj = New pbSettings
-'            End If
-'            If Err.number = 0 Then
-'                If Not stgObj Is Nothing Then
-'                    If stgObj.ValidConfig Then
-'                        Set pbStg = stgObj
-'                    End If
-'                End If
-'            Else
-'                Err.Clear
-'            End If
-'        End Function
-
+''        Public Property Get pbSettingsReady() As Boolean
+''            On Error Resume Next
+''            If Not pbStg Is Nothing Then
+''                pbSettingsReady = pbStg.ValidConfig
+''            End If
+''        End Property
+''
+''        Public Function pbpbStg.Setting() As pbSettings
+''            On Error Resume Next
+''            Static stgObj As pbSettings
+''            If stgObj Is Nothing Then
+''                Set stgObj = New pbSettings
+''            End If
+''            If Err.number = 0 Then
+''                If Not stgObj Is Nothing Then
+''                    If stgObj.ValidConfig Then
+''                        Set pbStg = stgObj
+''                    End If
+''                End If
+''            Else
+''                Err.Clear
+''            End If
+''        End Function
+''
 ''      03 - The line of code below will trigger the 'First Run' and set everything
 ''              up for pbSettings:
 ''
-'           If pbSettingsReady = True Then
-'               ' all action can now be used by calling: pbStg.[Method]
-'           End if
-''
-''
-''      Create A Setting:  pbStg.Setting("TEST SETTING") = Now
-''      Get A Setting Value:  myVal = pbStg.Setting("TEST_SETTING")
-''      Delete Setting: pbStg.Delete("TEST_SETTING")
+''           If pbSettingsReady = True Then
+''               ' all action can now be used by calling: pbStg.[Method]
+''           End if
 ''
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
-
-
-
 Option Explicit
 Option Compare Text
 Option Base 1
-
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''  THESE CONSTANTS DEFINE SETTINGS KEYS USED TO MANAGE THE
 ''  BEHAVIOR OF THE pbSettings Worksheet and ListObject
@@ -90,6 +85,12 @@ Option Base 1
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''  allow workbook after save event to be captured
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+    Private WithEvents stgwb As Workbook
+Attribute stgwb.VB_VarHelpID = -1
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''  Private Constants
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Private Const PBSETTINGS_TEMPLATE_NAME As String _
@@ -102,7 +103,7 @@ Option Base 1
         = "pbSettings"
         
     Private Const SETTINGS_SHEET_CODENAME As String _
-        = "pbSTGWS"
+        = "wsSTGWS"
         
     Private Const SETTINGS_LO As String _
         = "tbl_pbSettings"
@@ -115,6 +116,12 @@ Option Base 1
 ''      Valid and usable
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Private l_validCfg As Boolean
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''  Private variable used to store whether or not pbSettings has unsaved
+''  changes
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+    Private l_isDirty As Boolean
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''  'l_ws' stores the reference to the pbSettings worksheet
@@ -177,6 +184,14 @@ Option Base 1
         WildcardCharacterMatch = 2
     End Enum
     
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''  pbSettings Events
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+
+Public Event OnDeleteSetting(ByVal settingKey, ByRef Cancel As Boolean)
+
+    
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
@@ -192,6 +207,10 @@ Option Base 1
         If Not ValidConfig Then Exit Function
         Exists = Index(CheckKey(settingKey, isOSSpecific, isUSERSpecific)) > 0
     End Function
+    
+    Public Property Get IsDirty() As Boolean
+        IsDirty = l_isDirty
+    End Property
     
     Public Property Get AutoHide() As Boolean
         If Not ValidConfig Then Exit Property
@@ -211,6 +230,20 @@ Option Base 1
             CheckSettingsHealth
         End If
     End Property
+    
+    
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''  Gets [stgKey] value, if missing setting, create new setting with [stgDefaultVal]
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+    Public Function SettingWithDefault(ByVal stgKey, Optional ByVal stgDefaultVal)
+        If Not ValidConfig Then Exit Function
+        If Not Exists(stgKey) Then
+            If Not IsMissing(stgDefaultVal) Then
+                Setting(stgKey) = stgDefaultVal
+            End If
+        End If
+        SettingWithDefault = Setting(stgKey)
+    End Function
     
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''  Setting Value Property Getter
@@ -256,6 +289,10 @@ Option Base 1
         Dim evts As Boolean: evts = Application.EnableEvents: Application.EnableEvents = False
         If tmpIdx > 0 Then
             'Update Setting
+            If Not StringsMatch(TypeName(stgVal), TypeName(l_lo.listRows(tmpIdx).Range(1, SettingCols.scSettingValue).Value)) Then
+                l_lo.listRows(tmpIdx).Range(1, SettingCols.scSettingValue).numberFormat = "General"
+            End If
+            
             l_lo.listRows(tmpIdx).Range(1, SettingCols.scSettingValue).Value = stgVal
             l_lo.listRows(tmpIdx).Range(1, SettingCols.scUpdated).Value = Now()
         Else
@@ -268,7 +305,7 @@ Option Base 1
             l_lo.listRows.Add().Range.Value = stgArr
             CheckSort
         End If
-        ''  Restore App Events to prior setting
+        l_isDirty = True
         If Err.number <> 0 Then
             Err.Clear
         End If
@@ -384,6 +421,7 @@ Option Base 1
         If Not ValidConfig Then Exit Function
         stgKey = CheckKey(stgKey, isOSSpecific, isUSERSpecific)
         If Exists(stgKey) Then
+            l_isDirty = True
             l_lo.listRows(Index(stgKey)).Range(1, SettingCols.scSettingType) = TypeEnum.teNumeric
         End If
     End Function
@@ -397,6 +435,7 @@ Option Base 1
         If Not ValidConfig Then Exit Function
         stgKey = CheckKey(stgKey, isOSSpecific, isUSERSpecific)
         If Exists(stgKey) Then
+            l_isDirty = True
             l_lo.listRows(Index(stgKey)).Range(1, SettingCols.scSettingType) = TypeEnum.teDateTime
         End If
     End Function
@@ -410,6 +449,7 @@ Option Base 1
         If Not ValidConfig Then Exit Function
         stgKey = CheckKey(stgKey, isOSSpecific, isUSERSpecific)
         If Exists(stgKey) Then
+            l_isDirty = True
             l_lo.listRows(Index(stgKey)).Range(1, SettingCols.scSettingType) = TypeEnum.teBoolean
         End If
     End Function
@@ -421,6 +461,7 @@ Option Base 1
         If Not ValidConfig Then Exit Function
         stgKey = CheckKey(stgKey, isOSSpecific, isUSERSpecific)
         If Exists(stgKey) Then
+            l_isDirty = True
             l_lo.listRows(Index(stgKey)).Range(1, SettingCols.scSettingType) = TypeEnum.teGeneral
         End If
     End Function
@@ -432,12 +473,20 @@ Option Base 1
         If Not ValidConfig Then Exit Function
         stgKey = CheckKey(stgKey, isOSSpecific, isUSERSpecific)
         If Index(stgKey) > 0 Then
-            ''  Disable App Events
-            Dim evts As Boolean: evts = Application.EnableEvents: Application.EnableEvents = False
-            ''  Delete Setting
-            l_lo.listRows(Index(stgKey)).Delete
-            ''  Restore App Events to prior setting
-            Application.EnableEvents = evts
+            Dim cancelOperation As Boolean
+            RaiseEvent OnDeleteSetting(stgKey, cancelOperation)
+            Beep
+            Stop
+            If cancelOperation = True Then
+                'cancel
+            Else
+                Dim evts As Boolean: evts = Application.EnableEvents: Application.EnableEvents = False
+                ''  Delete Setting
+                l_lo.listRows(Index(stgKey)).Delete
+                ''  Restore App Events to prior setting
+                Application.EnableEvents = evts
+                l_isDirty = True
+            End If
         End If
     End Function
 
@@ -589,36 +638,30 @@ Option Base 1
 ''  If found, returns the worksheet identified by the constant:
 ''      SETTINGS_SHEET_CODENAME
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
-    Private Function VerifySettingsSheet(Optional ByVal wksht As Worksheet) As Boolean
+    Private Function VerifySettingsSheet() As Boolean
         Dim tmpWS As Worksheet
         Dim tmpLO As ListObject
         Dim lstCol As ListColumn
-        If wksht Is Nothing Then
-            '' First Try to Find by 'CodeName'
-            Dim findCodeName: findCodeName = SETTINGS_SHEET_CODENAME
-            If Exists(PBSTG_WS_CODENAME) Then
-                findCodeName = Setting(PBSTG_WS_CODENAME)
+        '' First Try to Find by 'CodeName'
+        Dim findCodeName: findCodeName = SETTINGS_SHEET_CODENAME
+        If Exists(PBSTG_WS_CODENAME) Then
+            findCodeName = Setting(PBSTG_WS_CODENAME)
+        End If
+        For Each tmpWS In ThisWorkbook.Worksheets
+            If StringsMatchPriv(tmpWS.CodeName, findCodeName) Then
+                Set l_ws = tmpWS
+                Exit For
             End If
+        Next
+        If l_ws Is Nothing Then
             For Each tmpWS In ThisWorkbook.Worksheets
-                If StringsMatchPriv(tmpWS.CodeName, findCodeName) Then
+                If StringsMatchPriv(tmpWS.Name, SETTINGS_SHEET_WEAKNAME) Then
                     Set l_ws = tmpWS
                     Exit For
                 End If
             Next
-            If l_ws Is Nothing Then
-                For Each tmpWS In ThisWorkbook.Worksheets
-                    If StringsMatchPriv(tmpWS.Name, SETTINGS_SHEET_WEAKNAME) Then
-                        Set l_ws = tmpWS
-                        Exit For
-                    End If
-                Next
-            End If
-        Else
-            If Not wksht.Parent Is ThisWorkbook Then
-                Set wksht = Nothing
-            End If
-            Set l_ws = wksht
         End If
+
         If Not l_ws Is Nothing Then
             Set l_lo = GetSettingsLO(l_ws)
         End If
@@ -723,6 +766,7 @@ Option Base 1
         expr = "COUNTA(UNIQUE(" & loName & "[" & keyColName & "]))"
         uniqueKeys = Evaluate(expr)
         If val(uniqueKeys) < Count Then
+            l_isDirty = True
             RemoveDuplicates
         End If
         If Err.number <> 0 Then
@@ -1002,5 +1046,22 @@ Private Sub Class_Initialize()
     Else
         CheckSettingsHealth
     End If
+    Set stgwb = ThisWorkbook
 
+End Sub
+
+Private Sub Class_Terminate()
+    Set stgwb = Nothing
+    Set l_lo = Nothing
+    Set l_ws = Nothing
+End Sub
+
+
+Private Sub stgwb_AfterSave(ByVal Success As Boolean)
+    l_isDirty = False
+End Sub
+
+Private Sub stgwb_BeforeSave(ByVal SaveAsUI As Boolean, Cancel As Boolean)
+    On Error Resume Next
+    Me.Setting("WKBK_SAVED") = Now()
 End Sub
