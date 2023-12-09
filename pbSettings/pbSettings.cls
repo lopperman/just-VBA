@@ -189,7 +189,16 @@ Attribute stgwb.VB_VarHelpID = -1
 ''  pbSettings Events
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 
-Public Event OnDeleteSetting(ByVal settingKey, ByRef Cancel As Boolean)
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''  If event is handled, changing 'Cancel' to True will prevent
+''  delete operation
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+    Public Event OnDeleteSetting(ByVal settingKey, ByRef Cancel As Boolean)
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''  If event is handled, changing 'Cancel' to True will prevent
+''  delete operation
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+    Public Event OnModifySetting(ByVal settingKey, ByVal settingValue, ByVal isNew As Boolean)
 
     
 
@@ -197,6 +206,34 @@ Public Event OnDeleteSetting(ByVal settingKey, ByRef Cancel As Boolean)
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''  MAIN EXPOSED SETTINGS METHODS
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+    
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''  Record timestamp to indicate when a table / listobject was edited
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+    Private Function ListObjectEditKey(ByVal lstObj) As Variant
+        Dim tmpKey
+        If StringsMatchPriv(TypeName(lstObj), "ListObject") Then
+            tmpKey = lstObj.Name
+        Else
+            tmpKey = CStr(lstObj)
+        End If
+        ListObjectEditKey = "EDIT_" & tmpKey
+    End Function
+    
+    Public Function ListObjectOnEdit(ByVal lstObj)
+        If Not ValidConfig Then Exit Function
+        Setting(ListObjectEditKey(lstObj)) = Now()
+    End Function
+    Public Property Get ListObjectEdited(ByVal lstObj) As Variant
+        If Not ValidConfig Then Exit Property
+        Dim tmpKey: tmpKey = ListObjectEditKey(lstObj)
+        If Exists(tmpKey) = False Then
+            Setting(tmpKey) = Now()
+        End If
+        ListObjectEdited = Setting(tmpKey)
+    End Property
+    
+    
     
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''  Returns True if [settingKey] Exists
@@ -289,13 +326,15 @@ Public Event OnDeleteSetting(ByVal settingKey, ByRef Cancel As Boolean)
         Dim evts As Boolean: evts = Application.EnableEvents: Application.EnableEvents = False
         If tmpIdx > 0 Then
             'Update Setting
-            If Not StringsMatch(TypeName(stgVal), TypeName(l_lo.listRows(tmpIdx).Range(1, SettingCols.scSettingValue).Value)) Then
+            RaiseEvent OnModifySetting(stgKey, stgVal, False)
+            If Not StringsMatchPriv(TypeName(stgVal), TypeName(l_lo.listRows(tmpIdx).Range(1, SettingCols.scSettingValue).Value)) Then
                 l_lo.listRows(tmpIdx).Range(1, SettingCols.scSettingValue).numberFormat = "General"
             End If
             
             l_lo.listRows(tmpIdx).Range(1, SettingCols.scSettingValue).Value = stgVal
             l_lo.listRows(tmpIdx).Range(1, SettingCols.scUpdated).Value = Now()
         Else
+            RaiseEvent OnModifySetting(stgKey, stgVal, True)
             Dim stgArr() As Variant
             ReDim stgArr(1 To 1, 1 To l_lo.ListColumns.Count)
             stgArr(1, SettingCols.scSettingKey) = stgKey
@@ -475,8 +514,6 @@ Public Event OnDeleteSetting(ByVal settingKey, ByRef Cancel As Boolean)
         If Index(stgKey) > 0 Then
             Dim cancelOperation As Boolean
             RaiseEvent OnDeleteSetting(stgKey, cancelOperation)
-            Beep
-            Stop
             If cancelOperation = True Then
                 'cancel
             Else
@@ -608,6 +645,17 @@ Public Event OnDeleteSetting(ByVal settingKey, ByRef Cancel As Boolean)
                 .Name = "SettingsExport"
                 .Range("A5").Resize(RowSize:=tmpIndexes.Count, ColumnSize:=l_lo.ListColumns.Count).Value = newArr
                 .UsedRange.EntireColumn.AutoFit
+                Dim checkCol As Long
+                For checkCol = 1 To .UsedRange.Columns.Count
+                    If .Cells(1, checkCol).EntireColumn.ColumnWidth > 100 Then
+                        .Cells(1, checkCol).EntireColumn.ColumnWidth = 100
+                        .Cells(1, checkCol).EntireColumn.WrapText = True
+                    End If
+                Next checkCol
+                .UsedRange.VerticalAlignment = xlVAlignCenter
+                .ListObjects.Add SourceType:=xlSrcRange, Source:=.UsedRange, XlListObjectHasHeaders:=xlYes
+                .Activate
+                .Parent.Windows(1).DisplayGridlines = False
                 
                 .Range("A1").Value = "Settings Exported From: " & ThisWorkbook.FullName
                 .Range("A2").Value = "Exported on: " & CStr(Now())
