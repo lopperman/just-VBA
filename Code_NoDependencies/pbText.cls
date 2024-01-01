@@ -11,11 +11,83 @@ Attribute VB_Exposed = False
 ''  A class for editing text in Excel cells
 ''
 ''   **  See: https://github.com/lopperman/just-VBA/
-''   **  https://github.com/lopperman/just-VBA/blob/main/Code_NoDependencies/pbText.cls
 '' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''  author (c) Paul Brower https://github.com/lopperman/
-''  module pbText.cls
+''  class module pbText.cls
 ''  license GNU General Public License v3.0
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''
+''  VERSIONS
+''
+''  v0.2 - 2024-JAN-01
+''    - When Merging cells in 'WriteText' method, if cells in 'writeTo' range
+''      are included in merge area outside 'writeTo' range, those cells
+''      outside the range will be unmerged prior to write
+''    - Add various 'one-off' methods for Updating Default Range format
+''      for next 'WriteText' (e.g. 'UpdateRangeHAlign', 'UpdateRangeVAlign')
+''  v0.1 - 2023-DEC-31
+''      Initial Version
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''
+''  USAGE EXAMPLES
+''
+''  'Put This Code in a regular Module - this will enable you to reuse
+''  'pbText and retain current configuration values
+''
+''  Public Function PBT() as pbText
+''      static textFormatter as new pbText
+''      Set PBT = textFormatter
+''  End Function
+''
+''  EXAMPLE - WRITE INFORMATION TO DIFFERENT RANGES
+''
+'   METHOD 1 -- REUSE THE 'PBT' FUNCTION DEFINE ABOVE
+''
+'        Public Function Example1()
+'            PBT.Configure horizontalAlign:=xlHAlignCenter, rangeInteriorColor:=vbYellow
+'            ''Write to first Range
+'            Dim sht As Worksheet
+'            Set sht = ThisWorkbook.Worksheets("sheet name")
+'            Dim rng As Range
+'            Set rng = sht.Range("C10")
+'            PBT.AddLineFormatted "Hello There", fontBold:=True, fontColor:=255
+'            PBT.AddBorder xlEdgeTop, borderColor:=vbBlue
+'            PBT.AddBorder xlEdgeBottom, borderColor:=vbBlue
+'            PBT.WriteText rng
+'            Set rng = sht.Range("C11:D12")
+'            PBT.UpdateRangeInteriorColor 13553360 ''grey
+'            PBT.AddLineFormatted "Hello Again", fontUnderline:=True, fontSize:=16
+'            PBT.AddBorderAround borderColor:=vbGreen, borderWeight:=xlThick
+'            PBT.WriteText rng
+'        End Function
+''
+'   METHOD 2 -- CREATE NEW pbText for Each Write
+''
+'        Public Function Example2()
+'            Dim sht As Worksheet
+'            Set sht = ThisWorkbook.Worksheets("sheet name")
+'            Dim rng As Range
+'                ''Write to first Range
+'            Set rng = sht.Range("C10")
+'            With New pbText
+'                .Configure horizontalAlign:=xlHAlignCenter, rangeInteriorColor:=vbYellow
+'                PBT.AddLineFormatted "Hello There", fontBold:=True, fontColor:=255
+'                .AddBorder xlEdgeTop, borderColor:=vbBlue
+'                .AddBorder xlEdgeBottom, borderColor:=vbBlue
+'                .WriteText rng
+'            End With
+'            Set rng = sht.Range("C11:D12")
+'            With New pbText
+'                .Configure horizontalAlign:=xlHAlignCenter, rangeInteriorColor:=13553360 ''grey
+'                .AddLineFormatted "Hello Again", fontUnderline:=True, fontSize:=16
+'                .AddBorderAround borderColor:=vbGreen, borderWeight:=xlThick
+'                .WriteText rng
+'            End With
+'        End Function
+''
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 Option Explicit
 Option Compare Text
@@ -70,11 +142,11 @@ Private lprotectionPwd As Variant
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 Private Enum itemType
     itTextNewLine = 0
-    itTextAppend
-    itFontColor
-    itFontSize
-    itFontName
-    itFontStyle
+    itTextAppend = 1
+    itFontColor = 2
+    itFontSize = 3
+    itFontName = 4
+    itFontStyle = 5
 End Enum
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
@@ -97,15 +169,15 @@ End Enum
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 Private Enum tComparisonType
     tOR = 0 'default
-    tAnd
+    tAnd = 1
 End Enum
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''  Private Enum used for determining validity of bitwise enum value
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 Private Enum tFlagEnumModify
-    tVerifyEnumExists
-    tVerifyEnumRemoved
+    tVerifyEnumExists = 0
+    tVerifyEnumRemoved = 1
 End Enum
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
@@ -163,6 +235,49 @@ Public Function Configure( _
     End If
     
     Set Configure = Me
+End Function
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''  OPTIONAL - UpdateRangeHAlign - Change Horizontal Alignment
+''  for next 'WriteText' operations
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+Public Function UpdateRangeHAlign(hAlign As XlHAlign)
+    lHAlign = hAlign
+End Function
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''  OPTIONAL - UpdateRangeVAlign - Change Vertical Alignment
+''  for next 'WriteText' operations
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+Public Function UpdateRangeVAlign(vAlign As XlVAlign)
+    lVAlign = vAlign
+End Function
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''  OPTIONAL - UpdateRangeMerge - Change Whether 'WriteText'
+''  will merge [writeTo] range for next 'WriteText' operations
+''  NOTE:  Only applies if [writeTo] range contains more than 1
+''  contiguous cell
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+Public Function UpdateRangeMerge(mergeRangeOnWrite As Boolean)
+    lMergeCells = mergeRangeOnWrite
+End Function
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''  OPTIONAL - UpdateRangeClearFormats - Change Whether 'WriteText'
+''  will clear all range formats in [writeTo] range, before rendering output
+''  (Default Value = True)
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+Public Function UpdateRangeClearFormats(clearFormatsBeforeWriting As Boolean)
+    lClearFormats = clearFormatsBeforeWriting
+End Function
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''  OPTIONAL - UpdateRangeInteriorColor - Change background color of
+''  [writeTo] range in next 'WriteText' operations
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+Public Function UpdateRangeInteriorColor(backGround As Double)
+    lInteriorColor = backGround
 End Function
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
@@ -372,11 +487,15 @@ Public Function WriteText(writeTo As Range, Optional protectPWD) As pbText
         Set rng = writeTo(1, 1)
     ElseIf writeTo.Count > 1 And lMergeCells = True Then
         Set rng = writeTo
-        If IsNull(rng.mergeCells) Then
-            rng.Merge
-        ElseIf rng.mergeCells = False Then
-            rng.Merge
-        End If
+        '' if [writeTo] range is a subset of existing merged area, unmerge first
+        UnmergeAnyMergedArea rng
+        rng.Merge
+'        If IsNull(rng.MergeCells) Then
+'            UnmergeAnyMergedArea rng
+'            rng.Merge
+'        ElseIf rng.MergeCells = False Then
+'            rng.Merge
+'        End If
     Else
         Set rng = writeTo
     End If
@@ -416,6 +535,24 @@ Public Function WriteText(writeTo As Range, Optional protectPWD) As pbText
         .ScreenUpdating = scrn
         .Interactive = intr
     End With
+End Function
+
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''  UNMERGE ANY CELLS THAT ARE MERGED IN [rng]
+''  If any cells in [rng] are part of a MergeArea that is outside of [rng],
+''  the merged cells outside of range [rng] will also be unmerged
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+Private Function UnmergeAnyMergedArea(ByRef rng As Range)
+    On Error Resume Next
+    Dim rArea As Range, cl As Range
+    For Each rArea In rng
+        For Each cl In rArea
+            If cl.MergeCells = True Then
+                cl.MergeArea.UnMerge
+            End If
+        Next cl
+    Next rArea
 End Function
 
 Private Function DisableEvents()
