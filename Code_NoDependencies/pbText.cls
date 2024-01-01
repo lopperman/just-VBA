@@ -57,6 +57,11 @@ Private lWrapText As Boolean
 ''  anytime prior to calling 'WriteText' method
 Private lClearFormats As Boolean
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''  Password to unprotect and reprotect sheet if needed
+''  Some operations in this class will fail if a sheet is protected with
+''  certain protection options.
+Private lprotectionPwd As Variant
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''  Private Enum used to indicate type of information being added from
@@ -142,7 +147,8 @@ Public Function Configure( _
     , Optional clearRangeFormatsOnWrite As Boolean = True _
     , Optional mergeCellsOnWrite As Boolean = True _
     , Optional wrapText As Boolean = True _
-    , Optional rangeInteriorColor) As pbText
+    , Optional rangeInteriorColor _
+    , Optional protectPWD) As pbText
     
     lVAlign = verticalAlign
     lHAlign = horizontalAlign
@@ -151,6 +157,9 @@ Public Function Configure( _
     If IsMissing(rangeInteriorColor) Then rangeInteriorColor = xlNone
     lInteriorColor = rangeInteriorColor
     lWrapText = wrapText
+    If Not IsMissing(protectPWD) Then
+        lprotectionPwd = CStr(protectPWD)
+    End If
     
     Set Configure = Me
 End Function
@@ -254,9 +263,104 @@ End Function
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''  Write text with specified formation to [writeTo] range
+''  Note:  Protection Password can be set with the Configure Method and
+''  will be used as long as the class instance exists. If a password is
+''  included with the 'WriteText' method, if will be used (if needed) instead
+''  of the password wet with the 'Configure' method
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
-Public Function WriteText(writeTo As Range) As pbText
+''
+''  SOME MORE NOTES ABOUT WORKSHEET PROTECTION
+''  I've tried every combination of available parameters in the
+''  '[Worksheet].Protect' method -- and if there are any contents protected
+''  on your worksheet, there is no property that can be set -- including
+''  'UserInterfaceOnly:=True' -- that will allow code to run that is performing
+''  Inserts to characters objects within a cell/range.  Even if you programatically
+''  Add a reference to the range you're going to write custom formatted text to --
+''  as a [Worksheet].Protection.'AllowEditRanges' area, if you add your range as an
+''  'AllowedEditRange' ** while the worksheet is protected ** the custom formatting
+''  will still fail with a 1004 ('The cell or chart you're trying to change is on
+''  a protected sheet')
+''
+''  There are three approaches you can take with protected worksheets
+''
+''  1. Programatically unprotect the sheet before you call the 'WriteText'
+''      method.  (Needless to say, make sure you code will guaranee
+''      reprotecting the worksheety after the custom formatted text has been written
+''
+''  2. Provide the Password to unprotect the sheet where you're writing custom
+''      formatted text using 'pbText' -- either one time in the 'Configure' method
+''      (this works well if any protected sheets are protected with the same password),
+''      or provide the password when you call the 'WriteText' method
+''      -- If a password is available to this class, the 'WriteText' method will
+''      automatically unprotect, then write, the reprotect, and the reprotect code
+''      will run even if there are errors
+''
+''  3. This open is a bit more complicated, but I've 'discovered' it works as
+''      a 3rd option to work with the Range.Characters object on a protected
+''      worksheet.
+''          (Just want to point out that everything else this class does
+''          can usually be done in VBA on a protected worksheet (as long as the 'Protect' method
+''          is 'live' (must be called in your active code session, otherwise the 'UserInterfaceOnly'
+''          ability gets killed) -- merging, unmerging, clearing, formatting cell properties
+''          and font styles all work fine with VBA on a protected sheet.  The one thing VBA
+''          can't do this is needed by this class, is inserting to the Characters object of a cell.
+''              -- i.e., this line of code from the 'RenderText' method:
+''                    toCell.Characters(nextPos).Insert CStr(tOut(3))
+''      OK, so getting back to the third option. If the Range/Cell that you are writing
+''      custom formatted text to, is added to the Worksheet.Protection object
+''      as a member of the 'AllowEditRanges' collection, the the worksheet does
+''      not need to be unprotected.
+''      ** It's worth pointing out that setting the Range/Cell 'Locked' Property to False
+''      is not the same as adding that range to the 'AllowEditRange' collection --
+''      if any contents are protected on your worksheet, you must add your 'AllowEditRange'
+''      for things to work.   One additional caveat with this, is is has to be added
+''      while your sheet is unprotected.
+''      This can all be done in VBA following these 'pseudo' steps:
+''      ---
+''      * Before pbText 'WriteText' is called
+''      1. VBA Code to Unprotect Your Worksheet
+''      2. Get a reference to your Range -- e.g. set myRange = Sheet1.Range("B5:D10")
+''      3. Add [myRange] to 'AllowEditRanges' protection collection (do not add a password here!)
+''          Sheet1.Protection.AllowEditRanges.Add "makeupName", myRange
+''      4. VBA Code to reprotect your worksheet
+''      5. Make sure [myRange] is the range you pass in when you call the 'WriteText' method
+''      6. Even the [myRange] is technically still protected, both VBA and users will be able to
+''          edit the range unless you remove it from he 'AllowEditRanges' collection
+''      7. The name you used as 'Range Title' when you added, can be used to remove it as well.
+''          ** You must unprotect your worksheet to remove a range **
+''          1 - VBA Code to Unprotect Your Worksheet
+''          2 - Sheet1.Protection.AllowEditRanges("makeupName").Delete
+''          3 - VBA Code to reprotect your worksheet
+''
+''      That third option might be a bit daunting if you're not familiar with using the
+''      Worksheet.Protection object -- but for what's it's worth, that would be my
+''      recommended method for dealing with it -- if your sheets are protected
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+Public Function WriteText(writeTo As Range, Optional protectPWD) As pbText
     On Error Resume Next
+    Dim evts As Boolean: evts = Application.EnableEvents
+    Dim scrn As Boolean: scrn = Application.ScreenUpdating
+    Dim intr As Boolean: intr = Application.Interactive
+    DisableEvents
+        
+    Dim reprotectSheet As Boolean
+    Dim reprotectPassword As String
+    If writeTo.Worksheet.protectContents Then
+        '' Please note that 'protectPWD' is a variant, so if your sheet is
+        ''  protected but does NOT have a password, make sure to pass in
+        ''  an empty string ("") as the protectPWD -- either here or in 'Configure'
+        If Not IsMissing(protectPWD) Then
+            reprotectPassword = CStr(protectPWD)
+            reprotectSheet = True
+        ElseIf tStringsMatch(TypeName(lprotectionPwd), "String") Then
+            reprotectPassword = CStr(lprotectionPwd)
+            reprotectSheet = True
+        End If
+        If reprotectSheet Then
+            writeTo.Worksheet.Unprotect reprotectPassword
+        End If
+    End If
+        
     Dim rng As Range
     If lClearFormats Then
         writeTo.Clear
@@ -292,8 +396,33 @@ Public Function WriteText(writeTo As Range) As pbText
         End If
     End With
     Clear
+        
+    If reprotectSheet Then
+        writeTo.Worksheet.Protect password:=reprotectPassword
+    End If
+        
+    
     Set WriteText = Me
+    
+    '' Just For Testing -- Comment Out the Next 4 Lines
+    If Err.number <> 0 Then
+        Beep
+        Debug.Print "pbText.WriteText ERROR", Err.number, Err.Description
+    End If
+    
+    With Application
+        .EnableEvents = evts
+        .ScreenUpdating = scrn
+        .Interactive = intr
+    End With
 End Function
+
+Private Function DisableEvents()
+    Application.EnableEvents = False
+    Application.ScreenUpdating = False
+    Application.Interactive = False
+End Function
+
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''  private method used to build 'pbTypeBorder' Type from Array
