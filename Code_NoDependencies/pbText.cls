@@ -11,6 +11,7 @@ Attribute VB_Exposed = False
 ''  A class for editing text in Excel cells
 ''
 ''   **  See: https://github.com/lopperman/just-VBA/
+''   **  https://github.com/lopperman/just-VBA/blob/main/Code_NoDependencies/pbText.cls
 '' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''  author (c) Paul Brower https://github.com/lopperman/
 ''  module pbText.cls
