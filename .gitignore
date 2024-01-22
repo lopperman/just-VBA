@@ -1,5 +1,6 @@
+# General
 *.tmp
-*.DS_Store
+.DS_Store
 
 # Word temporary
 ~$*.doc*
