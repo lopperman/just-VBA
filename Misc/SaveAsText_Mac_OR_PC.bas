@@ -68,7 +68,9 @@ Public Function SaveWKBKAs(Optional wkbk As Workbook, Optional fileName)
         
         '' save as txt to 'safe' directory
         Debug.Print "Saving to " & safeFilePath
-        wkbk.SaveCopyAs safeFilePath
+        ''Here's where the file is actually saved as text.
+        wkbk.SaveAs fileName:=safeFilePath, FileFormat:=XlFileFormat.xlTextMac, AddToMru:=False
+        
         
         Debug.Print "Opening " & safeFilePath & " into new workbook "
         Dim textWB As Workbook
