@@ -1,6 +1,6 @@
 # General
-*.tmp
 .DS_Store
+*.tmp
 *.DS_Store
 
 # Word temporary
