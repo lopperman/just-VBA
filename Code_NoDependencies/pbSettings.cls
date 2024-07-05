@@ -99,6 +99,7 @@ Option Base 1
     Private Const PBSTG_DEV_SHOW_TOOLS As String = "SHOW_DEV_TOOLS"
     Private Const PBSTG_DEV_NAMES = "DEV_NAMES"
     Private Const PBSTG_DEV_NO_NETWORK = "DEV_NO_NETWORK"
+    Private Const PBSTG_ADMIN_NAMES = "ADMIN_NAMES"
     
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''  SETTING KEY FOR 'VERSION'
@@ -157,6 +158,7 @@ Option Base 1
         '' include optLogChange
         optLogChanges = &H20000
         optDoNotLogChanges = &H40000
+        optAllowDuplicateArrayValues = &H80000
         
     End Enum
 
@@ -176,7 +178,7 @@ Option Base 1
         stgDisableAutoSave
         stgEnableConnections
         stgSaveLinkedValues
-        stgArrayDoNotHideSheets
+'        stgArrayDoNotHideSheets
         stgArrayDoNotProtectSheets
         stgDEVShowLogTrace
         stgDEVIsDevMode
@@ -403,15 +405,17 @@ Attribute stgwb.VB_VarHelpID = -1
             resp.defaultValue = defaultVal
         End If
         If resp.IDX > 0 Then
-            Dim tArr() As Variant
-            tArr = l_lo.ListRows(resp.IDX).Range.value
-            resp.OldOptions = tArr(1, pbSTGColumns.scSettingOptions)
-            resp.OldVal = tArr(1, pbSTGColumns.scSettingValue)
+            Dim tARR() As Variant
+            tARR = l_lo.listRows(resp.IDX).Range.value
+            resp.OldOptions = tARR(1, pbSTGColumns.scSettingOptions)
+            resp.OldVal = tARR(1, pbSTGColumns.scSettingValue)
             resp.OldValFormatted = FormatValue(resp.OldVal, resp.OldOptions)
-            resp.Updated = tArr(1, pbSTGColumns.scUpdated)
+            resp.Updated = tARR(1, pbSTGColumns.scUpdated)
         ElseIf privEnumCompare(options, pbSettingOption.optCreateKeyIfMissing) Then
-            resp.NewOptions = options
+            If Not IsMissing(defaultVal) Then
             
+            End If
+4            resp.NewOptions = options
         End If
         If Not IsMissing(defaultVal) And resp.OldVal = vbNullString Then
             If Not isArray(defaultVal) Then
@@ -496,7 +500,7 @@ Attribute stgwb.VB_VarHelpID = -1
         On Error Resume Next
         Dim curUserName: curUserName = UserNameOrLogin
         Dim devNames As Variant
-        Dim findKey: findKey = GetStandardSettingKey(stgDEVNames)
+        Dim findKey: findKey = PBSTG_DEV_NAMES
         Dim foundIdx As Long
         If ValidConfig Then
             devNames = Setting(findKey)
@@ -506,7 +510,7 @@ Attribute stgwb.VB_VarHelpID = -1
             Set foundRng = rng.Find(findKey, LookIn:=xlValues, LookAt:=xlWhole, SearchOrder:=xlByColumns, SearchDirection:=xlNext, MatchCase:=False)
             If Not foundRng Is Nothing Then
                 Set foundRng = foundRng.Offset(ColumnOffset:=(scSettingValue - scSettingKey))
-                devNames = Split(CStr(foundRng.value), "|", Compare:=vbTextCompare)
+                devNames = Split(CStr(foundRng.value), "|", compare:=vbTextCompare)
             End If
         End If
         If privEnumCompare(VarType(devNames), VbVarType.vbArray) Then
@@ -519,6 +523,38 @@ Attribute stgwb.VB_VarHelpID = -1
             Next checkName
         End If
         
+    End Function
+    
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''  Return True If [checkUser] Is an entry in the array-value setting 'ADMIN_NAMES'
+''  If [checkUser] is missing,will use computer username of current user
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+    Public Function IsAdmin(Optional checkUser) As Boolean
+        On Error Resume Next
+        If IsMissing(checkUser) Then checkUser = UserNameOrLogin
+        Dim adminNames As Variant
+        Dim findKey: findKey = PBSTG_ADMIN_NAMES
+        Dim foundIdx As Long
+        If ValidConfig Then
+            adminNames = Setting(findKey)
+        Else
+            Dim rng As Range, foundRng As Range
+            Set rng = l_lo.ListColumns(pbSTGColumns.scSettingKey).Range
+            Set foundRng = rng.Find(findKey, LookIn:=xlValues, LookAt:=xlWhole, SearchOrder:=xlByColumns, SearchDirection:=xlNext, MatchCase:=False)
+            If Not foundRng Is Nothing Then
+                Set foundRng = foundRng.Offset(ColumnOffset:=(scSettingValue - scSettingKey))
+                adminNames = Split(CStr(foundRng.value), "|", compare:=vbTextCompare)
+            End If
+        End If
+        If privEnumCompare(VarType(adminNames), VbVarType.vbArray) Then
+            Dim checkName
+            For Each checkName In adminNames
+                If StringsMatchPriv(checkName, checkUser) Then
+                    IsAdmin = True
+                    Exit Function
+                End If
+            Next checkName
+        End If
     End Function
     
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
@@ -575,7 +611,7 @@ Attribute stgwb.VB_VarHelpID = -1
     Private Function SizeColumns()
         On Error Resume Next
         l_lo.Range.EntireColumn.AutoFit
-        Dim lcCol As ListColumn
+        Dim lcCol As listColumn
         For Each lcCol In l_lo.ListColumns
             If lcCol.Range.EntireColumn.ColumnWidth > SETTINGS_MAX_COLUMN_WIDTH Then
                 lcCol.Range.EntireColumn.ColumnWidth = SETTINGS_MAX_COLUMN_WIDTH
@@ -650,7 +686,13 @@ Attribute stgwb.VB_VarHelpID = -1
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Public Property Get stdButtonAction(wksht As Worksheet, ByVal btnName As String) As String
         Dim vKey: vKey = BUTTON_ACTION_PREFIX & "_" & wksht.CodeName & "_" & btnName
-        stdButtonAction = GetValue(vKey)
+        Dim baArr As Variant
+        baArr = GetValue(vKey)
+        If privEnumCompare(VarType(baArr), VbVarType.vbArray) Then
+            stdButtonAction = baArr(UBound(baArr))
+        Else
+            stdButtonAction = baArr
+        End If
     End Property
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''
@@ -666,14 +708,15 @@ Attribute stgwb.VB_VarHelpID = -1
     Public Property Let stdButtonAction(wksht As Worksheet, ByVal btnName As String, ByVal methodName As String)
         Dim vKey: vKey = ButtonActionKey(wksht.CodeName, btnName)
         Dim pbk As pbKey
-        pbk = NewKey(vKey, optDefault)
-        pbk.NewVal = methodName
+        pbk = NewKey(vKey, optNonMigratableKey + optValueAsText + optValueAsArray)
+        pbk.NewVal = Array(wksht.CodeName, btnName, methodName)
         ''
-        Setting(pbk.Key) = pbk.NewVal
+'        Setting(pbk.Key) = pbk.NewVal
+        ArraySetting(pbk.Key) = pbk.NewVal
         ''
         If pbk.IDX = 0 Then
-            pbk.NewOptions = optNonMigratableKey + optValueAsText
-            UpdateSettingOptions pbk.Key, pbk.NewOptions
+            pbk.NewOptions = optNonMigratableKey + optValueAsText + optValueAsArray
+            SettingOptions(pbk.Key) = pbk.NewOptions
         End If
     End Property
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
@@ -703,7 +746,7 @@ Attribute stgwb.VB_VarHelpID = -1
         
         '' Add/Remove the settings worksheet from the DO_NOT_HIDE_SHEETCODENAMES key
         Dim pbk As pbKey
-        pbk = NewKey(StandardSettingEnum.stgArrayDoNotHideSheets, optDefault)
+        pbk = NewKey(PBSTG_DO_NOT_HIDE, optDefault)
         If hideSheetDefault Then
             ArraySettingRemoveFrom pbk.Key, pbk.OldOptions, pbSettingsSheet.CodeName
         Else
@@ -723,6 +766,20 @@ Attribute stgwb.VB_VarHelpID = -1
             CheckSettingsHealth
         End If
     End Property
+    Public Property Get stdArrayDoNotHideSheets() As Variant()
+        stdArrayDoNotHideSheets = GetValue(PBSTG_DO_NOT_HIDE)
+    End Property
+    Public Property Let stdArrayDoNotHideSheets(doNotHide() As Variant)
+        Setting(PBSTG_DO_NOT_HIDE) = doNotHide
+    End Property
+    
+    
+'            If hideSheetDefault Then
+'            ArraySettingRemoveFrom pbk.Key, pbk.OldOptions, pbSettingsSheet.CodeName
+'        Else
+'            ArraySettingAppendTo pbk.Key, pbk.OldOptions, pbSettingsSheet.CodeName
+'        End If
+
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''
 ''  Get Delimiter for Settings Values that return as arrays - pbSettings Standard Setting
@@ -948,6 +1005,41 @@ Attribute stgwb.VB_VarHelpID = -1
     End Property
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''
+''  ** DEVELOPER MENU/TOOLBAR ITEMS WILL NEVER BE HIDDEN BY pbSettings **
+''  Get Value (Boolean) That Determines if pbSettings will automatically ENABLE/SHOW
+''  the built-in Developer Excel Menu/Toolbar items
+''  (If setting is False, no action is taken by pbSettings)
+''
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+    Public Property Get stdShowDevTools() As Boolean
+        '' CHECK VALID CONFIGURATION
+        If Not ValidConfig Then Exit Property
+        ''
+        Dim resp: resp = GetValue(PBSTG_DEV_SHOW_TOOLS, False, optCreateKeyIfMissing + optNonMigratableKey + optValueAsBoolean)
+        If Len(resp) = 0 Then
+            Setting(PBSTG_DEV_SHOW_TOOLS) = False
+            resp = False
+        End If
+        stdShowDevTools = resp
+    End Property
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''
+''  ** DEVELOPER MENU/TOOLBAR ITEMS WILL NEVER BE HIDDEN BY pbSettings **
+''  Set Value (Boolean) That Determines if pbSettings will automatically ENABLE/SHOW
+''  the built-in Developer Excel Menu/Toolbar items
+''  (If setting is False, no action is taken by pbSettings)
+''
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+    Public Property Let stdShowDevTools(ByVal showDevTools As Boolean)
+        '' CHECK VALID CONFIGURATION
+        If Not ValidConfig Then Exit Property
+        ''
+        Setting(PBSTG_DEV_SHOW_TOOLS) = showDevTools
+    End Property
+
+
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''
 ''  Get 'ShowLogTrace' - pbSettings DEV Setting (Default True)
 ''  Use, add the following line of code to the method used to log to log file
 ''  (pseudo-code -- adjust as necessary)
@@ -1006,6 +1098,46 @@ Attribute stgwb.VB_VarHelpID = -1
         ''
         Setting(PBSTG_DEV_LOG_TO_IMMEDIATE) = devMode
     End Property
+    
+    Public Function stdDevNamesAppend(ParamArray addNames() As Variant)
+        '' make sure duplicates are not allowed
+        If privEnumCompare(SettingOptions(PBSTG_DEV_NAMES), pbSettingOption.optAllowDuplicateArrayValues) Then
+            Dim updOptions As pbSettingOption
+            updOptions = privEnumModify(SettingOptions(PBSTG_DEV_NAMES), pbSettingOption.optAllowDuplicateArrayValues, feVerifyEnumRemoved)
+            SettingOptions(PBSTG_DEV_NAMES) = updOptions
+        End If
+        Dim addName As Variant
+        For Each addName In addNames
+            ArraySettingAppendTo PBSTG_DEV_NAMES, optDefault, addName
+        Next addName
+    End Function
+    Public Function stdDevNamesRemove(ParamArray removeNames() As Variant)
+        '' make sure duplicates are not allowed
+        Dim removeName As Variant
+        For Each removeName In removeNames
+            ArraySettingRemoveFrom PBSTG_DEV_NAMES, optDefault, removeName
+        Next removeName
+    End Function
+
+    Public Function stdAdminNamesAppend(ParamArray addNames() As Variant)
+        '' make sure duplicates are not allowed
+        If privEnumCompare(SettingOptions(PBSTG_ADMIN_NAMES), pbSettingOption.optAllowDuplicateArrayValues) Then
+            Dim updOptions As pbSettingOption
+            updOptions = privEnumModify(SettingOptions(PBSTG_ADMIN_NAMES), pbSettingOption.optAllowDuplicateArrayValues, feVerifyEnumRemoved)
+            SettingOptions(PBSTG_ADMIN_NAMES) = updOptions
+        End If
+        Dim addName As Variant
+        For Each addName In addNames
+            ArraySettingAppendTo PBSTG_ADMIN_NAMES, optDefault, addName
+        Next addName
+    End Function
+    Public Function stdAdminNamesRemove(ParamArray removeNames() As Variant)
+        '' make sure duplicates are not allowed
+        Dim removeName As Variant
+        For Each removeName In removeNames
+            ArraySettingRemoveFrom PBSTG_ADMIN_NAMES, optDefault, removeName
+        Next removeName
+    End Function
 
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
@@ -1036,14 +1168,22 @@ Attribute stgwb.VB_VarHelpID = -1
     Public Function ExecuteButtonAction(ByVal btnName, wksht As Worksheet)
         On Error Resume Next
         Dim callMethod As String
-        callMethod = GetValue(ButtonActionKey(wksht.CodeName, btnName))
         Dim wkbk As Workbook
-        Set wkbk = wksht.Parent
-        Application.Run "'" & wkbk.Name & "'!" & callMethod
+        ''
+        callMethod = stdButtonAction(wksht, btnName)
+        If Len(callMethod) = 0 Then
+            LogERROR "pbSettingButtonAction not found for: " & btnName & ", from: " & wksht.CodeName & " (" & wksht.Name & ")"
+        Else
+            LogTRACE "pbSettingButtonAction: " & callMethod & ", running for: " & btnName & ", from: " & wksht.CodeName & " (" & wksht.Name & ")"
+            Set wkbk = wksht.Parent
+            Application.Run "'" & wkbk.Name & "'!" & callMethod
+        End If
         If Err.number <> 0 Then
             RaiseEvent OnAlert(True, "pbSettings.ExecuteButtonAction called from '" & wksht.CodeName & ":" & btnName & "' to execute method: " & callMethod)
         Else
-            RaiseEvent OnAlert(False, "pbSettings.ExecuteButtonAction called from '" & wksht.CodeName & ":" & btnName & "' to execute method: " & callMethod)
+            If Len(callMethod) > 0 Then
+                RaiseEvent OnAlert(False, "pbSettings.ExecuteButtonAction called from '" & wksht.CodeName & ":" & btnName & "' to execute method: " & callMethod)
+            End If
         End If
         Set wkbk = Nothing
     End Function
@@ -1083,7 +1223,7 @@ Attribute stgwb.VB_VarHelpID = -1
         Dim resp
         If tmpIdx > 0 Then
             Dim stgArr As Variant
-            stgArr = l_lo.ListRows(tmpIdx).Range.value
+            stgArr = l_lo.listRows(tmpIdx).Range.value
             resp = FormatValue(stgArr(1, pbSTGColumns.scSettingValue), stgArr(1, pbSTGColumns.scSettingOptions))
         End If
         Setting = resp
@@ -1145,7 +1285,8 @@ Attribute stgwb.VB_VarHelpID = -1
         End If
         For Each newItem In appendVals
             ConvertItemFormat newItem, existOptions
-            If Not privCollectionKeyExists(itemsColl, CStr(newItem)) Then
+            ''Add New value to collect if it doesn't already exist, OR if 'optAllowDuplicationArrayValues' option exist on setting
+            If privEnumCompare(existOptions, pbSettingOption.optAllowDuplicateArrayValues) Or Not privCollectionKeyExists(itemsColl, CStr(newItem)) Then
                 itemsColl.Add newItem, Key:=CStr(newItem)
             End If
         Next newItem
@@ -1174,7 +1315,7 @@ Attribute stgwb.VB_VarHelpID = -1
         Dim keyIndex As Long: keyIndex = Index(validKey)
         Dim existOptions As pbSettingOption
         If keyIndex > 0 Then
-            existOptions = l_lo.ListRows(keyIndex).Range(1, pbSTGColumns.scSettingOptions).value
+            existOptions = l_lo.listRows(keyIndex).Range(1, pbSTGColumns.scSettingOptions).value
             If Not privEnumCompare(existOptions, optValueAsArray) Then
                 Err.Raise 13, Source:=Me, Description:="pbSettings.ArraySettingRemoveFrom: " & validKey & " key is not configured as an array"
                 Exit Function
@@ -1194,7 +1335,7 @@ Attribute stgwb.VB_VarHelpID = -1
         For Each newItem In removeVals
             ConvertItemFormat newItem, existOptions
             If privCollectionKeyExists(itemsColl, CStr(newItem)) Then
-                itemsColl.Remove CStr(newItem)
+                itemsColl.remove CStr(newItem)
             End If
         Next newItem
         Dim newArr()
@@ -1301,7 +1442,7 @@ Attribute stgwb.VB_VarHelpID = -1
         Dim evts As Boolean: evts = Me.Events: Me.Events = False
         If tmpIdx > 0 Then
             'Update Setting
-            options = l_lo.ListRows(tmpIdx).Range(1, pbSTGColumns.scSettingOptions).value
+            options = l_lo.listRows(tmpIdx).Range(1, pbSTGColumns.scSettingOptions).value
             
             'stType = SettingTypeByOptions(options)
             stgVal = FormatValue(stgVal, options)
@@ -1309,7 +1450,7 @@ Attribute stgwb.VB_VarHelpID = -1
             If privEnumCompare(VarType(stgVal), VbVarType.vbArray) And Not privEnumCompare(options, pbSettingOption.optValueAsArray) Then
                 RaiseEvent OnAlert(False, "pbSettings.Setting (LET): [stgVal] was found to be of type 'Array', but the setting (" & stgKey & ") was originally set to another data type. SettingOption was forcibly changed to an array")
                 options = privEnumModify(options, pbSettingOption.optValueAsArray, FlagEnumModifyPriv.feVerifyEnumExists)
-                 l_lo.ListRows(tmpIdx).Range(1, pbSTGColumns.scSettingOptions).value = options
+                 l_lo.listRows(tmpIdx).Range(1, pbSTGColumns.scSettingOptions).value = options
                 ArraySetting(validKey) = stgVal
                 Exit Property
             End If
@@ -1318,11 +1459,11 @@ Attribute stgwb.VB_VarHelpID = -1
                 Exit Property
             End If
             RaiseEvent OnModifySetting(validKey, stgVal, False)
-            If Not StringsMatchPriv(TypeName(stgVal), TypeName(l_lo.ListRows(tmpIdx).Range(1, pbSTGColumns.scSettingValue).value)) Then
-                l_lo.ListRows(tmpIdx).Range(1, pbSTGColumns.scSettingValue).NumberFormat = "General"
+            If Not StringsMatchPriv(TypeName(stgVal), TypeName(l_lo.listRows(tmpIdx).Range(1, pbSTGColumns.scSettingValue).value)) Then
+                l_lo.listRows(tmpIdx).Range(1, pbSTGColumns.scSettingValue).numberFormat = "General"
             End If
-            l_lo.ListRows(tmpIdx).Range(1, pbSTGColumns.scSettingValue).value = ConvertItemFormat(stgVal, options)
-            l_lo.ListRows(tmpIdx).Range(1, pbSTGColumns.scUpdated).value = Now()
+            l_lo.listRows(tmpIdx).Range(1, pbSTGColumns.scSettingValue).value = ConvertItemFormat(stgVal, options)
+            l_lo.listRows(tmpIdx).Range(1, pbSTGColumns.scUpdated).value = Now()
         Else
             If privEnumCompare(VarType(stgVal), VbVarType.vbArray) Then
                 options = optValueAsArray + optValueAsGeneral
@@ -1337,9 +1478,9 @@ Attribute stgwb.VB_VarHelpID = -1
             stgArr(1, pbSTGColumns.scSettingValue) = ConvertItemFormat(stgVal, options)
             stgArr(1, pbSTGColumns.scUpdated) = Now()
             stgArr(1, pbSTGColumns.scSettingOptions) = options
-            Set newRow = l_lo.ListRows.Add
+            Set newRow = l_lo.listRows.Add
             newRow.Range.value = stgArr
-            newRow.Range(1, pbSTGColumns.scSettingValue).NumberFormat = "General"
+            newRow.Range(1, pbSTGColumns.scSettingValue).numberFormat = "General"
             CheckSort
         End If
         l_isDirty = True
@@ -1399,7 +1540,7 @@ Attribute stgwb.VB_VarHelpID = -1
         
         Dim options As pbSettingOption
         If tmpIdx > 0 Then
-            options = l_lo.ListRows(tmpIdx).Range(1, pbSTGColumns.scSettingOptions).value
+            options = l_lo.listRows(tmpIdx).Range(1, pbSTGColumns.scSettingOptions).value
         Else
             options = pbSettingOption.optValueAsArray + pbSettingOption.optValueAsGeneral
         End If
@@ -1421,8 +1562,8 @@ Attribute stgwb.VB_VarHelpID = -1
                 Exit Property
             End If
             RaiseEvent OnModifySetting(validKey, newStgVal, False)
-            l_lo.ListRows(tmpIdx).Range(1, pbSTGColumns.scSettingValue).value = newStgVal
-            l_lo.ListRows(tmpIdx).Range(1, pbSTGColumns.scUpdated).value = Now()
+            l_lo.listRows(tmpIdx).Range(1, pbSTGColumns.scSettingValue).value = newStgVal
+            l_lo.listRows(tmpIdx).Range(1, pbSTGColumns.scUpdated).value = Now()
         Else
             RaiseEvent OnModifySetting(validKey, newStgVal, True)
             Dim stgArr() As Variant
@@ -1432,7 +1573,7 @@ Attribute stgwb.VB_VarHelpID = -1
             stgArr(1, pbSTGColumns.scUpdated) = Now()
             stgArr(1, pbSTGColumns.scSettingOptions) = options
             
-            l_lo.ListRows.Add().Range.value = stgArr
+            l_lo.listRows.Add().Range.value = stgArr
             CheckSort
         End If
         l_isDirty = True
@@ -1486,8 +1627,6 @@ Attribute stgwb.VB_VarHelpID = -1
             If tmpCheckKey >= StandardSettingEnum.[_StandardSettingKeyFirst] And _
                 tmpCheckKey <= StandardSettingEnum.[_StandardSettingKeyLast] Then
                 Select Case tmpCheckKey
-                    Case StandardSettingEnum.stgArrayDoNotHideSheets
-                        resp = PBSTG_DO_NOT_HIDE
                     Case StandardSettingEnum.stgArrayDoNotProtectSheets
                         resp = PBSTG_DO_NOT_PROTECT
                     Case StandardSettingEnum.stgArraySettingDelimiter
@@ -1656,9 +1795,25 @@ Attribute stgwb.VB_VarHelpID = -1
         ''
         stgKey = CheckKey(stgKey, options)
         If Exists(stgKey) Then
-            SettingUpdated = CDate(l_lo.ListRows(Index(stgKey)).Range(1, pbSTGColumns.scUpdated))
+            SettingUpdated = CDate(l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scUpdated))
         End If
     End Function
+    
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''      Returns True if SettingOptions includes 'pbSettingOption.optKeyRequired'
+''      A Setting Cannot Be Deleted If it includes optKeyRequired
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+    Public Function SettingIsRequired(ByVal stgKey, Optional options As pbSettingOption = pbSettingOption.optDefault) As Boolean
+        '' CHECK VALID CONFIGURATION
+        If Not ValidConfig Then Exit Function
+        ''
+        stgKey = CheckKey(stgKey, options)
+        If Exists(stgKey) Then
+            SettingIsRequired = privEnumCompare(SettingOptions(stgKey), pbSettingOption.optKeyRequired)
+        End If
+    End Function
+    
+    
     
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''  Returns SettingType
@@ -1686,43 +1841,40 @@ Attribute stgwb.VB_VarHelpID = -1
             rowIdx = Index(validKey)
         End If
         If rowIdx > 0 Then
-            SettingValueRaw = l_lo.ListRows(rowIdx).Range(1, pbSTGColumns.scSettingValue).value
+            SettingValueRaw = l_lo.listRows(rowIdx).Range(1, pbSTGColumns.scSettingValue).value
         End If
     End Function
     
     Private Function SettingOptionsByIndex(ByVal rowIdx As Long, Optional options As pbSettingOption = pbSettingOption.optDefault) As pbSettingOption
-        SettingOptionsByIndex = l_lo.ListRows(rowIdx).Range(1, pbSTGColumns.scSettingOptions).value
+        SettingOptionsByIndex = l_lo.listRows(rowIdx).Range(1, pbSTGColumns.scSettingOptions).value
     End Function
-    Public Function SettingOptions(ByVal stgKey, Optional isOSSpecific As Boolean = False, Optional isUserSpecific As Boolean = False) As pbSettingOption
+    
+    Public Property Get SettingOptions(ByVal stgKey) As pbSettingOption
         '' CHECK VALID CONFIGURATION
-        If Not ValidConfig Then Exit Function
+        If Not ValidConfig Then Exit Property
         ''
         Dim tOptions As pbSettingOption
-        If isOSSpecific Then
-            tOptions = privEnumModify(tOptions, optOSSpecific, feVerifyEnumExists)
-        End If
-        If isUserSpecific Then
-            tOptions = privEnumModify(tOptions, optUserSpecific, feVerifyEnumExists)
-        End If
-        stgKey = CheckKey(stgKey, tOptions)
-        Dim stgIDX As Long: stgIDX = Index(stgKey)
-        If stgIDX > 0 Then
-            SettingOptions = l_lo.ListRows(stgIDX).Range(1, pbSTGColumns.scSettingOptions).value
-        End If
-    End Function
-    Private Function UpdateSettingOptions(ByVal stgKey, ByVal updOptions As pbSettingOption, Optional ByVal dataType)
-        If Not ValidConfig Then Exit Function
         stgKey = CheckKey(stgKey)
         Dim stgIDX As Long: stgIDX = Index(stgKey)
         If stgIDX > 0 Then
-            If Not IsMissing(dataType) Then
-                Dim isArray As Boolean
-                isArray = privEnumCompare(updOptions, optValueAsArray, ecOR)
-                updOptions = ResetDataTypeOption(updOptions, dataType, isArray)
-            End If
-            l_lo.ListRows(stgIDX).Range(1, pbSTGColumns.scSettingOptions).value = updOptions
+            SettingOptions = l_lo.listRows(stgIDX).Range(1, pbSTGColumns.scSettingOptions).value
         End If
-    End Function
+    End Property
+    
+    
+    Public Property Let SettingOptions(ByVal stgKey, stgOptions As pbSettingOption)
+        If Not ValidConfig Then Exit Property
+        stgKey = CheckKey(stgKey, stgOptions)
+        Dim stgIDX As Long: stgIDX = Index(stgKey)
+        If stgIDX > 0 Then
+            l_lo.listRows(stgIDX).Range(1, pbSTGColumns.scSettingOptions).value = stgOptions
+        ElseIf privEnumCompare(stgOptions, pbSettingOption.optCreateKeyIfMissing) Then
+            Setting(stgKey) = vbNullString
+            If Exists(stgKey) Then
+                SettingOptions(stgKey) = stgOptions
+            End If
+        End If
+    End Property
     
     Public Function SettingType(ByVal stgKey, Optional options As pbSettingOption = pbSettingOption.optDefault) As SettingTypeEnum
         '' CHECK VALID CONFIGURATION
@@ -1731,7 +1883,7 @@ Attribute stgwb.VB_VarHelpID = -1
         stgKey = CheckKey(stgKey, options)
         If Exists(stgKey) Then
             Dim tOpt As pbSettingOption
-            tOpt = l_lo.ListRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions)
+            tOpt = l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions)
             If privEnumCompare(tOpt, optValueAsBoolean) Then
                 SettingType = teBoolean
             ElseIf privEnumCompare(tOpt, optValueAsDate) Then
@@ -1795,6 +1947,63 @@ Attribute stgwb.VB_VarHelpID = -1
             End If
         End If
         BuildUSERSpecificKey = userKey
+    End Function
+    
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''  HIDE ALL SHEETS THAT ARE:
+''   - Not the current ActiveSheet
+''   - Not In the DO_NOT_HIDE_SHEETCODENAMES Setting
+''  @onlyHide - supply a single worksheet to hide.  (Will be ignored if it is the only
+''      visible worksheet
+''  @hideVeryHidden - True (Default) prevents users from unhiding. Set to false to
+''      hide, but users are allowed to unhide
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+    Public Function HideSheets(Optional onlyHide As Worksheet, Optional hideVeryHidden As Boolean = True)
+        If Not onlyHide Is Nothing Then
+            If Not onlyHide.Parent Is stgwb Then
+                RaiseEvent OnAlert(True, "(pbSettings.HideSheets) " & onlyHide.Name & " is not a worksheet in workbook: " & stgwb.Name)
+                Exit Function
+            End If
+            If WorksheetVisibleCount >= 2 Then
+                onlyHide.visible = IIf(hideVeryHidden, xlSheetVeryHidden, xlSheetHidden)
+            End If
+        Else
+            Dim tws As Worksheet
+            
+            For Each tws In stgwb.Worksheets
+                If tws.visible <> xlSheetVisible And WorksheetVisibleCount > 1 Then
+                    If CanHideSheet(tws) Then
+                        tws.visible = IIf(hideVeryHidden, xlSheetVeryHidden, xlSheetHidden)
+                    End If
+                End If
+            Next tws
+        End If
+    End Function
+    
+    Public Function CanHideSheet(wksht As Worksheet) As Boolean
+        Dim doNotHide
+        doNotHide = GetValue(STG_DO_NOT_HIDE)
+        If isArray(doNotHide) Then
+            Dim tsht
+            For Each tsht In doNotHide
+                If StringsMatchPriv(tsht, wksht.CodeName) Then
+                    CanHideSheet = False
+                    Exit Function
+                End If
+            Next tsht
+        End If
+        CanHideSheet = True
+    End Function
+    
+    Public Function WorksheetVisibleCount(Optional countType As XlSheetVisibility = XlSheetVisibility.xlSheetVisible) As Long
+            Dim resp As Long
+            Dim tws As Worksheet
+            For Each tws In stgwb.Worksheets
+                If tws.visible = countType Then
+                    resp = resp + 1
+                End If
+            Next tws
+            WorksheetVisibleCount = resp
     End Function
     
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
@@ -1871,7 +2080,7 @@ Attribute stgwb.VB_VarHelpID = -1
             l_isDirty = True
             existOptions = SettingOptionsByIndex(stgIDX)
             existOptions = ResetDataTypeOption(existOptions, optValueAsDouble, IsArraySet(existOptions))
-            l_lo.ListRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
+            l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
         End If
     End Function
     Public Function ForceTextFormat(ByVal stgKey, Optional options As pbSettingOption = pbSettingOption.optDefault)
@@ -1885,7 +2094,7 @@ Attribute stgwb.VB_VarHelpID = -1
             l_isDirty = True
             existOptions = SettingOptionsByIndex(stgIDX)
             existOptions = ResetDataTypeOption(existOptions, optValueAsText, IsArraySet(existOptions))
-            l_lo.ListRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
+            l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
         End If
     End Function
     Public Function ForceDoubleFormat(ByVal stgKey, Optional options As pbSettingOption = pbSettingOption.optDefault)
@@ -1899,7 +2108,7 @@ Attribute stgwb.VB_VarHelpID = -1
             l_isDirty = True
             existOptions = SettingOptionsByIndex(stgIDX)
             existOptions = ResetDataTypeOption(existOptions, optValueAsDouble, IsArraySet(existOptions))
-            l_lo.ListRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
+            l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
         End If
 
     End Function
@@ -1914,7 +2123,7 @@ Attribute stgwb.VB_VarHelpID = -1
             l_isDirty = True
             existOptions = SettingOptionsByIndex(stgIDX)
             existOptions = ResetDataTypeOption(existOptions, optValueAsLong, IsArraySet(existOptions))
-            l_lo.ListRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
+            l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
         End If
     End Function
     
@@ -1934,7 +2143,7 @@ Attribute stgwb.VB_VarHelpID = -1
             l_isDirty = True
             existOptions = SettingOptionsByIndex(stgIDX)
             existOptions = ResetDataTypeOption(existOptions, optValueAsDateTime, IsArraySet(existOptions))
-            l_lo.ListRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
+            l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
         End If
     End Function
     
@@ -1954,7 +2163,7 @@ Attribute stgwb.VB_VarHelpID = -1
             l_isDirty = True
             existOptions = SettingOptionsByIndex(stgIDX)
             existOptions = ResetDataTypeOption(existOptions, optValueAsDate, IsArraySet(existOptions))
-            l_lo.ListRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
+            l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
         End If
 
     End Function
@@ -1977,7 +2186,7 @@ Attribute stgwb.VB_VarHelpID = -1
             l_isDirty = True
             existOptions = SettingOptionsByIndex(stgIDX)
             existOptions = ResetDataTypeOption(existOptions, optValueAsBoolean, IsArraySet(existOptions))
-            l_lo.ListRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
+            l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
         End If
     End Function
     
@@ -1995,7 +2204,7 @@ Attribute stgwb.VB_VarHelpID = -1
             l_isDirty = True
             existOptions = SettingOptionsByIndex(stgIDX)
             existOptions = ResetDataTypeOption(existOptions, dataType, True)
-            l_lo.ListRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
+            l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
         End If
         
     End Function
@@ -2015,7 +2224,7 @@ Attribute stgwb.VB_VarHelpID = -1
             l_isDirty = True
             existOptions = SettingOptionsByIndex(stgIDX)
             existOptions = ResetDataTypeOption(existOptions, optValueAsGeneral, IsArraySet(existOptions))
-            l_lo.ListRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
+            l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
         End If
     End Function
     
@@ -2027,23 +2236,26 @@ Attribute stgwb.VB_VarHelpID = -1
         If Not ValidConfig Then Exit Function
         ''
         stgKey = CheckKey(stgKey, options)
-        If Index(stgKey) > 0 Then
-            Dim cancelOperation As Boolean
-            RaiseEvent OnDeleteSetting(stgKey, cancelOperation)
-            DoEvents
-            If cancelOperation = True Then
-                'cancel
-            Else
-                Dim evts As Boolean: evts = Me.Events: Me.Events = False
-                ''  Delete Setting
-                l_lo.ListRows(Index(stgKey)).Delete
-                ''  Restore App Events to prior setting
-                Me.Events = evts
-                l_isDirty = True
+        If SettingIsRequired(stgKey) = True Then
+            RaiseEvent OnAlert(True, "pbSetting: '" & stgKey & "' could not be deleted because it contains option: optKeyRequired")
+        Else
+            If Index(stgKey) > 0 Then
+                Dim cancelOperation As Boolean
+                RaiseEvent OnDeleteSetting(stgKey, cancelOperation)
+                DoEvents
+                If cancelOperation = True Then
+                    'cancel
+                Else
+                    Dim evts As Boolean: evts = Me.Events: Me.Events = False
+                    ''  Delete Setting
+                    l_lo.listRows(Index(stgKey)).Delete
+                    ''  Restore App Events to prior setting
+                    Me.Events = evts
+                    l_isDirty = True
+                End If
             End If
         End If
     End Function
-
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
@@ -2142,7 +2354,7 @@ Attribute stgwb.VB_VarHelpID = -1
         '' CHECK VALID CONFIGURATION
         If Not ValidConfig Then Exit Property
         ''
-        Count = l_lo.ListRows.Count
+        Count = l_lo.listRows.Count
     End Property
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
@@ -2196,7 +2408,7 @@ Attribute stgwb.VB_VarHelpID = -1
                     End If
                 Next checkCol
                 .UsedRange.VerticalAlignment = xlVAlignCenter
-                .ListObjects.Add SourceType:=xlSrcRange, Source:=.UsedRange, XlListObjectHasHeaders:=xlYes
+                .ListObjects.Add SourceType:=xlSrcRange, Source:=.UsedRange, XLListObjectHasHeaders:=xlYes
                 .Activate
                 .Parent.Windows(1).DisplayGridlines = False
                 
@@ -2293,7 +2505,7 @@ Attribute stgwb.VB_VarHelpID = -1
     Private Function VerifySettingsSheet() As Boolean
         Dim tmpWS As Worksheet
         Dim tmpLO As ListObject
-        Dim lstCol As ListColumn
+        Dim lstCol As listColumn
         '' First Try to Find by 'CodeName'
         Dim findCodeName: findCodeName = SETTINGS_SHEET_CODENAME
         For Each tmpWS In stgwb.Worksheets
@@ -2327,7 +2539,7 @@ Attribute stgwb.VB_VarHelpID = -1
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Private Function GetSettingsLO(wksht As Worksheet) As ListObject
             Dim tmpLO As ListObject
-            Dim validLO As ListObject, lstCol As ListColumn
+            Dim validLO As ListObject, lstCol As listColumn
             For Each tmpLO In wksht.ListObjects
                 If StringsMatchPriv(tmpLO.Name, SETTINGS_LO) Then
                     Dim expectCols As Variant
@@ -2356,7 +2568,7 @@ Attribute stgwb.VB_VarHelpID = -1
 ''       that are expected to be in the settings ListObject
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Private Property Get ExpectedColsArr() As Variant
-        Dim tmpArr As Variant: tmpArr = Split(SETTINGS_COL_NAMES, delimiter:="|", Compare:=vbTextCompare)
+        Dim tmpArr As Variant: tmpArr = Split(SETTINGS_COL_NAMES, delimiter:="|", compare:=vbTextCompare)
         Dim i As Long, colName As Variant, tmpArrSize As Long
         tmpArrSize = ArrSize(tmpArr)
         If tmpArrSize <> pbSTGColumns.[_TOTALCOLS] Then
@@ -2407,12 +2619,12 @@ Attribute stgwb.VB_VarHelpID = -1
         Dim evts As Boolean: evts = Me.Events: Me.Events = False
         
         For Each colName In colNames
-            Dim colidx As Long
-            For colidx = l_lo.ListColumns.Count To 1 Step -1
-                If StringsMatchPriv(colName, l_lo.ListColumns(colidx).Name) Then
-                    l_lo.ListColumns(colidx).Delete
+            Dim colIdx As Long
+            For colIdx = l_lo.ListColumns.Count To 1 Step -1
+                If StringsMatchPriv(colName, l_lo.ListColumns(colIdx).Name) Then
+                    l_lo.ListColumns(colIdx).Delete
                 End If
-            Next colidx
+            Next colIdx
         Next colName
         Me.Events = evts
     End Function
@@ -2476,7 +2688,7 @@ Attribute stgwb.VB_VarHelpID = -1
         ''  Disable App Events
         Dim evts As Boolean: evts = Me.Events: Me.Events = False
         For Each deleteItem In deleteItems
-            l_lo.ListRows(deleteItem).Range(1, pbSTGColumns.scSettingKey) = "PB_SETTING_DUPLICATE_DELETE"
+            l_lo.listRows(deleteItem).Range(1, pbSTGColumns.scSettingKey) = "PB_SETTING_DUPLICATE_DELETE"
         Next
         Sort
         Dim delRng As Range
@@ -2553,12 +2765,12 @@ Attribute stgwb.VB_VarHelpID = -1
     Private Function Sorted() As Boolean
         If Not ValidConfig Then Exit Function
         With l_lo
-            If .ListRows.Count <= 1 Then
+            If .listRows.Count <= 1 Then
                 Sorted = True
             Else
                 Dim expr As String, rng1 As Range, rng2 As Range
-                Set rng1 = .ListColumns(pbSTGColumns.scSettingKey).DataBodyRange.Resize(.ListRows.Count - 1)
-                Set rng2 = rng1.Offset(RowOffset:=1)
+                Set rng1 = .ListColumns(pbSTGColumns.scSettingKey).DataBodyRange.Resize(.listRows.Count - 1)
+                Set rng2 = rng1.Offset(rowOffset:=1)
                 expr = "AND(" & "'[" & stgwb.Name & "]" & rng1.Worksheet.Name & "'!" & rng1.Address & "<='[" & stgwb.Name & "]" & rng2.Worksheet.Name & "'!" & rng2.Address & ")"
                 Sorted = Evaluate(expr)
             End If
@@ -2808,9 +3020,9 @@ Attribute stgwb.VB_VarHelpID = -1
         tRng.value = ExpectedColsArr
         Set tRng = tRng.Resize(RowSize:=2)
         Dim lstObj As ListObject
-        Set lstObj = tmplSheet.ListObjects.Add(SourceType:=xlSrcRange, Source:=tRng, XlListObjectHasHeaders:=xlYes, tableStyleName:="TableStyleMedium2")
+        Set lstObj = tmplSheet.ListObjects.Add(SourceType:=xlSrcRange, Source:=tRng, XLListObjectHasHeaders:=xlYes, tableStyleName:="TableStyleMedium2")
         lstObj.Name = SETTINGS_LO
-        With lstObj.ListRows(1)
+        With lstObj.listRows(1)
             .Range(1, pbSTGColumns.scSettingKey) = PBSTG_HIDE
             .Range(1, pbSTGColumns.scSettingValue) = True
             .Range(1, pbSTGColumns.scSettingOptions) = pbSettingOption.optValueAsBoolean + pbSettingOption.optKeyRequired + pbSettingOption.optNonMigratableKey
@@ -2891,7 +3103,7 @@ Private Function CheckDefaultCommonSettings()
     If Exists(PBSTG_DEV_LOG_TO_IMMEDIATE) = False Then Setting(PBSTG_DEV_LOG_TO_IMMEDIATE) = False
     tmpOptions = SettingOptions(PBSTG_DEV_LOG_TO_IMMEDIATE)
     If Not SettingTypeByOptions(tmpOptions) = teBoolean Then
-        UpdateSettingOptions PBSTG_DEV_LOG_TO_IMMEDIATE, tmpOptions, optValueAsBoolean
+        ForceBooleanFormat PBSTG_DEV_LOG_TO_IMMEDIATE, tmpOptions
     End If
         
     '' PBSTG_RETURN_1BASED_ARRAYS
@@ -2899,8 +3111,7 @@ Private Function CheckDefaultCommonSettings()
     If Exists(PBSTG_RETURN_1BASED_ARRAYS) = False Then Setting(PBSTG_RETURN_1BASED_ARRAYS) = True
     tmpOptions = SettingOptions(PBSTG_RETURN_1BASED_ARRAYS)
     If Not SettingTypeByOptions(tmpOptions) = teBoolean Then
-        tmpOptions = privEnumModify(tmpOptions, pbSettingOption.optKeyRequired + pbSettingOption.optNonMigratableKey, feVerifyEnumExists)
-        UpdateSettingOptions PBSTG_RETURN_1BASED_ARRAYS, tmpOptions, optValueAsBoolean
+        ForceBooleanFormat PBSTG_RETURN_1BASED_ARRAYS, tmpOptions
     End If
         
     ''DEV_NAMES
@@ -2909,77 +3120,87 @@ Private Function CheckDefaultCommonSettings()
     End If
     tmpOptions = SettingOptions(PBSTG_DEV_NAMES)
     If Not SettingTypeByOptions(tmpOptions) = teText Then
-        UpdateSettingOptions PBSTG_DEV_NAMES, tmpOptions, optValueAsText
+        ForceTextFormat PBSTG_DEV_NAMES, tmpOptions
     End If
+    
+    'ADMIN_NAMES
+    If Exists(PBSTG_ADMIN_NAMES) = False Then
+        ArraySetting(PBSTG_ADMIN_NAMES) = UserNameOrLogin
+    End If
+    tmpOptions = SettingOptions(PBSTG_ADMIN_NAMES)
+    If Not SettingTypeByOptions(tmpOptions) = teText Then
+        ForceTextFormat PBSTG_ADMIN_NAMES, tmpOptions
+    End If
+    
     
     '' PBSETTING SHEET - MAX COLUMN WIDTH
     If Exists(PBSTG_MAX_SETTINGS_COL_WIDTH) = False Then Setting(PBSTG_MAX_SETTINGS_COL_WIDTH) = SETTINGS_MAX_COLUMN_WIDTH
     tmpOptions = SettingOptions(PBSTG_MAX_SETTINGS_COL_WIDTH)
     If Not SettingTypeByOptions(tmpOptions) = teDouble Then
-        UpdateSettingOptions PBSTG_MAX_SETTINGS_COL_WIDTH, tmpOptions, optValueAsDouble
+        ForceDoubleFormat PBSTG_MAX_SETTINGS_COL_WIDTH, tmpOptions
     End If
     
     '' DEV_MODE
     If Exists(PBSTG_DEV_MODE) = False Then Setting(PBSTG_DEV_MODE) = False
     tmpOptions = SettingOptions(PBSTG_DEV_MODE)
     If Not SettingTypeByOptions(tmpOptions) = teBoolean Then
-        UpdateSettingOptions PBSTG_DEV_MODE, tmpOptions, optValueAsBoolean
+        ForceBooleanFormat PBSTG_DEV_MODE, tmpOptions
     End If
     
     '' DISABLE AUTO SAVE (DEFAULT TRUE)
     If Exists(PBSTG_DISABLE_AUTO_SAVE) = False Then Setting(PBSTG_DISABLE_AUTO_SAVE) = True
     tmpOptions = SettingOptions(PBSTG_DISABLE_AUTO_SAVE)
     If Not SettingTypeByOptions(tmpOptions) = teBoolean Then
-        UpdateSettingOptions PBSTG_DISABLE_AUTO_SAVE, tmpOptions, optValueAsBoolean
+        ForceBooleanFormat PBSTG_DISABLE_AUTO_SAVE, tmpOptions
     End If
     
     '' ENABLE WORKBOOK CONNECTIONS
     If Exists(PBSTG_ENABLE_CONNECTIONS) = False Then Setting(PBSTG_ENABLE_CONNECTIONS) = True
     tmpOptions = SettingOptions(PBSTG_ENABLE_CONNECTIONS)
     If Not SettingTypeByOptions(tmpOptions) = teBoolean Then
-        UpdateSettingOptions PBSTG_ENABLE_CONNECTIONS, tmpOptions, optValueAsBoolean
+        ForceBooleanFormat PBSTG_ENABLE_CONNECTIONS, tmpOptions
     End If
     
     '' SAVE LINKED VALUES
     If Exists(PBSTG_SAVE_LINK_VALUES) = False Then Setting(PBSTG_SAVE_LINK_VALUES) = True
     tmpOptions = SettingOptions(PBSTG_SAVE_LINK_VALUES)
     If Not SettingTypeByOptions(tmpOptions) = teBoolean Then
-        UpdateSettingOptions PBSTG_SAVE_LINK_VALUES, tmpOptions, optValueAsBoolean
+        ForceBooleanFormat PBSTG_SAVE_LINK_VALUES, tmpOptions
     End If
     
     '' DEV: SHOW DEV TOOLS
     If Exists(PBSTG_DEV_SHOW_TOOLS) = False Then Setting(PBSTG_DEV_SHOW_TOOLS) = False
     tmpOptions = SettingOptions(PBSTG_DEV_SHOW_TOOLS)
     If Not SettingTypeByOptions(tmpOptions) = teBoolean Then
-        UpdateSettingOptions PBSTG_DEV_SHOW_TOOLS, tmpOptions, optValueAsBoolean
+        ForceBooleanFormat PBSTG_DEV_SHOW_TOOLS, tmpOptions
     End If
     
     ''  DO NOT HIDE WORKSHEET CODENAMES
     If Exists(PBSTG_DO_NOT_HIDE) = False Then Setting(PBSTG_DO_NOT_HIDE) = vbNullString
     tmpOptions = SettingOptions(PBSTG_DO_NOT_HIDE)
     If Not SettingTypeByOptions(tmpOptions) = teText Or Not privEnumCompare(tmpOptions, optValueAsArray) Then
-        ForceArrayFormat PBSTG_DO_NOT_HIDE, dataType:=optValueAsText
+        ForceArrayFormat PBSTG_DO_NOT_HIDE, options:=tmpOptions, dataType:=optValueAsText
     End If
     
     ''  DEFAULT ZOOM FOR MAC/PC -- USED UNTIL 'AutoZoom' is disabled, or users set's custom preference
     If Not Exists(PBSTG_ZOOM_ENABLE) Then Setting(PBSTG_ZOOM_ENABLE) = True
     tmpOptions = SettingOptions(PBSTG_ZOOM_ENABLE)
     If Not SettingTypeByOptions(tmpOptions) = teBoolean Then
-        UpdateSettingOptions PBSTG_ZOOM_ENABLE, tmpOptions, optValueAsBoolean
+        ForceBooleanFormat PBSTG_ZOOM_ENABLE, tmpOptions
     End If
     
     ''  ZOOM DEFAULT MAC
     If Not Exists(PBSTG_ZOOM_MAC_DEF) Then Setting(PBSTG_ZOOM_MAC_DEF) = 100
     tmpOptions = SettingOptions(PBSTG_ZOOM_MAC_DEF)
     If Not SettingTypeByOptions(tmpOptions) = teDouble Then
-        UpdateSettingOptions PBSTG_ZOOM_MAC_DEF, tmpOptions, optValueAsDouble
+        ForceDoubleFormat PBSTG_ZOOM_MAC_DEF, tmpOptions
     End If
     
     ''  ZOOM DEFAULT PC
     If Not Exists(PBSTG_ZOOM_PC_DEF) Then Setting(PBSTG_ZOOM_PC_DEF) = 80
     tmpOptions = SettingOptions(PBSTG_ZOOM_PC_DEF)
     If Not SettingTypeByOptions(tmpOptions) = teDouble Then
-        UpdateSettingOptions PBSTG_ZOOM_PC_DEF, tmpOptions, optValueAsDouble
+        ForceDoubleFormat PBSTG_ZOOM_PC_DEF, tmpOptions
     End If
     
     ''  ZOOM THRESHOLDS
@@ -3036,7 +3257,13 @@ Public Function Zoom( _
     Dim visStatus As Variant, tmpWS As Worksheet, doZoom As Boolean, curWS As Worksheet
     Set curWS = stgwb.activeSheet
     Dim shtView As WorksheetView
-    For Each shtView In stgwb.Windows(1).SheetViews
+    Dim checkWB As Workbook
+    If Not singleWorksheet Is Nothing Then
+        Set checkWB = singleWorksheet.Parent
+    Else
+        Set checkWB = stgwb
+    End If
+    For Each shtView In checkWB.Windows(1).SheetViews
         doZoom = False
         If Not singleWorksheet Is Nothing Then
             If shtView.Sheet Is singleWorksheet Then
@@ -3155,8 +3382,8 @@ Private Function ConfigureWorkbook()
         stgwb.SaveLinkValues = True
     End If
     ''do not turn dev tools off, but turn on if true
-    If Application.ShowDevTools = False And Setting(PBSTG_DEV_SHOW_TOOLS) = True Then
-        Application.ShowDevTools = True
+    If Application.showDevTools = False And Setting(PBSTG_DEV_SHOW_TOOLS) = True Then
+        Application.showDevTools = True
     End If
     Application.AutomationSecurity = msoAutomationSecurityLow
     Application.EnableCancelKey = xlErrorHandler
@@ -3181,14 +3408,14 @@ End Function
     Public Function DEV_ListSettingsDataTypes(Optional keyNameLike As String = vbNullString)
         If Not IsDeveloper Then Exit Function
         If Count = 0 Then Exit Function
-        Dim tArr() As Variant
-        tArr = l_lo.DataBodyRange.value
+        Dim tARR() As Variant
+        tARR = l_lo.DataBodyRange.value
         Dim i As Long
         Dim pbk As pbKey
         Dim tOutput As Boolean
-        For i = LBound(tArr) To UBound(tArr)
+        For i = LBound(tARR) To UBound(tARR)
             tOutput = True
-            pbk = NewKey(tArr(i, pbSTGColumns.scSettingKey), optDefault)
+            pbk = NewKey(tARR(i, pbSTGColumns.scSettingKey), optDefault)
             If Not keyNameLike = vbNullString Then
                 tOutput = StringsMatchPriv(pbk.Key, keyNameLike, smContains)
             End If
@@ -3203,16 +3430,16 @@ End Function
         If Not IsDeveloper Then Exit Function
         If Count = 0 Then Exit Function
         On Error Resume Next
-        Dim tArr() As Variant
+        Dim tARR() As Variant
         Dim pbKeys As New Collection
         '' Adding Array :   Key |ValueRaw|ValueFormatted|SettingOptions|Updated
-        tArr = l_lo.DataBodyRange.value
+        tARR = l_lo.DataBodyRange.value
         Dim i As Long
         Dim pbk As pbKey
         Dim tOutput As Boolean
-        For i = LBound(tArr) To UBound(tArr)
+        For i = LBound(tARR) To UBound(tARR)
             tOutput = True
-            pbk = NewKey(tArr(i, pbSTGColumns.scSettingKey), optDefault)
+            pbk = NewKey(tARR(i, pbSTGColumns.scSettingKey), optDefault)
             If Not keyNameLike = vbNullString Then
                 tOutput = StringsMatchPriv(pbk.Key, keyNameLike, smContains)
             End If
@@ -3221,13 +3448,13 @@ End Function
             End If
         Next i
         If pbKeys.Count > 0 Then
-            Dim tWB As Workbook, tWS As Worksheet
+            Dim tWB As Workbook, tws As Worksheet
             Set tWB = Workbooks.Add
-            Set tWS = tWB.Worksheets(1)
-            tWS.Name = "pbSettings-Summary"
+            Set tws = tWB.Worksheets(1)
+            tws.Name = "pbSettings-Summary"
             tWB.Windows(1).DisplayGridlines = False
             Dim tRng As Range
-            Set tRng = tWS.Range("A1:K3")
+            Set tRng = tws.Range("A1:K3")
             tRng.Merge
             tRng.HorizontalAlignment = xlHAlignLeft
             tRng.VerticalAlignment = xlVAlignCenter
@@ -3236,7 +3463,7 @@ End Function
             tRng.Cells(1, 1) = CStr(Now) & "   pbSettings Summary From " & stgwb.FullName
             tRng.BorderAround
             tRng.WrapText = True
-            Set tRng = tWS.Range("B4").Resize(ColumnSize:=6)
+            Set tRng = tws.Range("B4").Resize(ColumnSize:=6)
             tRng(1, 1) = "SETTING KEY"
             tRng(1, 2) = "SETTING VALUE (RAW)"
             tRng(1, 3) = "SETTING UPDATED"
@@ -3252,7 +3479,7 @@ End Function
             
             For Each arrItem In pbKeys
                 lb = LBound(arrItem)
-                Set tRng = tRng.Offset(RowOffset:=tRng.rows.Count)
+                Set tRng = tRng.Offset(rowOffset:=tRng.rows.Count)
                 Set tRng = tRng.Resize(RowSize:=1)
                 tRng(1, 1) = arrItem(lb)
                 tRng(1, 2) = arrItem(lb + 1)
@@ -3272,15 +3499,15 @@ End Function
                     
                 End If
             Next arrItem
-            tWS.UsedRange.EntireColumn.AutoFit
-            Dim colidx As Long
-            For colidx = 1 To tWS.UsedRange.Columns.Count
-                If tWS.UsedRange(1, colidx).ColumnWidth > GetValue(StandardSettingEnum.stgSettingsSheetMaxColWidth) Then
-                    tWS.UsedRange(1, colidx).ColumnWidth = GetValue(StandardSettingEnum.stgSettingsSheetMaxColWidth)
+            tws.UsedRange.EntireColumn.AutoFit
+            Dim colIdx As Long
+            For colIdx = 1 To tws.UsedRange.Columns.Count
+                If tws.UsedRange(1, colIdx).ColumnWidth > GetValue(StandardSettingEnum.stgSettingsSheetMaxColWidth) Then
+                    tws.UsedRange(1, colIdx).ColumnWidth = GetValue(StandardSettingEnum.stgSettingsSheetMaxColWidth)
                 End If
             Next
-            tWS.UsedRange.WrapText = True
-            tWS.UsedRange.EntireRow.AutoFit
+            tws.UsedRange.WrapText = True
+            tws.UsedRange.EntireRow.AutoFit
         End If
     End Function
 

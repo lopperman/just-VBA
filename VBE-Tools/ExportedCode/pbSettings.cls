@@ -1800,6 +1800,22 @@ Attribute stgwb.VB_VarHelpID = -1
     End Function
     
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+''      Returns True if SettingOptions includes 'pbSettingOption.optKeyRequired'
+''      A Setting Cannot Be Deleted If it includes optKeyRequired
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
+    Public Function SettingIsRequired(ByVal stgKey, Optional options As pbSettingOption = pbSettingOption.optDefault) As Boolean
+        '' CHECK VALID CONFIGURATION
+        If Not ValidConfig Then Exit Function
+        ''
+        stgKey = CheckKey(stgKey, options)
+        If Exists(stgKey) Then
+            SettingIsRequired = privEnumCompare(SettingOptions(stgKey), pbSettingOption.optKeyRequired)
+        End If
+    End Function
+    
+    
+    
+' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ''  Returns SettingType
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Private Function SettingTypeByOptions(options As pbSettingOption) As SettingTypeEnum
@@ -1844,12 +1860,19 @@ Attribute stgwb.VB_VarHelpID = -1
             SettingOptions = l_lo.listRows(stgIDX).Range(1, pbSTGColumns.scSettingOptions).value
         End If
     End Property
+    
+    
     Public Property Let SettingOptions(ByVal stgKey, stgOptions As pbSettingOption)
         If Not ValidConfig Then Exit Property
         stgKey = CheckKey(stgKey, stgOptions)
         Dim stgIDX As Long: stgIDX = Index(stgKey)
         If stgIDX > 0 Then
             l_lo.listRows(stgIDX).Range(1, pbSTGColumns.scSettingOptions).value = stgOptions
+        ElseIf privEnumCompare(stgOptions, pbSettingOption.optCreateKeyIfMissing) Then
+            Setting(stgKey) = vbNullString
+            If Exists(stgKey) Then
+                SettingOptions(stgKey) = stgOptions
+            End If
         End If
     End Property
     
@@ -2213,23 +2236,26 @@ Attribute stgwb.VB_VarHelpID = -1
         If Not ValidConfig Then Exit Function
         ''
         stgKey = CheckKey(stgKey, options)
-        If Index(stgKey) > 0 Then
-            Dim cancelOperation As Boolean
-            RaiseEvent OnDeleteSetting(stgKey, cancelOperation)
-            DoEvents
-            If cancelOperation = True Then
-                'cancel
-            Else
-                Dim evts As Boolean: evts = Me.Events: Me.Events = False
-                ''  Delete Setting
-                l_lo.listRows(Index(stgKey)).Delete
-                ''  Restore App Events to prior setting
-                Me.Events = evts
-                l_isDirty = True
+        If SettingIsRequired(stgKey) = True Then
+            RaiseEvent OnAlert(True, "pbSetting: '" & stgKey & "' could not be deleted because it contains option: optKeyRequired")
+        Else
+            If Index(stgKey) > 0 Then
+                Dim cancelOperation As Boolean
+                RaiseEvent OnDeleteSetting(stgKey, cancelOperation)
+                DoEvents
+                If cancelOperation = True Then
+                    'cancel
+                Else
+                    Dim evts As Boolean: evts = Me.Events: Me.Events = False
+                    ''  Delete Setting
+                    l_lo.listRows(Index(stgKey)).Delete
+                    ''  Restore App Events to prior setting
+                    Me.Events = evts
+                    l_isDirty = True
+                End If
             End If
         End If
     End Function
-
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
