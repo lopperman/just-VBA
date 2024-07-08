@@ -1830,7 +1830,7 @@ On Error Resume Next
     If InVisibleRange = False And scrollTo = True Then
         Dim scrn As Boolean: scrn = Application.ScreenUpdating
         Application.ScreenUpdating = True
-        Application.GoTo Reference:=ThisWorkbook.activeSheet.Range(activeSheetAddress).Cells(1, 1), Scroll:=True
+        Application.Goto Reference:=ThisWorkbook.activeSheet.Range(activeSheetAddress).Cells(1, 1), Scroll:=True
         DoEvents
         Application.ScreenUpdating = scrn
     End If
@@ -2501,7 +2501,7 @@ On Error Resume Next
             .title = choosePrompt
             .AllowMultiSelect = False
             .InitialFileName = Application.DefaultFilePath
-            If .Show <> -1 Then GoTo NextCode
+            If .show <> -1 Then GoTo NextCode
             retV = .SelectedItems(1)
         End With
 NextCode:

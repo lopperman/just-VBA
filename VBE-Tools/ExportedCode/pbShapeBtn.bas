@@ -118,7 +118,7 @@ Public Function UsedButtonRowCount(wksht As Worksheet) As Long
             If shp.AutoShapeType = msoShapeRoundedRectangle Then
                 mostLeft = IIf(mostLeft = -1, shp.Left, Min2(mostLeft, shp.Left))
                 mostTop = IIf(mostTop = -1, shp.Top, Min2(mostTop, shp.Top))
-                lastBottom = IIf(lastBottom = -1, shp.Top + shp.height + BTN_PADDING, Max2(lastBottom, shp.Top + shp.height + BTN_PADDING))
+                lastBottom = IIf(lastBottom = -1, shp.Top + shp.Height + BTN_PADDING, Max2(lastBottom, shp.Top + shp.Height + BTN_PADDING))
                 lastRight = IIf(lastRight = -1, shp.Left + shp.Width + BTN_PADDING, Max2(lastRight, shp.Left + shp.Width + BTN_PADDING))
             End If
         End If
@@ -229,7 +229,7 @@ Public Function BuildShapeBtn(ws As Worksheet _
         If Not shp.Left = adjLeft Then shp.Left = adjLeft
         If Not shp.Top = adjTop Then shp.Top = adjTop
         If Not shp.Width = adjWidth Then shp.Width = adjWidth
-        If Not shp.height = adjHeight Then shp.height = adjHeight
+        If Not shp.Height = adjHeight Then shp.Height = adjHeight
     End If
     
     With shp
@@ -540,7 +540,7 @@ Public Function addPrimaryNavigation(ws As Worksheet, Optional sheetGraphicOnAct
         If Not sheetGraphic.Top = newTop Then sheetGraphic.Top = newTop
         If Not sheetGraphic.Left = newLeft Then sheetGraphic.Left = newLeft
         If Not sheetGraphic.Width = 40 Then sheetGraphic.Width = 40
-        If Not sheetGraphic.height = 40 Then sheetGraphic.height = 40
+        If Not sheetGraphic.Height = 40 Then sheetGraphic.Height = 40
         If Len(sheetGraphicOnAction) > 0 Then
             If Not sheetGraphic.OnAction = sheetGraphicOnAction Then
                 sheetGraphic.OnAction = sheetGraphicOnAction
@@ -563,7 +563,7 @@ Public Function AdjustEye(ws As Worksheet)
         If Not FindShape(ws, "changeFont", msoGraphic) Is Nothing Then
             With FindShape(ws, "changeFont", msoGraphic)
                 .Width = 28
-                .height = 28
+                .Height = 28
                 .Top = 0
                 .Left = shtGraphic.Left + (shtGraphic.Width / 2) - (.Width / 2)
                 .Placement = xlFreeFloating

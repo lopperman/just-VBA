@@ -4,6 +4,14 @@ Option Compare Text
 Option Base 1
 
 
+Public Function devVBItem(vbcName As String) As VBItemProps
+        Dim comp1 As VBComponent
+        Set comp1 = ThisWorkbook.VBProject.VBComponents(vbcName)
+        Dim resp As New VBItemProps
+        resp.Populate ThisWorkbook, comp1
+        Set devVBItem = resp
+        Set comp1 = Nothing
+End Function
 
 Public Function testSort()
 

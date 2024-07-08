@@ -496,12 +496,13 @@ Attribute stgwb.VB_VarHelpID = -1
 ''  Return True If [checkUser] Is an entry in the array-value setting 'DEV_NAMES'
 ''  If [checkUser] is missing,will use computer username of current user
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
-    Public Function IsDeveloper(Optional checkUser) As Boolean
+    Public Function IsDeveloper(Optional checkUser, Optional doNotCheckPause As Boolean = False) As Boolean
         On Error Resume Next
         Dim curUserName: curUserName = UserNameOrLogin
         Dim devNames As Variant
         Dim findKey: findKey = PBSTG_DEV_NAMES
         Dim foundIdx As Long
+        Dim resp As Boolean
         If ValidConfig Then
             devNames = Setting(findKey)
         Else
@@ -517,12 +518,23 @@ Attribute stgwb.VB_VarHelpID = -1
             Dim checkName
             For Each checkName In devNames
                 If StringsMatchPriv(checkName, curUserName) Then
-                    IsDeveloper = True
-                    Exit Function
+                    resp = True
+                    Exit For
                 End If
             Next checkName
         End If
-        
+        If resp = True Then
+            If Exists("DEV_PAUSE_POPUPS_UNTIL") And doNotCheckPause = False Then
+                Dim pUntil
+                pUntil = Setting("DEV_PAUSE_POPUPS_UNTIL")
+                If StringsMatchPriv(TypeName(pUntil), "Date") Then
+                    If pUntil > Now() Then
+                        resp = False
+                    End If
+                End If
+            End If
+        End If
+        IsDeveloper = resp
     End Function
     
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
@@ -1168,16 +1180,17 @@ Attribute stgwb.VB_VarHelpID = -1
     Public Function ExecuteButtonAction(ByVal btnName, wksht As Worksheet)
         On Error Resume Next
         Dim callMethod As String
-        Dim wkbk As Workbook
-        ''
         callMethod = stdButtonAction(wksht, btnName)
+        Dim wkbk As Workbook
+        Set wkbk = wksht.Parent
+        ''
         If Len(callMethod) = 0 Then
             LogERROR "pbSettingButtonAction not found for: " & btnName & ", from: " & wksht.CodeName & " (" & wksht.Name & ")"
         Else
             LogTRACE "pbSettingButtonAction: " & callMethod & ", running for: " & btnName & ", from: " & wksht.CodeName & " (" & wksht.Name & ")"
-            Set wkbk = wksht.Parent
             Application.Run "'" & wkbk.Name & "'!" & callMethod
         End If
+        ''
         If Err.number <> 0 Then
             RaiseEvent OnAlert(True, "pbSettings.ExecuteButtonAction called from '" & wksht.CodeName & ":" & btnName & "' to execute method: " & callMethod)
         Else

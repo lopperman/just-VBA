@@ -42,10 +42,10 @@ Public Function ExportSupported(Optional vbaFile As Workbook, Optional lbl As St
     ExportCode vbaFile, vbext_ct_ActiveXDesigner, lbl
 End Function
 
-Public Function ShowWBIndexes()
+Public Function ShowWBIndexes(Optional showHasVBProjectOnly As Boolean = False)
     Dim thisIDX As Long
     Dim wb As Workbook
-    Dim i As Long
+    Dim i As Long, validOutput As Boolean
     For i = 1 To Application.Workbooks.Count
         If Application.Workbooks(i) Is ThisWorkbook Then
             thisIDX = i
@@ -56,10 +56,16 @@ Public Function ShowWBIndexes()
     Debug.Print Concat(CODE_TAB_SPACES, "pbVBComp running in: ", ThisWorkbook.Name, " (Index: " & thisIDX & ")")
     Debug.Print CODE_LINE_SEPARATOR
     For i = 1 To Application.Workbooks.Count
-        If Not Application.Workbooks(i) Is ThisWorkbook Then
-'            If Application.Workbooks(i).HasVBProject Then
-                Debug.Print Concat(CODE_TAB_SPACES, Application.Workbooks(i).Name, " (Index: " & i & ")")
-'            End If
+        validOutput = False
+        If Application.Workbooks(i) Is ThisWorkbook Then
+            validOutput = False
+        ElseIf Application.Workbooks(i).HasVBProject = False Then
+            If showHasVBProjectOnly = False Then validOutput = True
+        Else
+            validOutput = True
+        End If
+        If validOutput Then
+            Debug.Print Concat(CODE_TAB_SPACES, Application.Workbooks(i).Name, " (Index: " & i & ")")
         End If
     Next i
     Debug.Print CODE_LINE_SEPARATOR
@@ -106,16 +112,16 @@ Public Function ExportCode(vbaFile As Workbook, exportType As vbext_ComponentTyp
     Else
         fileExt = "txt"
     End If
-    Dim vbItem As VBComponent, compFileName As String, includeItem As Boolean
-    For Each vbItem In vbaFile.VBProject.VBComponents
-        If vbItem.Type = exportType Then
+    Dim VBItem As VBComponent, compFileName As String, includeItem As Boolean
+    For Each VBItem In vbaFile.VBProject.VBComponents
+        If VBItem.Type = exportType Then
             includeItem = True
             If Not IsMissing(componentName) Then
-                includeItem = StringsMatch(vbItem.Name, componentName)
+                includeItem = StringsMatch(VBItem.Name, componentName)
             End If
             If includeItem Then
-                compFileName = vbItem.Name
-                vbItem.Export PathCombine(False, exportToDir, Concat(compFileName, ".", fileExt))
+                compFileName = VBItem.Name
+                VBItem.Export PathCombine(False, exportToDir, Concat(compFileName, ".", fileExt))
                 LogTRACE ConcatWithDelim(" ", stg.UserNameOrLogin, "Exported:", compFileName & "." & fileExt, ", to", exportToDir)
                 
             End If
@@ -333,35 +339,40 @@ End Function
 ''  @componentName - if provided, will only document component
 ''      matching name
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
-Public Function ShowComponentInfo(Optional vbaFile As Workbook, Optional componentType As vbext_ComponentType, Optional componentName)
-    Dim vbItem As VBComponent, compFileName As String, includeItem As Boolean
+Public Function ShowComponentInfo(Optional vbaFile As Workbook, Optional ComponentType As vbext_ComponentType, Optional componentName)
+    Dim VBItem As VBComponent, compFileName As String, includeItem As Boolean
     If vbaFile Is Nothing Then
         Set vbaFile = ThisWorkbook
     End If
     Dim invalidComp As Boolean
-    For Each vbItem In vbaFile.VBProject.VBComponents
+    For Each VBItem In vbaFile.VBProject.VBComponents
         invalidComp = False
-        If componentType <> 0 And vbItem.Type <> componentType Then
+        If ComponentType <> 0 And VBItem.Type <> ComponentType Then
             invalidComp = True
         End If
-        If Not IsMissing(componentName) And Not StringsMatch(componentName, vbItem.Type) Then
+        If Not IsMissing(componentName) And Not StringsMatch(componentName, VBItem.Name) Then
             invalidComp = True
         End If
         If Not invalidComp Then
             Dim iLine As Long, totLines As Long
-            totLines = vbItem.CodeModule.CountOfLines
+            totLines = VBItem.CodeModule.CountOfLines
             Dim codeLine As String
-            If vbItem.CodeModule.CountOfLines > 0 Then
+            If VBItem.CodeModule.CountOfLines > 0 Then
                 For iLine = 1 To totLines
-                    codeLine = vbItem.CodeModule.lines(iLine, 1)
+                    codeLine = VBItem.CodeModule.lines(iLine, 1)
                     If Not StringsMatch("'", codeLine, smStartsWithStr) Then
                         If StringsMatch(codeLine, "Public", smContains) Then
-                            Debug.Print vbItem.Name, "Line " & iLine, codeLine
+                            Debug.Print VBItem.Name, "Line " & iLine, codeLine
                         End If
                     End If
                 Next iLine
             End If
         End If
     Next
+End Function
+
+Public Function pbCompareCode(wkbk1 As Workbook, item1, wkbk2 As Workbook, item2)
+    Dim vbc As New VBItems
+    vbc.CompareVBComp wkbk1, CStr(item1), wkbk2, CStr(item2)
 End Function
 

@@ -13,6 +13,13 @@ Option Explicit
 Option Compare Text
 Option Base 1
 
+Public Function DEVSel() As Range
+    If IsDev Then
+        Set DEVSel = Selection
+    End If
+End Function
+
+
 Public Function TestArrTypes()
 
     Dim s() As String, l(1 To 2) As Long, v() As Variant

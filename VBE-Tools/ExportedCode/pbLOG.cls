@@ -67,7 +67,6 @@ End Enum
     Private lastLogMsg As Single
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 
-
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 '
@@ -79,22 +78,31 @@ Public Property Get Initialized() As Boolean
     Initialized = loggingInitialized
 End Property
 
-
-Public Function InitLogging(loggingLevel As LogType, Optional commonEvts As pbCommonEvents, Optional wkbk As Workbook, Optional runAutoClean As Boolean = True)
+Public Function InitLogging(loggingLevel As LogType, Optional commonEvts As pbCommonEvents, Optional wkbk As Workbook, Optional runAutoClean As Boolean = False, Optional forceReInit As Boolean = False)
     On Error Resume Next
+    If forceReInit = True Then
+        loggingInitialized = False
+        runAutoClean = False
+        wbNameNoExtension = ""
+    End If
     If loggingInitialized = False Then
         lCurrentLogLevel = loggingLevel
+        Dim tWkbk As Workbook
         If wkbk Is Nothing Then
-            Set wkbk = ThisWorkbook
+            Set tWkbk = ThisWorkbook
+        Else
+            Set tWkbk = wkbk
         End If
-        wbNameNoExtension = FileNameWithoutExtension(wkbk.Name)
+        If Len(wbNameNoExtension) = 0 Then
+            wbNameNoExtension = FileNameWithoutExtension(tWkbk.Name)
+        End If
         loggingInitialized = True
         lastLogMsg = Timer
         LOG "** Logging Initialized **, User: " & ENV_LogName, ltFORCED
         LOG "** Logging To: " & LogPath, ltFORCED
         LogLevel = loggingLevel
-        LOG "** FileName **: " & wkbk.FullName, ltFORCED
-        Set wkbk = Nothing
+        LOG "** FileName **: " & tWkbk.FullName, ltFORCED
+        Set tWkbk = Nothing
         If runAutoClean = True Then
             LogDelete
         End If
@@ -192,6 +200,7 @@ End Function
 
 Public Function GetCurrentLogLines() As Collection
     On Error Resume Next
+    LogFORCED stg.UserNameOrLogin & " requested all log lines"
     Dim resp As New Collection
     LogClose
     Dim hf As Integer: hf = FreeFile
@@ -201,11 +210,11 @@ Public Function GetCurrentLogLines() As Collection
     lines = Split(Input$(LOF(hf), #hf), vbNewLine)
     Close #hf
     For i = LBound(lines) To UBound(lines)
-        resp.Add lines(i)
+        resp.Add Replace(lines(i), Chr(34), "")
     Next i
     Set GetCurrentLogLines = resp
-    
 End Function
+
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 '   Log [msg] to[pbLogPath()]
 '   if there is an open fileNumber for log, that will be used.
