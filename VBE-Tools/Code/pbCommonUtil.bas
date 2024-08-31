@@ -841,38 +841,38 @@ Public Function GetPerfText(Optional notNormalOnly As Boolean = False) As String
     'CHECK EVENTS
     
     If EnumCompare(curPerf, PerfEnum.peEventsOn) = False Then
-        c.Add "evts:N"
+        c.add "evts:N"
     ElseIf notNormalOnly = False Then
-        c.Add "evts:Y"
+        c.add "evts:Y"
     End If
     'CHECK SCREEN UPDATING
     If EnumCompare(curPerf, PerfEnum.peScreenUpdatingON) = False Then
-        c.Add "scrn:N"
+        c.add "scrn:N"
     ElseIf notNormalOnly = False Then
-        c.Add "scrn:Y"
+        c.add "scrn:Y"
     End If
     'CHECK INTERACTIVE
     If EnumCompare(curPerf, PerfEnum.peInteractiveON) = False Then
-        c.Add "intr:N"
+        c.add "intr:N"
     ElseIf notNormalOnly = False Then
-        c.Add "intr:Y"
+        c.add "intr:Y"
     End If
     'CHECK ALERTS
     If EnumCompare(curPerf, PerfEnum.peAlertsON) = False Then
-        c.Add "alrt:N"
+        c.add "alrt:N"
     ElseIf notNormalOnly = False Then
-        c.Add "alrt:Y"
+        c.add "alrt:Y"
     End If
     'CHECK CALC MODE
     If EnumCompare(curPerf, PerfEnum.peCalcAutomatic) = False Then
-        c.Add "calc:M"
+        c.add "calc:M"
     ElseIf notNormalOnly = False Then
-        c.Add "calc:A"
+        c.add "calc:A"
     End If
     If EnumCompare(curPerf, PerfEnum.peMousePointerDefault) = False Then
-        c.Add "curs:W"
+        c.add "curs:W"
     ElseIf notNormalOnly = False Then
-        c.Add "curs:D"
+        c.add "curs:D"
     End If
     If notNormalOnly Then
         resp = " ( Abnormal States:"
@@ -1215,7 +1215,7 @@ Public Function AddSheetProtectionCache(ByRef wksht As Worksheet, pwd As String,
     ElseIf existKey Then
         protSettingCache.remove (colKey)
     End If
-    protSettingCache.Add Array(pwd, protectOptions), Key:=colKey
+    protSettingCache.add Array(pwd, protectOptions), Key:=colKey
 End Function
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
@@ -2451,7 +2451,7 @@ Public Function CopySheetToNewWB(ByVal ws As Worksheet, Optional filePath As Var
 On Error Resume Next
     Application.EnableEvents = False
     Dim newWB As Workbook
-    Set newWB = Application.Workbooks.Add
+    Set newWB = Application.Workbooks.add
     With ws
         .Copy Before:=newWB.Worksheets(1)
         DoEvents
@@ -2890,7 +2890,7 @@ On Error Resume Next
     MyName = Dir(MyPath, vbNormal)
     Do While MyName <> ""
         If (GetAttr(PathCombine(False, MyPath, MyName)) And vbNormal) = vbNormal Then
-            cl.Add MyName
+            cl.add MyName
         End If
         MyName = Dir()
     Loop
@@ -3130,7 +3130,7 @@ Public Function GetEnvironSettings( _
             End If
         End If
         If canReturn Then
-            tColl.Add Array(tKey, tVal), Key:=tKey
+            tColl.add Array(tKey, tVal), Key:=tKey
         End If
         
         i = i + 1
@@ -3187,7 +3187,7 @@ On Error GoTo e:
             For Each tmpLO In tmpWS.ListObjects
                 If StringsMatch(tmpLO.Name, lstObjName) Then
                     If cacheReference Then
-                        loCol.Add tmpLO, Key:=lstObjName
+                        loCol.add tmpLO, Key:=lstObjName
                     End If
                     Set wt = tmpLO
                 End If
@@ -3775,7 +3775,7 @@ Public Function HideSheets(ParamArray doNotHide() As Variant)
     Dim DoNotHideSheets As New Collection
     Dim tmpCodeName
     For Each tmpCodeName In doNotHide
-        DoNotHideSheets.Add tmpCodeName, Key:=CStr(tmpCodeName)
+        DoNotHideSheets.add tmpCodeName, Key:=CStr(tmpCodeName)
     Next
     
     Dim p As PerfEnum
@@ -3817,11 +3817,11 @@ Public Function UnhideSheets(wkbk As Workbook, ParamArray keepHiddenSheets() As 
         Dim sht
         For Each sht In keepHiddenSheets
             If StringsMatch(TypeName(sht), "Worksheet") Then
-                hideColl.Add sht.CodeName, Key:=sht.CodeName
+                hideColl.add sht.CodeName, Key:=sht.CodeName
             ElseIf StringsMatch(TypeName(sht), "String") Then
                 For Each ws In wkbk.Worksheets
                     If StringsMatch(ws.CodeName, sht) Or StringsMatch(ws.Name, sht) Then
-                        hideColl.Add ws.CodeName, Key:=ws.CodeName
+                        hideColl.add ws.CodeName, Key:=ws.CodeName
                     End If
                 Next ws
             End If
@@ -3966,9 +3966,9 @@ Public Function HiddenWorksheets( _
     Dim resp As New Collection
     For Each tws In wkbk.Worksheets
         If tws.visible = xlSheetHidden And includeHidden Then
-            resp.Add tws, Key:=tws.Name
+            resp.add tws, Key:=tws.Name
         ElseIf tws.visible = xlSheetVeryHidden And includeVeryHidden Then
-            resp.Add tws, Key:=tws.Name
+            resp.add tws, Key:=tws.Name
         End If
     Next tws
     Set HiddenWorksheets = resp
@@ -3994,7 +3994,7 @@ Public Function ProtectedWorksheets( _
     Dim resp As New Collection
     For Each tws In wkbk.Worksheets
         If tws.protectContents Or tws.protectDrawingObjects Then
-            resp.Add tws, Key:=tws.Name
+            resp.add tws, Key:=tws.Name
         End If
     Next tws
     Set ProtectedWorksheets = resp

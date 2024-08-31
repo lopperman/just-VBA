@@ -131,7 +131,7 @@ Public Function AddOption(ByVal updateOption As ListObjUpdateOptions, ByVal opti
     If CollectionKeyExists(l_options, CStr(updateOption)) Then
         l_options.remove CStr(updateOption)
     End If
-    l_options.Add optionValue, Key:=CStr(updateOption)
+    l_options.add optionValue, Key:=CStr(updateOption)
 End Function
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
@@ -264,7 +264,7 @@ Private Function BuildResultsCollection(matchedVal As Boolean) As Collection
     Dim i As Long
     For i = 1 To UBound(l_IndexResults)
         If l_IndexResults(i, 2) = matchedVal Then
-            resp.Add (i)
+            resp.add (i)
         End If
     Next i
     Set BuildResultsCollection = resp
@@ -389,7 +389,7 @@ Private Function MatchedIndexes(listColumn, _
                 isMatched = (curValue < MinV(searchVal1, searchVal2)) Or (curValue > MaxV(searchVal1, searchVal2))
         End Select
         If isMatched Then
-            resp.Add i
+            resp.add i
         End If
     Next i
     Set MatchedIndexes = resp
@@ -550,7 +550,7 @@ Private Function OnErrorRaise(errNumber, errMessage As String)
 End Function
 
 Private Function OnLog(logLvl As String, msg As String)
-    l_logMessages.Add TimeStamp & " " & UCase(logLvl) & " " & msg
+    l_logMessages.add TimeStamp & " " & UCase(logLvl) & " " & msg
     RaiseEvent OnLogMessage(logLvl, msg)
 End Function
 

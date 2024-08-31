@@ -477,7 +477,7 @@ Public Function DeleteAllShapeButtons(wks As Worksheet)
     For Each shp In wks.Shapes
         If shp.Type = msoAutoShape Then
             If shp.AutoShapeType = msoShapeRoundedRectangle Then
-                delItems.Add shp.Name
+                delItems.add shp.Name
             End If
         End If
     Next

@@ -237,7 +237,7 @@ Public Function UserSort(lstObj As ListObject, lstColIdx As Long)
                     .SortFields(1).Order = xlAscending
                 End If
             Else
-                .SortFields.Add lstObj.ListColumns(lstColIdx).DataBodyRange, SortOn:=XlSortOn.xlSortOnValues, Order:=XlSortOrder.xlAscending
+                .SortFields.add lstObj.ListColumns(lstColIdx).DataBodyRange, SortOn:=XlSortOn.xlSortOnValues, Order:=XlSortOrder.xlAscending
             End If
             .Apply
         End With
@@ -523,7 +523,7 @@ Public Function FindMatchingListColumns(colName As String, Optional matchType As
         For Each tLO In tws.ListObjects
             For Each tCol In tLO.ListColumns
                 If StringsMatch(tCol.Name, colName, matchType) Then
-                    retCol.Add Array(tLO.Name, tCol.Name)
+                    retCol.add Array(tLO.Name, tCol.Name)
                 End If
             Next
         Next
@@ -561,9 +561,9 @@ On Error Resume Next
     If Not ListColumnExists(lstObj, colName) Then
         Dim nc As listColumn
         If position > 0 Then
-            Set nc = lstObj.ListColumns.Add(position:=position)
+            Set nc = lstObj.ListColumns.add(position:=position)
         Else
-            Set nc = lstObj.ListColumns.Add
+            Set nc = lstObj.ListColumns.add
         End If
         nc.Name = colName
         If lstObj.listRows.Count > 0 And numberFormat <> vbNullString Then
@@ -691,7 +691,7 @@ On Error GoTo e:
     
     lstObj.Resize lstObj.Range.Resize(RowSize:=(hdrRngRows + totRngRows + listRows) + addRowCount)
     Do While lstObj.listRows.Count < endCount
-        lstObj.listRows.Add
+        lstObj.listRows.add
     Loop
     
     Dim firstNewRow As Long, lastNewRow As Long
@@ -836,7 +836,7 @@ On Error GoTo e:
     Next
     If Not oDict.Exists(sID) Then Set oDict(sID) = New Collection
 '    Call oDict(sID).Add(i - 1)
-    oDict(sID).Add (i - 1)
+    oDict(sID).add (i - 1)
   Next
   Set getIndex = oDict
   Exit Function

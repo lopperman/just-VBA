@@ -352,7 +352,7 @@ End Function
 Public Function HasAnyOverlappingValue(rng1 As Range, rng2 As Range) As Boolean
 
     If Not rng1 Is Nothing And Not rng2 Is Nothing Then
-        HasAnyOverlappingValue = Not rng1.find(rng2.value) Is Nothing
+        HasAnyOverlappingValue = Not rng1.Find(rng2.value) Is Nothing
     End If
 
 End Function
@@ -1452,7 +1452,7 @@ On Error GoTo e:
         With lstObj.Sort
             .SortFields.Clear
             For colIdx = LBound(tCols) To UBound(tCols)
-                .SortFields.Add lstObj.ListColumns(tCols(colIdx, 1)).DataBodyRange, SortOn:=xlSortOnValues, Order:=sortOrder
+                .SortFields.add lstObj.ListColumns(tCols(colIdx, 1)).DataBodyRange, SortOn:=xlSortOnValues, Order:=sortOrder
             Next colIdx
             .Apply
             DoEvents
@@ -1497,7 +1497,7 @@ On Error GoTo e:
                 .SortFields.Clear
             Else
             End If
-            .SortFields.Add listObj.ListColumns(field).DataBodyRange, SortOn:=xlSortOnValues, Order:=Order
+            .SortFields.add listObj.ListColumns(field).DataBodyRange, SortOn:=xlSortOnValues, Order:=Order
             .Apply
         End With
     End If

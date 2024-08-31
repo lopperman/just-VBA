@@ -53,7 +53,7 @@ Private Function TmpUtilSheet() As Worksheet
     If WorksheetExists(TMP_RANGE_UTIL_WORKSHEET) = False Then
         Dim retWS As Worksheet
         
-        Set retWS = Excel.Application.Worksheets.Add(After:=Worksheets(Worksheets.Count))
+        Set retWS = Excel.Application.Worksheets.add(After:=Worksheets(Worksheets.Count))
         retWS.Name = TMP_RANGE_UTIL_WORKSHEET
         retWS.visible = xlSheetVeryHidden
         Set TmpUtilSheet = retWS
@@ -75,10 +75,10 @@ Public Function RangeToUniqueArray(rng As Range, Optional Sorted As Boolean = Tr
             If Not d.Exists(tmpVal) Then
                 If excludeEmpty = True Then
                     If Not StringsMatch(TypeName(tmpVal), "Empty") Then
-                        d.Add tmpVal, tmpVal
+                        d.add tmpVal, tmpVal
                     End If
                 Else
-                        d.Add tmpVal, tmpVal
+                        d.add tmpVal, tmpVal
                 End If
             End If
         Next rngCell
@@ -262,7 +262,7 @@ Public Function GetUniqueSortedListCol(lstObj As ListObject, lstCol As Variant, 
         Case ListReturnType.lrtCollection
             Set tDic = New Collection
             For aIdx = LBound(arr) To UBound(arr)
-                tCol.Add arr(aIdx, 1)
+                tCol.add arr(aIdx, 1)
             Next aIdx
             Set GetUniqueSortedListCol = tCol
     End Select

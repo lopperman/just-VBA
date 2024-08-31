@@ -4,7 +4,21 @@ Option Compare Text
 Option Base 1
 
 
+Public Function FindBlanks(ws As Worksheet)
+    Debug.Print "Find Blank rows/cols in: " & ws.Name & " (" & ws.CodeName & ")"
+    Debug.Print ws.Name, "used range: " & ws.UsedRange.Address
+    If Not ws.UsedRange.Count > 1 Then
+        Debug.Print "There are no blank rows or columns within UsedRange for sheet: " & ws.Name
+        Exit Function
+    End If
+    
+    Dim arr
+    arr = ws.UsedRange
+     
+        
+    
 
+End Function
 
 Public Function devUpdLO()
     Dim upd As New pbUpdateLO
@@ -70,14 +84,14 @@ Public Function testSort()
     maxLen = 50
     
     Dim wb As Workbook, ws As Worksheet, lo As ListObject
-    Set wb = Application.Workbooks.Add
+    Set wb = Application.Workbooks.add
     Set ws = wb.Worksheets(1)
     With ws
         .Range("A1") = "Col1"
         .Range("B1") = "Col2"
         .Range("A2") = "testing"
         .Range("B2") = Now()
-        Set lo = .ListObjects.Add(SourceType:=xlSrcRange, Source:=.Range("A1:B2"), XLListObjectHasHeaders:=xlYes)
+        Set lo = .ListObjects.add(SourceType:=xlSrcRange, Source:=.Range("A1:B2"), XLListObjectHasHeaders:=xlYes)
     End With
     Dim i As Long, tARR() As Variant
     Dim tVal

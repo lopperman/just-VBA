@@ -517,7 +517,7 @@ Attribute stgwb.VB_VarHelpID = -1
         Else
             Dim rng As Range, foundRng As Range
             Set rng = l_lo.ListColumns(pbSTGColumns.scSettingKey).Range
-            Set foundRng = rng.find(findKey, LookIn:=xlValues, LookAt:=xlWhole, SearchOrder:=xlByColumns, SearchDirection:=xlNext, MatchCase:=False)
+            Set foundRng = rng.Find(findKey, LookIn:=xlValues, LookAt:=xlWhole, SearchOrder:=xlByColumns, SearchDirection:=xlNext, MatchCase:=False)
             If Not foundRng Is Nothing Then
                 Set foundRng = foundRng.Offset(ColumnOffset:=(scSettingValue - scSettingKey))
                 devNames = Split(CStr(foundRng.value), "|", compare:=vbTextCompare)
@@ -561,7 +561,7 @@ Attribute stgwb.VB_VarHelpID = -1
         Else
             Dim rng As Range, foundRng As Range
             Set rng = l_lo.ListColumns(pbSTGColumns.scSettingKey).Range
-            Set foundRng = rng.find(findKey, LookIn:=xlValues, LookAt:=xlWhole, SearchOrder:=xlByColumns, SearchDirection:=xlNext, MatchCase:=False)
+            Set foundRng = rng.Find(findKey, LookIn:=xlValues, LookAt:=xlWhole, SearchOrder:=xlByColumns, SearchDirection:=xlNext, MatchCase:=False)
             If Not foundRng Is Nothing Then
                 Set foundRng = foundRng.Offset(ColumnOffset:=(scSettingValue - scSettingKey))
                 adminNames = Split(CStr(foundRng.value), "|", compare:=vbTextCompare)
@@ -1302,14 +1302,14 @@ Attribute stgwb.VB_VarHelpID = -1
             Dim existItem, newItem, shouldAdd As Boolean
             For Each existItem In tmpItems
                 ConvertItemFormat existItem, existOptions
-                itemsColl.Add existItem, Key:=CStr(existItem)
+                itemsColl.add existItem, Key:=CStr(existItem)
             Next existItem
         End If
         For Each newItem In appendVals
             ConvertItemFormat newItem, existOptions
             ''Add New value to collect if it doesn't already exist, OR if 'optAllowDuplicationArrayValues' option exist on setting
             If privEnumCompare(existOptions, pbSettingOption.optAllowDuplicateArrayValues) Or Not privCollectionKeyExists(itemsColl, CStr(newItem)) Then
-                itemsColl.Add newItem, Key:=CStr(newItem)
+                itemsColl.add newItem, Key:=CStr(newItem)
             End If
         Next newItem
         Dim newArr()
@@ -1352,7 +1352,7 @@ Attribute stgwb.VB_VarHelpID = -1
         Dim tmpItems: tmpItems = Setting(validKey)
         Dim existItem, newItem, shouldAdd As Boolean
         For Each existItem In tmpItems
-            itemsColl.Add existItem, Key:=CStr(existItem)
+            itemsColl.add existItem, Key:=CStr(existItem)
         Next existItem
         For Each newItem In removeVals
             ConvertItemFormat newItem, existOptions
@@ -1500,7 +1500,7 @@ Attribute stgwb.VB_VarHelpID = -1
             stgArr(1, pbSTGColumns.scSettingValue) = ConvertItemFormat(stgVal, options)
             stgArr(1, pbSTGColumns.scUpdated) = Now()
             stgArr(1, pbSTGColumns.scSettingOptions) = options
-            Set newRow = l_lo.listRows.Add
+            Set newRow = l_lo.listRows.add
             newRow.Range.value = stgArr
             newRow.Range(1, pbSTGColumns.scSettingValue).numberFormat = "General"
             CheckSort
@@ -1595,7 +1595,7 @@ Attribute stgwb.VB_VarHelpID = -1
             stgArr(1, pbSTGColumns.scUpdated) = Now()
             stgArr(1, pbSTGColumns.scSettingOptions) = options
             
-            l_lo.listRows.Add().Range.value = stgArr
+            l_lo.listRows.add().Range.value = stgArr
             CheckSort
         End If
         l_isDirty = True
@@ -2423,14 +2423,14 @@ Attribute stgwb.VB_VarHelpID = -1
             For iRow = LBound(exportArr) To UBound(exportArr)
                 If iRow = 1 Then
                     'Add Column Headers Index
-                    tmpIndexes.Add iRow
+                    tmpIndexes.add iRow
                 Else
                     If IsMissing(wildcardSearch) Then
-                        tmpIndexes.Add iRow
+                        tmpIndexes.add iRow
                     Else
                         For iCol = LBound(exportArr, 2) To UBound(exportArr, 2)
                             If StringsMatchPriv(exportArr(iRow, iCol), wildcardSearch, smContains) Then
-                                tmpIndexes.Add iRow
+                                tmpIndexes.add iRow
                                 Exit For
                             End If
                         Next iCol
@@ -2446,7 +2446,7 @@ Attribute stgwb.VB_VarHelpID = -1
                     newArr(populatingIndex, iCol) = exportArr(goodIndex, iCol)
                 Next iCol
             Next
-            Set newWB = Workbooks.Add
+            Set newWB = Workbooks.add
             Set newWS = newWB.Worksheets(1)
             With newWS
                 .Name = "SettingsExport"
@@ -2460,7 +2460,7 @@ Attribute stgwb.VB_VarHelpID = -1
                     End If
                 Next checkCol
                 .UsedRange.VerticalAlignment = xlVAlignCenter
-                .ListObjects.Add SourceType:=xlSrcRange, Source:=.UsedRange, XLListObjectHasHeaders:=xlYes
+                .ListObjects.add SourceType:=xlSrcRange, Source:=.UsedRange, XLListObjectHasHeaders:=xlYes
                 .Activate
                 .Parent.Windows(1).DisplayGridlines = False
                 
@@ -2496,14 +2496,14 @@ Attribute stgwb.VB_VarHelpID = -1
             Exit Function
         End If
         Dim wkbk As Workbook
-        Set wkbk = Application.Workbooks.Add
+        Set wkbk = Application.Workbooks.add
         DoEvents
         If Not wkbk Is Nothing Then
             wkbk.Worksheets(1).Name = "pbSettingsTest"
         End If
         wkbk.SaveAs fileName:=ThisWorkbook.path & Application.PathSeparator & "DEV_TEST_pbSettings.xlsm", FileFormat:=XlFileFormat.xlOpenXMLWorkbookMacroEnabled, addToMRU:=False
 '        wkbk.Worksheets(1).Name = "pbSettingsTest_" & UCase(Format(Now(), "_yyyyMMMdd_hhnnss"))
-        wkbk.VBProject.VBComponents.Add vbext_ct_StdModule
+        wkbk.VBProject.VBComponents.add vbext_ct_StdModule
         wkbk.Save
         Set SettingsWorkbook = wkbk
         StartSettings
@@ -2725,11 +2725,11 @@ Attribute stgwb.VB_VarHelpID = -1
                     If CollectionItemExists(deleteItems, startIdx) = False Then
                         If StringsMatchPriv(keepKey, srcArr(startIdx, pbSTGColumns.scSettingKey)) Then
                             If CDate(srcArr(startIdx, pbSTGColumns.scUpdated)) >= keepDt Then
-                                deleteItems.Add keepIdx
+                                deleteItems.add keepIdx
                                 keepIdx = startIdx
                                 keepDt = CDate(srcArr(startIdx, pbSTGColumns.scUpdated))
                             Else
-                                deleteItems.Add startIdx
+                                deleteItems.add startIdx
                             End If
                         End If
                     End If
@@ -2744,11 +2744,11 @@ Attribute stgwb.VB_VarHelpID = -1
         Next
         Sort
         Dim delRng As Range
-        Set delRng = l_lo.ListColumns(pbSTGColumns.scSettingKey).Range.find("PB_SETTING_DUPLICATE_DELETE")
+        Set delRng = l_lo.ListColumns(pbSTGColumns.scSettingKey).Range.Find("PB_SETTING_DUPLICATE_DELETE")
         If Not delRng Is Nothing Then
             Do While Not delRng Is Nothing
                 delRng.Resize(ColumnSize:=l_lo.ListColumns.Count).Delete xlShiftUp
-                Set delRng = l_lo.ListColumns(pbSTGColumns.scSettingKey).Range.find("PB_SETTING_DUPLICATE_DELETE")
+                Set delRng = l_lo.ListColumns(pbSTGColumns.scSettingKey).Range.Find("PB_SETTING_DUPLICATE_DELETE")
             Loop
         End If
         ''  Restore App Events to prior setting
@@ -2804,7 +2804,7 @@ Attribute stgwb.VB_VarHelpID = -1
             ''  Disable App Events
             Dim evts As Boolean: evts = Me.Events: Me.Events = False
             .SortFields.Clear
-            .SortFields.Add l_lo.ListColumns(pbSTGColumns.scSettingKey).DataBodyRange, SortOn:=xlSortOnValues, Order:=XlSortOrder.xlAscending
+            .SortFields.add l_lo.ListColumns(pbSTGColumns.scSettingKey).DataBodyRange, SortOn:=xlSortOnValues, Order:=XlSortOrder.xlAscending
             .Apply
             ''  Restore App Events to prior setting
             Me.Events = evts
@@ -3037,7 +3037,7 @@ Attribute stgwb.VB_VarHelpID = -1
         Application.Interactive = False
         Application.Cursor = XlMousePointer.xlWait
         
-        Set tmplSheet = stgwb.Worksheets.Add(After:=stgwb.Worksheets(stgwb.Worksheets.Count))
+        Set tmplSheet = stgwb.Worksheets.add(After:=stgwb.Worksheets(stgwb.Worksheets.Count))
         
         
         tmplSheet.Name = SETTINGS_SHEET_WEAKNAME
@@ -3055,7 +3055,7 @@ Attribute stgwb.VB_VarHelpID = -1
         
         tmplSheet.Range("A4:D4").Merge
         With tmplSheet
-            .Hyperlinks.Add Anchor:=tmplSheet.Range("A4:D4"), _
+            .Hyperlinks.add Anchor:=tmplSheet.Range("A4:D4"), _
             Address:="https://github.com/lopperman/just-VBA/blob/main/pbSettings/pbSettings.md", _
             ScreenTip:="View pbSettings on just-VBA Github repository"
             .Range("A3:D4").VerticalAlignment = xlVAlignCenter
@@ -3072,7 +3072,7 @@ Attribute stgwb.VB_VarHelpID = -1
         tRng.value = ExpectedColsArr
         Set tRng = tRng.Resize(RowSize:=2)
         Dim lstObj As ListObject
-        Set lstObj = tmplSheet.ListObjects.Add(SourceType:=xlSrcRange, Source:=tRng, XLListObjectHasHeaders:=xlYes, tableStyleName:="TableStyleMedium2")
+        Set lstObj = tmplSheet.ListObjects.add(SourceType:=xlSrcRange, Source:=tRng, XLListObjectHasHeaders:=xlYes, tableStyleName:="TableStyleMedium2")
         lstObj.Name = SETTINGS_LO
         With lstObj.listRows(1)
             .Range(1, pbSTGColumns.scSettingKey) = PBSTG_HIDE
@@ -3496,12 +3496,12 @@ End Function
                 tOutput = StringsMatchPriv(pbk.Key, keyNameLike, smContains)
             End If
             If tOutput Then
-                 pbKeys.Add Array(pbk.Key, pbk.OldVal, pbk.OldValFormatted, pbk.OldOptions, pbk.Updated)
+                 pbKeys.add Array(pbk.Key, pbk.OldVal, pbk.OldValFormatted, pbk.OldOptions, pbk.Updated)
             End If
         Next i
         If pbKeys.Count > 0 Then
             Dim tWB As Workbook, tws As Worksheet
-            Set tWB = Workbooks.Add
+            Set tWB = Workbooks.add
             Set tws = tWB.Worksheets(1)
             tws.Name = "pbSettings-Summary"
             tWB.Windows(1).DisplayGridlines = False
@@ -3638,11 +3638,11 @@ Public Function DEV_ListMatchingSettings(options As pbSettingOption, Optional fi
     For Each sKey In SettingKeyColumn.DataBodyRange
         If findNonMatching = False Then
             If privEnumCompare(SettingOptions(sKey), options, ecAnd) = True Then
-                resp.Add sKey
+                resp.add sKey
             End If
         Else
             If privEnumCompare(SettingOptions(sKey), options, ecOR) = False Then
-                resp.Add sKey
+                resp.add sKey
             End If
         End If
     Next sKey

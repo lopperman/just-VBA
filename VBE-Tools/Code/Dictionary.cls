@@ -161,8 +161,8 @@ End Property
 ' @param {Variant} Key
 ' @param {Variant} Item
 ' --------------------------------------------- '
-Public Sub Add(Key As Variant, item As Variant)
-Attribute Add.VB_Description = "Add a new key and item to the dictionary."
+Public Sub add(Key As Variant, item As Variant)
+Attribute add.VB_Description = "Add a new key and item to the dictionary."
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
     If Not Me.Exists(Key) Then
         dict_AddKeyValue Key, item
@@ -171,7 +171,7 @@ Attribute Add.VB_Description = "Add a new key and item to the dictionary."
         Err.Raise 457
     End If
 #Else
-    dict_pDictionary.Add Key, item
+    dict_pDictionary.add Key, item
 #End If
 End Sub
 
@@ -310,7 +310,7 @@ Private Sub dict_AddKeyValue(dict_Key As Variant, dict_Value As Variant, Optiona
         End If
 
         ' Add key-value at proper index
-        dict_pKeyValues.Add Array(dict_FormattedKey, dict_Key, dict_Value), dict_FormattedKey, Before:=dict_Index + 1
+        dict_pKeyValues.add Array(dict_FormattedKey, dict_Key, dict_Value), dict_FormattedKey, Before:=dict_Index + 1
     Else
         ' Add key-value as last item
         If VBA.IsObject(dict_Key) Then
@@ -324,7 +324,7 @@ Private Sub dict_AddKeyValue(dict_Key As Variant, dict_Value As Variant, Optiona
             dict_pItems(UBound(dict_pItems)) = dict_Value
         End If
 
-        dict_pKeyValues.Add Array(dict_FormattedKey, dict_Key, dict_Value), dict_FormattedKey
+        dict_pKeyValues.add Array(dict_FormattedKey, dict_Key, dict_Value), dict_FormattedKey
     End If
 End Sub
 
@@ -423,7 +423,7 @@ Private Function dict_GetObjectKey(dict_ObjKey As Variant) As String
         End If
     Next dict_i
 
-    dict_pObjectKeys.Add dict_ObjKey
+    dict_pObjectKeys.add dict_ObjKey
     dict_GetObjectKey = "__object__" & dict_pObjectKeys.Count
 End Function
 

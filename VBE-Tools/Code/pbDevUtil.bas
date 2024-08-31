@@ -191,7 +191,7 @@ Public Function IDEClear(ParamArray visible() As Variant)
     Dim IDX As Long
     If UBound(visible) >= LBound(visible) Then
         For IDX = LBound(visible) To UBound(visible)
-            visCol.Add visible(IDX), Key:=CStr(visible(IDX))
+            visCol.add visible(IDX), Key:=CStr(visible(IDX))
         Next IDX
     End If
     Dim vbProj As VBProject, vbComp As VBComponent
@@ -332,10 +332,10 @@ Public Function DEV_ListOLEDBConnections(Optional ByVal targetWorksheet, Optiona
             searchSheetCodeName = searchSheetName
         End If
     End If
-    tmpCol.Add Array(vbTab, "")
-    tmpCol.Add Array("", "")
-    tmpCol.Add Array("***** Sharepoint OLEDB Connections *****", searchWorkbook.Name)
-    tmpCol.Add Array("", "")
+    tmpCol.add Array(vbTab, "")
+    tmpCol.add Array("", "")
+    tmpCol.add Array("***** Sharepoint OLEDB Connections *****", searchWorkbook.Name)
+    tmpCol.add Array("", "")
     For Each tmpWBConn In searchWorkbook.Connections
         If tmpWBConn.Ranges.Count > 0 Then
             Set targetRange = tmpWBConn.Ranges(1)
@@ -351,25 +351,25 @@ Public Function DEV_ListOLEDBConnections(Optional ByVal targetWorksheet, Optiona
         End If
         If shouldCheck Then
             If tmpWBConn.Type = xlConnectionTypeOLEDB Then
-                tmpCol.Add Array("", "")
-                tmpCol.Add Array("*** CONNECTION NAME ***", tmpWBConn.Name)
-                tmpCol.Add Array("", "")
+                tmpCol.add Array("", "")
+                tmpCol.add Array("*** CONNECTION NAME ***", tmpWBConn.Name)
+                tmpCol.add Array("", "")
                 If Not targetRange Is Nothing Then
-                    tmpCol.Add Array("TARGET WORKSHEET", targetRange.Worksheet.CodeName & "(" & targetRange.Worksheet.Name & ")")
-                    tmpCol.Add Array("WORKSHEET RANGE", targetRange.Address)
+                    tmpCol.add Array("TARGET WORKSHEET", targetRange.Worksheet.CodeName & "(" & targetRange.Worksheet.Name & ")")
+                    tmpCol.add Array("WORKSHEET RANGE", targetRange.Address)
                 End If
-                tmpCol.Add Array("REFRESH WITH REFRESH ALL", tmpWBConn.refreshWithRefreshAll)
+                tmpCol.add Array("REFRESH WITH REFRESH ALL", tmpWBConn.refreshWithRefreshAll)
                 Set tmpOleDBConn = tmpWBConn.OLEDBConnection
-                tmpCol.Add Array("COMMAND TEXT", tmpOleDBConn.CommandText)
-                tmpCol.Add Array("CONNECTION", tmpOleDBConn.Connection)
-                tmpCol.Add Array("ENABLE REFRESH", tmpOleDBConn.enableRefresh)
-                tmpCol.Add Array("IS CONNECTED", tmpOleDBConn.IsConnected)
-                tmpCol.Add Array("MAINTAIN CONNECTION", tmpOleDBConn.maintainConnection)
-                tmpCol.Add Array("REFRESH ON FILE OPEN", tmpOleDBConn.refreshOnFileOpen)
-                tmpCol.Add Array("REFRESH PERIOD", tmpOleDBConn.RefreshPeriod)
-                tmpCol.Add Array("ROBUST CONNECT (xlRobustConnect)", tmpOleDBConn.RobustConnect)
-                tmpCol.Add Array("SERVER CREDENTIALS METHOD (xlCredentialsMethod)", tmpOleDBConn.serverCredentialsMethod)
-                tmpCol.Add Array("USE LOCAL CONNECTION", tmpOleDBConn.UseLocalConnection)
+                tmpCol.add Array("COMMAND TEXT", tmpOleDBConn.CommandText)
+                tmpCol.add Array("CONNECTION", tmpOleDBConn.Connection)
+                tmpCol.add Array("ENABLE REFRESH", tmpOleDBConn.enableRefresh)
+                tmpCol.add Array("IS CONNECTED", tmpOleDBConn.IsConnected)
+                tmpCol.add Array("MAINTAIN CONNECTION", tmpOleDBConn.maintainConnection)
+                tmpCol.add Array("REFRESH ON FILE OPEN", tmpOleDBConn.refreshOnFileOpen)
+                tmpCol.add Array("REFRESH PERIOD", tmpOleDBConn.RefreshPeriod)
+                tmpCol.add Array("ROBUST CONNECT (xlRobustConnect)", tmpOleDBConn.RobustConnect)
+                tmpCol.add Array("SERVER CREDENTIALS METHOD (xlCredentialsMethod)", tmpOleDBConn.serverCredentialsMethod)
+                tmpCol.add Array("USE LOCAL CONNECTION", tmpOleDBConn.UseLocalConnection)
             End If
         End If
     Next tmpWBConn

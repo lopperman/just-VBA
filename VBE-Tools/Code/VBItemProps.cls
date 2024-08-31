@@ -77,7 +77,7 @@ Public Function GetLines(Optional includeBlank As Boolean = False, Optional incl
             If includeComments = False Then tInclude = False
         End If
         If tInclude Then
-            resp.Add tLine, Key:="Line" & Format(i, "0000")
+            resp.add tLine, Key:="Line" & Format(i, "0000")
         End If
     Next i
     Set GetLines = resp
@@ -163,9 +163,9 @@ Private Function PopulateProps()
         For Each tProp In lcomp.Properties
             tVarType = VarType(tProp.value)
             If Err.number = 0 And tProp.NumIndices <= 1 Then
-                lProps.Add tProp.Name, tProp.value
+                lProps.add tProp.Name, tProp.value
             ElseIf Err.number = 0 Then
-                lProps.Add tProp.Name, tProp.value
+                lProps.add tProp.Name, tProp.value
             Else
                 Beep
                 Err.Clear
