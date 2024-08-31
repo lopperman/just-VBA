@@ -152,7 +152,9 @@ Public Function ExportCode(vbaFile As Workbook, exportType As vbext_ComponentTyp
                 End If
                 LogFORCED tmpPath
                 VBItem.Export tmpPath
-                GrantAccessToMultipleFiles Array(exportFullPath)
+                #If Mac Then
+                    GrantAccessToMultipleFiles Array(exportFullPath)
+                #End If
                 FileCopy tmpPath, exportFullPath
                 
                 'VBItem.Export PathCombine(False, tmpPath, compFileName & "." & fileExt)

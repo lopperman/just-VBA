@@ -408,3 +408,112 @@ Public Function CombinePath(ParamArray vals() As Variant) As String
     End If
     CombinePath = retV
 End Function
+
+Public Function CAL()
+    Dim lo As ListObject
+    Set lo = pbListObj.FindListObject(Workbooks("CalendarData.xlsx"), "tblCal")
+    Dim arr, i As Long
+    arr = ArrListObj(lo, aoNone)
+    Dim startDtCol As Long, startTimeCol As Long, endTimeCol As Long, newStartCol As Long, newEndCol As Long
+    startDtCol = lo.ListColumns("FixedDate").Index
+    startTimeCol = lo.ListColumns("Start Time").Index
+    endTimeCol = lo.ListColumns("End Time").Index
+    newStartCol = lo.ListColumns("New Start").Index
+    newEndCol = lo.ListColumns("New End").Index
+        
+    Dim startDt, startTm, endTm, newStart, newEnd
+    Dim arrValsChanged As Boolean
+    For i = LBound(arr) To UBound(arr)
+        ''
+        startDt = arr(i, startDtCol)
+        startTm = arr(i, startTimeCol)
+        endTm = arr(i, endTimeCol)
+        newStart = arr(i, newStartCol)
+        newEnd = arr(i, newEndCol)
+        ''
+        If Len(Trim(CStr(startTm))) = 0 Then
+            startTm = "9:01 AM"
+            arr(i, startTimeCol) = startTm
+            arrValsChanged = True
+        End If
+        If Len(Trim(CStr(endTm))) = 0 Then
+            endTm = "10:31 AM"
+            arr(i, endTimeCol) = endTm
+            arrValsChanged = True
+        End If
+        ''
+        ''SPLIT OUT END TIME IF '-' FOUND
+        If StringsMatch(startTm, "-", smContains) Then
+            Dim times
+            times = Split(startTm, "-", , vbTextCompare)
+            If EnumCompare(VarType(times), VbVarType.vbArray) Then
+                If UBound(times) - LBound(times) + 1 = 2 Then
+                    startTm = times(LBound(times))
+                    endTm = times(UBound(times))
+                    arrValsChanged = True
+                    arr(i, startTimeCol) = startTm
+                    arr(i, endTimeCol) = endTm
+                End If
+            End If
+        End If
+        '' MAKE SURE AM/PM IS PRECEEDED BY A SPACE FOR START TM
+        If Len(startTm) >= 3 Then
+            If StringsMatch(Mid(startTm, Len(startTm) - 2, 1), " ") = False Then
+                If StringsMatch(Right(startTm, 2), "am") Or StringsMatch(Right(startTm, 2), "pm") Then
+                    'Debug.Print "Change: " & startTm & ", To: " & Left(startTm, Len(startTm) - 2) & " " & UCase(Right(startTm, 2))
+                    startTm = Left(startTm, Len(startTm) - 2) & " " & UCase(Right(startTm, 2))
+                    arr(i, startTimeCol) = startTm
+                    arrValsChanged = True
+                End If
+            End If
+        End If
+        '' MAKE SURE AM/PM IS PRECEEDED BY A SPACE FOR START TM
+        If Len(endTm) >= 3 Then
+            If StringsMatch(Mid(endTm, Len(endTm) - 2, 1), " ") = False Then
+                If StringsMatch(Right(endTm, 2), "am") Or StringsMatch(Right(endTm, 2), "pm") Then
+                    'Debug.Print "Change: " & endTm & ", To: " & Left(endTm, Len(endTm) - 2) & " " & UCase(Right(endTm, 2))
+                    endTm = Left(endTm, Len(endTm) - 2) & " " & UCase(Right(endTm, 2))
+                    arr(i, endTimeCol) = endTm
+                    arrValsChanged = True
+                End If
+            End If
+        End If
+        ''
+        On Error Resume Next
+        ''
+        newStart = CDate(Trim(Concat(startDt, " ", startTm)))
+        arrValsChanged = True
+        If Err.number <> 0 Then
+            newStart = startDt
+            Err.Clear
+        End If
+        If dtPart(dtHour, newStart) < 6 Then
+            newStart = CDate(Format(CStr(newStart), "mm/dd/yyyy") & " 9:31 AM")
+            newEnd = DtAdd(dtMinute, 90, newStart)
+        End If
+        arr(i, newStartCol) = newStart
+        
+        newEnd = CDate(Trim(Concat(Format(newStart, "mm/dd/yyyy"), " ", endTm)))
+        arrValsChanged = True
+        If Err.number <> 0 Then
+            newEnd = DtAdd(dtMinute, 90, newStart)
+            Err.Clear
+        End If
+        If newStart > newEnd Then
+            newEnd = DtAdd(dtMinute, 90, newStart)
+        End If
+        If dtPart(dtMinute, newStart) <> 1 And dtPart(dtMinute, newEnd) = 31 Then
+            newEnd = DtAdd(dtMinute, 90, newStart)
+        End If
+        arr(i, newEndCol) = newEnd
+        
+                   
+        
+        
+    Next i
+    
+    If arrValsChanged Then
+        lo.DataBodyRange.value = arr
+    End If
+
+End Function
