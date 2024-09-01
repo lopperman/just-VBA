@@ -203,7 +203,7 @@ Option Base 1
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
     Private Type pbKey
         UncheckedKey As Variant
-        Key As Variant
+        key As Variant
         OldVal As Variant
         OldValFormatted As Variant
         NewVal As Variant
@@ -404,8 +404,8 @@ Attribute stgwb.VB_VarHelpID = -1
             End If
         End If
         resp.UncheckedKey = stgKey
-        resp.Key = CheckKey(stgKey, options)
-        resp.IDX = keyIndex(resp.Key)
+        resp.key = CheckKey(stgKey, options)
+        resp.IDX = keyIndex(resp.key)
         If Not IsMissing(defaultVal) Then
             resp.defaultValue = defaultVal
         End If
@@ -617,7 +617,7 @@ Attribute stgwb.VB_VarHelpID = -1
         '' CHECK VALID CONFIGURATION
         If Not ValidConfig Then Exit Function
         ''
-        Exists = Index(CheckKey(settingKey, options)) > 0
+        Exists = index(CheckKey(settingKey, options)) > 0
     End Function
     
     Public Property Get IsDirty() As Boolean
@@ -733,11 +733,11 @@ Attribute stgwb.VB_VarHelpID = -1
         pbk.NewVal = Array(wksht.CodeName, btnName, methodName)
         ''
 '        Setting(pbk.Key) = pbk.NewVal
-        ArraySetting(pbk.Key) = pbk.NewVal
+        ArraySetting(pbk.key) = pbk.NewVal
         ''
         If pbk.IDX = 0 Then
             pbk.NewOptions = optNonMigratableKey + optValueAsText + optValueAsArray
-            SettingOptions(pbk.Key) = pbk.NewOptions
+            SettingOptions(pbk.key) = pbk.NewOptions
         End If
     End Property
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
@@ -769,9 +769,9 @@ Attribute stgwb.VB_VarHelpID = -1
         Dim pbk As pbKey
         pbk = NewKey(PBSTG_DO_NOT_HIDE, optDefault)
         If hideSheetDefault Then
-            ArraySettingRemoveFrom pbk.Key, pbk.OldOptions, pbSettingsSheet.CodeName
+            ArraySettingRemoveFrom pbk.key, pbk.OldOptions, pbSettingsSheet.CodeName
         Else
-            ArraySettingAppendTo pbk.Key, pbk.OldOptions, pbSettingsSheet.CodeName
+            ArraySettingAppendTo pbk.key, pbk.OldOptions, pbSettingsSheet.CodeName
         End If
         '' Ensure PBSTG_HIDE Is Boolean
         If Not SettingType(PBSTG_HIDE) = teBoolean Then ForceBooleanFormat (PBSTG_HIDE)
@@ -1241,7 +1241,7 @@ Attribute stgwb.VB_VarHelpID = -1
         '' CHECK VALID CONFIGURATION
         If Not ValidConfig Then Exit Property
         ''
-        Dim tmpIdx As Long: tmpIdx = Index(stgKey)
+        Dim tmpIdx As Long: tmpIdx = index(stgKey)
         Dim resp
         If tmpIdx > 0 Then
             Dim stgArr As Variant
@@ -1278,7 +1278,7 @@ Attribute stgwb.VB_VarHelpID = -1
         ''
         'if stg is not type array, then raise error
         Dim validKey: validKey = CheckKey(stgKey, options)
-        Dim keyIndex As Long: keyIndex = Index(validKey)
+        Dim keyIndex As Long: keyIndex = index(validKey)
         Dim existOptions As pbSettingOption
         If keyIndex > 0 Then
             existOptions = SettingOptionsByIndex(keyIndex)
@@ -1302,14 +1302,14 @@ Attribute stgwb.VB_VarHelpID = -1
             Dim existItem, newItem, shouldAdd As Boolean
             For Each existItem In tmpItems
                 ConvertItemFormat existItem, existOptions
-                itemsColl.add existItem, Key:=CStr(existItem)
+                itemsColl.Add existItem, key:=CStr(existItem)
             Next existItem
         End If
         For Each newItem In appendVals
             ConvertItemFormat newItem, existOptions
             ''Add New value to collect if it doesn't already exist, OR if 'optAllowDuplicationArrayValues' option exist on setting
             If privEnumCompare(existOptions, pbSettingOption.optAllowDuplicateArrayValues) Or Not privCollectionKeyExists(itemsColl, CStr(newItem)) Then
-                itemsColl.add newItem, Key:=CStr(newItem)
+                itemsColl.Add newItem, key:=CStr(newItem)
             End If
         Next newItem
         Dim newArr()
@@ -1334,7 +1334,7 @@ Attribute stgwb.VB_VarHelpID = -1
         If Not ValidConfig Then Exit Function
         ''
         Dim validKey: validKey = CheckKey(stgKey, options)
-        Dim keyIndex As Long: keyIndex = Index(validKey)
+        Dim keyIndex As Long: keyIndex = index(validKey)
         Dim existOptions As pbSettingOption
         If keyIndex > 0 Then
             existOptions = l_lo.listRows(keyIndex).Range(1, pbSTGColumns.scSettingOptions).value
@@ -1352,12 +1352,12 @@ Attribute stgwb.VB_VarHelpID = -1
         Dim tmpItems: tmpItems = Setting(validKey)
         Dim existItem, newItem, shouldAdd As Boolean
         For Each existItem In tmpItems
-            itemsColl.add existItem, Key:=CStr(existItem)
+            itemsColl.Add existItem, key:=CStr(existItem)
         Next existItem
         For Each newItem In removeVals
             ConvertItemFormat newItem, existOptions
             If privCollectionKeyExists(itemsColl, CStr(newItem)) Then
-                itemsColl.remove CStr(newItem)
+                itemsColl.Remove CStr(newItem)
             End If
         Next newItem
         Dim newArr()
@@ -1401,16 +1401,16 @@ Attribute stgwb.VB_VarHelpID = -1
     '       'error was returned
     '   End if
     ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
-    Private Function privCollectionItemByKey(ByRef col As Collection, ByVal Key)
+    Private Function privCollectionItemByKey(ByRef col As Collection, ByVal key)
     On Error Resume Next
-        Key = CStr(Key)
-        If IsObject(col(Key)) Then
+        key = CStr(key)
+        If IsObject(col(key)) Then
             If Err.number = 0 Then
-                Set privCollectionItemByKey = col(Key)
+                Set privCollectionItemByKey = col(key)
             End If
         Else
             If Err.number = 0 Then
-                privCollectionItemByKey = col(Key)
+                privCollectionItemByKey = col(key)
             End If
         End If
         If Err.number <> 0 Then
@@ -1418,10 +1418,10 @@ Attribute stgwb.VB_VarHelpID = -1
             privCollectionItemByKey = CVErr(1004)
         End If
     End Function
-    Private Function privCollectionKeyExists(ByRef col As Collection, ByVal Key)
+    Private Function privCollectionKeyExists(ByRef col As Collection, ByVal key)
     On Error Resume Next
-        Key = CStr(Key)
-        If IsObject(col(Key)) Then
+        key = CStr(key)
+        If IsObject(col(key)) Then
             If Err.number = 0 Then
                 privCollectionKeyExists = True
             Else
@@ -1454,7 +1454,7 @@ Attribute stgwb.VB_VarHelpID = -1
         If Not ValidConfig Then Exit Property
         ''
         On Error Resume Next
-        Dim tmpIdx As Long: tmpIdx = Index(stgKey)
+        Dim tmpIdx As Long: tmpIdx = index(stgKey)
         Dim validKey: validKey = CheckKey(stgKey)
         Dim resp, respType
         Dim options As pbSettingOption
@@ -1500,7 +1500,7 @@ Attribute stgwb.VB_VarHelpID = -1
             stgArr(1, pbSTGColumns.scSettingValue) = ConvertItemFormat(stgVal, options)
             stgArr(1, pbSTGColumns.scUpdated) = Now()
             stgArr(1, pbSTGColumns.scSettingOptions) = options
-            Set newRow = l_lo.listRows.add
+            Set newRow = l_lo.listRows.Add
             newRow.Range.value = stgArr
             newRow.Range(1, pbSTGColumns.scSettingValue).numberFormat = "General"
             CheckSort
@@ -1545,7 +1545,7 @@ Attribute stgwb.VB_VarHelpID = -1
         If Not ValidConfig Then Exit Property
         ''
         On Error Resume Next
-        Dim tmpIdx As Long: tmpIdx = Index(stgKey)
+        Dim tmpIdx As Long: tmpIdx = index(stgKey)
         Dim validKey: validKey = CheckKey(stgKey)
         Dim resp, respType
         ''  Disable App Events
@@ -1595,7 +1595,7 @@ Attribute stgwb.VB_VarHelpID = -1
             stgArr(1, pbSTGColumns.scUpdated) = Now()
             stgArr(1, pbSTGColumns.scSettingOptions) = options
             
-            l_lo.listRows.add().Range.value = stgArr
+            l_lo.listRows.Add().Range.value = stgArr
             CheckSort
         End If
         l_isDirty = True
@@ -1817,7 +1817,7 @@ Attribute stgwb.VB_VarHelpID = -1
         ''
         stgKey = CheckKey(stgKey, options)
         If Exists(stgKey) Then
-            SettingUpdated = CDate(l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scUpdated))
+            SettingUpdated = CDate(l_lo.listRows(index(stgKey)).Range(1, pbSTGColumns.scUpdated))
         End If
     End Function
     
@@ -1860,7 +1860,7 @@ Attribute stgwb.VB_VarHelpID = -1
     
     Private Function SettingValueRaw(ByVal validKey, Optional rowIdx As Long)
         If rowIdx <= 0 Or rowIdx > Count Then
-            rowIdx = Index(validKey)
+            rowIdx = index(validKey)
         End If
         If rowIdx > 0 Then
             SettingValueRaw = l_lo.listRows(rowIdx).Range(1, pbSTGColumns.scSettingValue).value
@@ -1877,7 +1877,7 @@ Attribute stgwb.VB_VarHelpID = -1
         ''
         Dim tOptions As pbSettingOption
         stgKey = CheckKey(stgKey)
-        Dim stgIDX As Long: stgIDX = Index(stgKey)
+        Dim stgIDX As Long: stgIDX = index(stgKey)
         If stgIDX > 0 Then
             SettingOptions = l_lo.listRows(stgIDX).Range(1, pbSTGColumns.scSettingOptions).value
         End If
@@ -1886,7 +1886,7 @@ Attribute stgwb.VB_VarHelpID = -1
     Public Property Let SettingOptions(ByVal stgKey, stgOptions As pbSettingOption)
         If Not ValidConfig Then Exit Property
         stgKey = CheckKey(stgKey, stgOptions)
-        Dim stgIDX As Long: stgIDX = Index(stgKey)
+        Dim stgIDX As Long: stgIDX = index(stgKey)
         If stgIDX > 0 Then
             l_lo.listRows(stgIDX).Range(1, pbSTGColumns.scSettingOptions).value = stgOptions
         ElseIf privEnumCompare(stgOptions, pbSettingOption.optCreateKeyIfMissing) Then
@@ -1905,13 +1905,13 @@ Attribute stgwb.VB_VarHelpID = -1
             SettingOption = False
         End If
     End Property
-    Public Property Let SettingOption(ByVal stgKey, ByVal stgOpt As pbSettingOption, includeOption As Boolean)
+    Public Property Let SettingOption(ByVal stgKey, ByVal stgOpt As pbSettingOption, IncludeOption As Boolean)
         stgKey = CheckKey(stgKey)
         If Exists(stgKey) Then
             Dim curOptions As pbSettingOption, modOptions As pbSettingOption
             curOptions = SettingOptions(stgKey)
             modOptions = curOptions
-            privEnumModify modOptions, stgOpt, IIf(includeOption, FlagEnumModifyPriv.feVerifyEnumExists, FlagEnumModifyPriv.feVerifyEnumRemoved)
+            privEnumModify modOptions, stgOpt, IIf(IncludeOption, FlagEnumModifyPriv.feVerifyEnumExists, FlagEnumModifyPriv.feVerifyEnumRemoved)
             If curOptions <> modOptions Then
                 SettingOptions(stgKey) = modOptions
             End If
@@ -1927,7 +1927,7 @@ Attribute stgwb.VB_VarHelpID = -1
         stgKey = CheckKey(stgKey, options)
         If Exists(stgKey) Then
             Dim tOpt As pbSettingOption
-            tOpt = l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions)
+            tOpt = l_lo.listRows(index(stgKey)).Range(1, pbSTGColumns.scSettingOptions)
             If privEnumCompare(tOpt, optValueAsBoolean) Then
                 SettingType = teBoolean
             ElseIf privEnumCompare(tOpt, optValueAsDate) Then
@@ -2126,13 +2126,13 @@ Attribute stgwb.VB_VarHelpID = -1
         If Not ValidConfig Then Exit Function
         ''
         stgKey = CheckKey(stgKey, options)
-        Dim stgIDX As Long: stgIDX = Index(stgKey)
+        Dim stgIDX As Long: stgIDX = index(stgKey)
         Dim existOptions As pbSettingOption
         If stgIDX > 0 Then
             l_isDirty = True
             existOptions = SettingOptionsByIndex(stgIDX)
             existOptions = ResetDataTypeOption(existOptions, optValueAsDouble, IsArraySet(existOptions))
-            l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
+            l_lo.listRows(index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
         End If
     End Function
     Public Function ForceTextFormat(ByVal stgKey, Optional options As pbSettingOption = pbSettingOption.optDefault)
@@ -2140,13 +2140,13 @@ Attribute stgwb.VB_VarHelpID = -1
         If Not ValidConfig Then Exit Function
         ''
         stgKey = CheckKey(stgKey, options)
-        Dim stgIDX As Long: stgIDX = Index(stgKey)
+        Dim stgIDX As Long: stgIDX = index(stgKey)
         Dim existOptions As pbSettingOption
         If stgIDX > 0 Then
             l_isDirty = True
             existOptions = SettingOptionsByIndex(stgIDX)
             existOptions = ResetDataTypeOption(existOptions, optValueAsText, IsArraySet(existOptions))
-            l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
+            l_lo.listRows(index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
         End If
     End Function
     Public Function ForceDoubleFormat(ByVal stgKey, Optional options As pbSettingOption = pbSettingOption.optDefault)
@@ -2154,13 +2154,13 @@ Attribute stgwb.VB_VarHelpID = -1
         If Not ValidConfig Then Exit Function
         ''
         stgKey = CheckKey(stgKey, options)
-        Dim stgIDX As Long: stgIDX = Index(stgKey)
+        Dim stgIDX As Long: stgIDX = index(stgKey)
         Dim existOptions As pbSettingOption
         If stgIDX > 0 Then
             l_isDirty = True
             existOptions = SettingOptionsByIndex(stgIDX)
             existOptions = ResetDataTypeOption(existOptions, optValueAsDouble, IsArraySet(existOptions))
-            l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
+            l_lo.listRows(index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
         End If
 
     End Function
@@ -2169,13 +2169,13 @@ Attribute stgwb.VB_VarHelpID = -1
         If Not ValidConfig Then Exit Function
         ''
         stgKey = CheckKey(stgKey, options)
-        Dim stgIDX As Long: stgIDX = Index(stgKey)
+        Dim stgIDX As Long: stgIDX = index(stgKey)
         Dim existOptions As pbSettingOption
         If stgIDX > 0 Then
             l_isDirty = True
             existOptions = SettingOptionsByIndex(stgIDX)
             existOptions = ResetDataTypeOption(existOptions, optValueAsLong, IsArraySet(existOptions))
-            l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
+            l_lo.listRows(index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
         End If
     End Function
     
@@ -2189,13 +2189,13 @@ Attribute stgwb.VB_VarHelpID = -1
         If Not ValidConfig Then Exit Function
         ''
         stgKey = CheckKey(stgKey, options)
-        Dim stgIDX As Long: stgIDX = Index(stgKey)
+        Dim stgIDX As Long: stgIDX = index(stgKey)
         Dim existOptions As pbSettingOption
         If stgIDX > 0 Then
             l_isDirty = True
             existOptions = SettingOptionsByIndex(stgIDX)
             existOptions = ResetDataTypeOption(existOptions, optValueAsDateTime, IsArraySet(existOptions))
-            l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
+            l_lo.listRows(index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
         End If
     End Function
     
@@ -2209,13 +2209,13 @@ Attribute stgwb.VB_VarHelpID = -1
         If Not ValidConfig Then Exit Function
         ''
         stgKey = CheckKey(stgKey, options)
-        Dim stgIDX As Long: stgIDX = Index(stgKey)
+        Dim stgIDX As Long: stgIDX = index(stgKey)
         Dim existOptions As pbSettingOption
         If stgIDX > 0 Then
             l_isDirty = True
             existOptions = SettingOptionsByIndex(stgIDX)
             existOptions = ResetDataTypeOption(existOptions, optValueAsDate, IsArraySet(existOptions))
-            l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
+            l_lo.listRows(index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
         End If
 
     End Function
@@ -2232,13 +2232,13 @@ Attribute stgwb.VB_VarHelpID = -1
         If Not ValidConfig Then Exit Function
         ''
         stgKey = CheckKey(stgKey, options)
-        Dim stgIDX As Long: stgIDX = Index(stgKey)
+        Dim stgIDX As Long: stgIDX = index(stgKey)
         Dim existOptions As pbSettingOption
         If stgIDX > 0 Then
             l_isDirty = True
             existOptions = SettingOptionsByIndex(stgIDX)
             existOptions = ResetDataTypeOption(existOptions, optValueAsBoolean, IsArraySet(existOptions))
-            l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
+            l_lo.listRows(index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
         End If
     End Function
     
@@ -2250,13 +2250,13 @@ Attribute stgwb.VB_VarHelpID = -1
         If Not ValidConfig Then Exit Function
         ''
         stgKey = CheckKey(stgKey, options)
-        Dim stgIDX As Long: stgIDX = Index(stgKey)
+        Dim stgIDX As Long: stgIDX = index(stgKey)
         Dim existOptions As pbSettingOption
         If stgIDX > 0 Then
             l_isDirty = True
             existOptions = SettingOptionsByIndex(stgIDX)
             existOptions = ResetDataTypeOption(existOptions, dataType, True)
-            l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
+            l_lo.listRows(index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
         End If
         
     End Function
@@ -2270,13 +2270,13 @@ Attribute stgwb.VB_VarHelpID = -1
         If Not ValidConfig Then Exit Function
         ''
         stgKey = CheckKey(stgKey, options)
-        Dim stgIDX As Long: stgIDX = Index(stgKey)
+        Dim stgIDX As Long: stgIDX = index(stgKey)
         Dim existOptions As pbSettingOption
         If stgIDX > 0 Then
             l_isDirty = True
             existOptions = SettingOptionsByIndex(stgIDX)
             existOptions = ResetDataTypeOption(existOptions, optValueAsGeneral, IsArraySet(existOptions))
-            l_lo.listRows(Index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
+            l_lo.listRows(index(stgKey)).Range(1, pbSTGColumns.scSettingOptions) = existOptions
         End If
     End Function
     
@@ -2291,7 +2291,7 @@ Attribute stgwb.VB_VarHelpID = -1
         If SettingIsRequired(stgKey) = True Then
             RaiseEvent OnAlert(True, "pbSetting: '" & stgKey & "' could not be deleted because it contains option: optKeyRequired")
         Else
-            If Index(stgKey) > 0 Then
+            If index(stgKey) > 0 Then
                 Dim cancelOperation As Boolean
                 RaiseEvent OnDeleteSetting(stgKey, cancelOperation)
                 DoEvents
@@ -2300,7 +2300,7 @@ Attribute stgwb.VB_VarHelpID = -1
                 Else
                     Dim evts As Boolean: evts = Me.Events: Me.Events = False
                     ''  Delete Setting
-                    l_lo.listRows(Index(stgKey)).Delete
+                    l_lo.listRows(index(stgKey)).Delete
                     ''  Restore App Events to prior setting
                     Me.Events = evts
                     l_isDirty = True
@@ -2316,7 +2316,7 @@ Attribute stgwb.VB_VarHelpID = -1
 ''  Returns Index of List for [settingKey]
 ''  Returns 0 if Missing
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
-    Public Function Index(ByVal stgKey, Optional options As pbSettingOption = pbSettingOption.optDefault) As Long
+    Public Function index(ByVal stgKey, Optional options As pbSettingOption = pbSettingOption.optDefault) As Long
         '' CHECK VALID CONFIGURATION
         If Not ValidConfig Then Exit Function
         ''
@@ -2326,7 +2326,7 @@ Attribute stgwb.VB_VarHelpID = -1
             On Error Resume Next
             tmpIdx = keyIndex(stgKey)
             If Err.number = 0 Then
-                Index = CLng(tmpIdx)
+                index = CLng(tmpIdx)
             Else
                 Err.Clear
             End If
@@ -2423,14 +2423,14 @@ Attribute stgwb.VB_VarHelpID = -1
             For iRow = LBound(exportArr) To UBound(exportArr)
                 If iRow = 1 Then
                     'Add Column Headers Index
-                    tmpIndexes.add iRow
+                    tmpIndexes.Add iRow
                 Else
                     If IsMissing(wildcardSearch) Then
-                        tmpIndexes.add iRow
+                        tmpIndexes.Add iRow
                     Else
                         For iCol = LBound(exportArr, 2) To UBound(exportArr, 2)
                             If StringsMatchPriv(exportArr(iRow, iCol), wildcardSearch, smContains) Then
-                                tmpIndexes.add iRow
+                                tmpIndexes.Add iRow
                                 Exit For
                             End If
                         Next iCol
@@ -2446,7 +2446,7 @@ Attribute stgwb.VB_VarHelpID = -1
                     newArr(populatingIndex, iCol) = exportArr(goodIndex, iCol)
                 Next iCol
             Next
-            Set newWB = Workbooks.add
+            Set newWB = Workbooks.Add
             Set newWS = newWB.Worksheets(1)
             With newWS
                 .Name = "SettingsExport"
@@ -2460,7 +2460,7 @@ Attribute stgwb.VB_VarHelpID = -1
                     End If
                 Next checkCol
                 .UsedRange.VerticalAlignment = xlVAlignCenter
-                .ListObjects.add SourceType:=xlSrcRange, Source:=.UsedRange, XLListObjectHasHeaders:=xlYes
+                .ListObjects.Add SourceType:=xlSrcRange, Source:=.UsedRange, XLListObjectHasHeaders:=xlYes
                 .Activate
                 .Parent.Windows(1).DisplayGridlines = False
                 
@@ -2496,14 +2496,14 @@ Attribute stgwb.VB_VarHelpID = -1
             Exit Function
         End If
         Dim wkbk As Workbook
-        Set wkbk = Application.Workbooks.add
+        Set wkbk = Application.Workbooks.Add
         DoEvents
         If Not wkbk Is Nothing Then
             wkbk.Worksheets(1).Name = "pbSettingsTest"
         End If
         wkbk.SaveAs fileName:=ThisWorkbook.path & Application.PathSeparator & "DEV_TEST_pbSettings.xlsm", FileFormat:=XlFileFormat.xlOpenXMLWorkbookMacroEnabled, addToMRU:=False
 '        wkbk.Worksheets(1).Name = "pbSettingsTest_" & UCase(Format(Now(), "_yyyyMMMdd_hhnnss"))
-        wkbk.VBProject.VBComponents.add vbext_ct_StdModule
+        wkbk.VBProject.VBComponents.Add vbext_ct_StdModule
         wkbk.Save
         Set SettingsWorkbook = wkbk
         StartSettings
@@ -2598,10 +2598,10 @@ Attribute stgwb.VB_VarHelpID = -1
                     expectCols = ExpectedColsArr
                     If ArrSize(expectCols) = tmpLO.ListColumns.Count Then
                         For Each lstCol In tmpLO.ListColumns
-                            If StringsMatchPriv(lstCol.Name, expectCols(lstCol.Index)) = False Then
+                            If StringsMatchPriv(lstCol.Name, expectCols(lstCol.index)) = False Then
                                 Exit For
                             End If
-                            If lstCol.Index = tmpLO.ListColumns.Count Then
+                            If lstCol.index = tmpLO.ListColumns.Count Then
                                 Set validLO = tmpLO
                                 Exit For
                             End If
@@ -2725,11 +2725,11 @@ Attribute stgwb.VB_VarHelpID = -1
                     If CollectionItemExists(deleteItems, startIdx) = False Then
                         If StringsMatchPriv(keepKey, srcArr(startIdx, pbSTGColumns.scSettingKey)) Then
                             If CDate(srcArr(startIdx, pbSTGColumns.scUpdated)) >= keepDt Then
-                                deleteItems.add keepIdx
+                                deleteItems.Add keepIdx
                                 keepIdx = startIdx
                                 keepDt = CDate(srcArr(startIdx, pbSTGColumns.scUpdated))
                             Else
-                                deleteItems.add startIdx
+                                deleteItems.Add startIdx
                             End If
                         End If
                     End If
@@ -2804,7 +2804,7 @@ Attribute stgwb.VB_VarHelpID = -1
             ''  Disable App Events
             Dim evts As Boolean: evts = Me.Events: Me.Events = False
             .SortFields.Clear
-            .SortFields.add l_lo.ListColumns(pbSTGColumns.scSettingKey).DataBodyRange, SortOn:=xlSortOnValues, Order:=XlSortOrder.xlAscending
+            .SortFields.Add l_lo.ListColumns(pbSTGColumns.scSettingKey).DataBodyRange, SortOn:=xlSortOnValues, Order:=XlSortOrder.xlAscending
             .Apply
             ''  Restore App Events to prior setting
             Me.Events = evts
@@ -3037,7 +3037,7 @@ Attribute stgwb.VB_VarHelpID = -1
         Application.Interactive = False
         Application.Cursor = XlMousePointer.xlWait
         
-        Set tmplSheet = stgwb.Worksheets.add(After:=stgwb.Worksheets(stgwb.Worksheets.Count))
+        Set tmplSheet = stgwb.Worksheets.Add(After:=stgwb.Worksheets(stgwb.Worksheets.Count))
         
         
         tmplSheet.Name = SETTINGS_SHEET_WEAKNAME
@@ -3055,7 +3055,7 @@ Attribute stgwb.VB_VarHelpID = -1
         
         tmplSheet.Range("A4:D4").Merge
         With tmplSheet
-            .Hyperlinks.add Anchor:=tmplSheet.Range("A4:D4"), _
+            .Hyperlinks.Add Anchor:=tmplSheet.Range("A4:D4"), _
             Address:="https://github.com/lopperman/just-VBA/blob/main/pbSettings/pbSettings.md", _
             ScreenTip:="View pbSettings on just-VBA Github repository"
             .Range("A3:D4").VerticalAlignment = xlVAlignCenter
@@ -3072,7 +3072,7 @@ Attribute stgwb.VB_VarHelpID = -1
         tRng.value = ExpectedColsArr
         Set tRng = tRng.Resize(RowSize:=2)
         Dim lstObj As ListObject
-        Set lstObj = tmplSheet.ListObjects.add(SourceType:=xlSrcRange, Source:=tRng, XLListObjectHasHeaders:=xlYes, tableStyleName:="TableStyleMedium2")
+        Set lstObj = tmplSheet.ListObjects.Add(SourceType:=xlSrcRange, Source:=tRng, XLListObjectHasHeaders:=xlYes, tableStyleName:="TableStyleMedium2")
         lstObj.Name = SETTINGS_LO
         With lstObj.listRows(1)
             .Range(1, pbSTGColumns.scSettingKey) = PBSTG_HIDE
@@ -3469,10 +3469,10 @@ End Function
             tOutput = True
             pbk = NewKey(tARR(i, pbSTGColumns.scSettingKey), optDefault)
             If Not keyNameLike = vbNullString Then
-                tOutput = StringsMatchPriv(pbk.Key, keyNameLike, smContains)
+                tOutput = StringsMatchPriv(pbk.key, keyNameLike, smContains)
             End If
             If tOutput Then
-                Debug.Print "SETTING KEY: " & pbk.Key & " ** ValueType: " & TypeName(pbk.OldValFormatted)
+                Debug.Print "SETTING KEY: " & pbk.key & " ** ValueType: " & TypeName(pbk.OldValFormatted)
             End If
         Next i
     End Function
@@ -3493,15 +3493,15 @@ End Function
             tOutput = True
             pbk = NewKey(tARR(i, pbSTGColumns.scSettingKey), optDefault)
             If Not keyNameLike = vbNullString Then
-                tOutput = StringsMatchPriv(pbk.Key, keyNameLike, smContains)
+                tOutput = StringsMatchPriv(pbk.key, keyNameLike, smContains)
             End If
             If tOutput Then
-                 pbKeys.add Array(pbk.Key, pbk.OldVal, pbk.OldValFormatted, pbk.OldOptions, pbk.Updated)
+                 pbKeys.Add Array(pbk.key, pbk.OldVal, pbk.OldValFormatted, pbk.OldOptions, pbk.Updated)
             End If
         Next i
         If pbKeys.Count > 0 Then
             Dim tWB As Workbook, tws As Worksheet
-            Set tWB = Workbooks.add
+            Set tWB = Workbooks.Add
             Set tws = tWB.Worksheets(1)
             tws.Name = "pbSettings-Summary"
             tWB.Windows(1).DisplayGridlines = False
@@ -3638,11 +3638,11 @@ Public Function DEV_ListMatchingSettings(options As pbSettingOption, Optional fi
     For Each sKey In SettingKeyColumn.DataBodyRange
         If findNonMatching = False Then
             If privEnumCompare(SettingOptions(sKey), options, ecAnd) = True Then
-                resp.add sKey
+                resp.Add sKey
             End If
         Else
             If privEnumCompare(SettingOptions(sKey), options, ecOR) = False Then
-                resp.add sKey
+                resp.Add sKey
             End If
         End If
     Next sKey

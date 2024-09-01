@@ -28,7 +28,7 @@ Public Function CompareVBComp(wkbk1 As Workbook, vbComp1 As String, wkbk2 As Wor
     Set vb2 = New VBItemProps
     vb2.Populate wkbk2, wkbk2.VBProject.VBComponents(vbComp2)
     
-    Set wbOut = Workbooks.add
+    Set wbOut = Workbooks.Add
     Set wsOut = wbOut.Worksheets(1)
     
     With wsOut
@@ -138,9 +138,9 @@ End Function
 
 Public Function IsMethodStart(sLine) As Boolean
     Dim terms As New Collection
-    terms.add "Public "
-    terms.add "Private "
-    terms.add "Internal "
+    terms.Add "Public "
+    terms.Add "Private "
+    terms.Add "Internal "
     Dim chkLine As String
     chkLine = Trim(sLine)
     Dim chkTerm
@@ -153,10 +153,10 @@ Public Function IsMethodStart(sLine) As Boolean
 End Function
 Public Function IsMethodEnd(sLine) As Boolean
     Dim terms As New Collection
-    terms.add "End Function"
-    terms.add "End Sub"
-    terms.add "End Property"
-    terms.add "End Function"
+    terms.Add "End Function"
+    terms.Add "End Sub"
+    terms.Add "End Property"
+    terms.Add "End Function"
     Dim chkLine As String
     chkLine = Trim(sLine)
     Dim chkTerm

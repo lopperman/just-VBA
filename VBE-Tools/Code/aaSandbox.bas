@@ -4,6 +4,7 @@ Option Compare Text
 Option Base 1
 
 
+
 Public Function FindBlanks(ws As Worksheet)
     Debug.Print "Find Blank rows/cols in: " & ws.Name & " (" & ws.CodeName & ")"
     Debug.Print ws.Name, "used range: " & ws.UsedRange.Address
@@ -18,6 +19,25 @@ Public Function FindBlanks(ws As Worksheet)
         
     
 
+End Function
+
+Public Function devcol()
+    Dim tst As pbCollectionTest
+    Set tst = New pbCollectionTest
+    tst.work
+    
+End Function
+
+Public Function devnudge() As pbNudgeRange
+    Dim ndr As New pbNudgeRange
+    Set devnudge = ndr
+    Debug.Print "Default Options: " & ndr.DefaultOptions
+    Debug.Print "Events On: " & ndr.CheckDefaultOption(ndRaiseLogEvents)
+    Debug.Print "Fill Columns Only: " & ndr.CheckDefaultOption(ndFillByColsOnly)
+    Debug.Print "Fill Left To Right: " & (ndr.CheckDefaultOption(ndFillRightLeft) = False)
+    Debug.Print "On Complete, Delete Blank Cols: " & (ndr.CheckDefaultOption(ndOnCompleteDeleteBlankCols))
+    Debug.Print "On Complete, Delete Blank Rows: " & (ndr.CheckDefaultOption(ndOnCompleteDeleteBlankRows))
+    
 End Function
 
 Public Function devUpdLO()
@@ -84,14 +104,14 @@ Public Function testSort()
     maxLen = 50
     
     Dim wb As Workbook, ws As Worksheet, lo As ListObject
-    Set wb = Application.Workbooks.add
+    Set wb = Application.Workbooks.Add
     Set ws = wb.Worksheets(1)
     With ws
         .Range("A1") = "Col1"
         .Range("B1") = "Col2"
         .Range("A2") = "testing"
         .Range("B2") = Now()
-        Set lo = .ListObjects.add(SourceType:=xlSrcRange, Source:=.Range("A1:B2"), XLListObjectHasHeaders:=xlYes)
+        Set lo = .ListObjects.Add(SourceType:=xlSrcRange, Source:=.Range("A1:B2"), XLListObjectHasHeaders:=xlYes)
     End With
     Dim i As Long, tARR() As Variant
     Dim tVal
@@ -429,11 +449,11 @@ Public Function CAL()
     Dim arr, i As Long
     arr = ArrListObj(lo, aoNone)
     Dim startDtCol As Long, startTimeCol As Long, endTimeCol As Long, newStartCol As Long, newEndCol As Long
-    startDtCol = lo.ListColumns("FixedDate").Index
-    startTimeCol = lo.ListColumns("Start Time").Index
-    endTimeCol = lo.ListColumns("End Time").Index
-    newStartCol = lo.ListColumns("New Start").Index
-    newEndCol = lo.ListColumns("New End").Index
+    startDtCol = lo.ListColumns("FixedDate").index
+    startTimeCol = lo.ListColumns("Start Time").index
+    endTimeCol = lo.ListColumns("End Time").index
+    newStartCol = lo.ListColumns("New Start").index
+    newEndCol = lo.ListColumns("New End").index
         
     Dim startDt, startTm, endTm, newStart, newEnd
     Dim arrValsChanged As Boolean

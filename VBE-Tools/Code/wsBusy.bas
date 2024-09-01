@@ -15,6 +15,10 @@ Private lastTmr As Single
 Private forceScreenRefreshSeconds As Long
 Private lOnCloseGoTo As Worksheet
 
+Private Sub Worksheet_Calculate()
+    
+End Sub
+
 
 Public Property Get ForceRefreshSeconds() As Long
     If forceScreenRefreshSeconds <= 0 Then forceScreenRefreshSeconds = 1
@@ -207,3 +211,6 @@ End Function
 
 
 
+Private Sub Worksheet_Change(ByVal Target As Range)
+
+End Sub

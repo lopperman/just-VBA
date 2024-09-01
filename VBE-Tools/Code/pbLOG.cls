@@ -210,7 +210,7 @@ Public Function GetCurrentLogLines() As Collection
     lines = Split(Input$(LOF(hf), #hf), vbNewLine)
     Close #hf
     For i = LBound(lines) To UBound(lines)
-        resp.add Replace(lines(i), Chr(34), "")
+        resp.Add Replace(lines(i), Chr(34), "")
     Next i
     Set GetCurrentLogLines = resp
 End Function

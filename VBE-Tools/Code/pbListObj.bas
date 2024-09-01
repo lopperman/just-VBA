@@ -220,7 +220,7 @@ Public Function UserSort(lstObj As ListObject, lstColIdx As Long)
             clearPreviousSort = True
         Else
             If lstObj.Sort.SortFields.Count = 1 Then
-                If lstObj.Sort.SortFields(1).Key.column - hdrCol + 1 <> lstColIdx Then
+                If lstObj.Sort.SortFields(1).key.column - hdrCol + 1 <> lstColIdx Then
                     clearPreviousSort = True
                 End If
             End If
@@ -237,7 +237,7 @@ Public Function UserSort(lstObj As ListObject, lstColIdx As Long)
                     .SortFields(1).Order = xlAscending
                 End If
             Else
-                .SortFields.add lstObj.ListColumns(lstColIdx).DataBodyRange, SortOn:=XlSortOn.xlSortOnValues, Order:=XlSortOrder.xlAscending
+                .SortFields.Add lstObj.ListColumns(lstColIdx).DataBodyRange, SortOn:=XlSortOn.xlSortOnValues, Order:=XlSortOrder.xlAscending
             End If
             .Apply
         End With
@@ -357,7 +357,7 @@ Public Function ReplaceFormulasWithStatic(lstObj As ListObject) As Boolean
     Dim lc As listColumn
     For Each lc In lstObj.ListColumns
         If lc.DataBodyRange(1, 1).HasFormula Then
-            ReplaceListColFormulaWithStatic lstObj, lc.Index
+            ReplaceListColFormulaWithStatic lstObj, lc.index
         End If
     Next lc
     Set lc = Nothing
@@ -523,7 +523,7 @@ Public Function FindMatchingListColumns(colName As String, Optional matchType As
         For Each tLO In tws.ListObjects
             For Each tCol In tLO.ListColumns
                 If StringsMatch(tCol.Name, colName, matchType) Then
-                    retCol.add Array(tLO.Name, tCol.Name)
+                    retCol.Add Array(tLO.Name, tCol.Name)
                 End If
             Next
         Next
@@ -544,7 +544,7 @@ Public Function ListColumnIndex(ByRef lstObj As ListObject, lstColName As String
     Dim lstCol As listColumn
     For Each lstCol In lstObj.ListColumns
         If StringsMatch(lstCol.Name, lstColName) Then
-            ListColumnIndex = lstCol.Index
+            ListColumnIndex = lstCol.index
             Exit For
         End If
     Next lstCol
@@ -561,9 +561,9 @@ On Error Resume Next
     If Not ListColumnExists(lstObj, colName) Then
         Dim nc As listColumn
         If position > 0 Then
-            Set nc = lstObj.ListColumns.add(position:=position)
+            Set nc = lstObj.ListColumns.Add(position:=position)
         Else
-            Set nc = lstObj.ListColumns.add
+            Set nc = lstObj.ListColumns.Add
         End If
         nc.Name = colName
         If lstObj.listRows.Count > 0 And numberFormat <> vbNullString Then
@@ -691,7 +691,7 @@ On Error GoTo e:
     
     lstObj.Resize lstObj.Range.Resize(RowSize:=(hdrRngRows + totRngRows + listRows) + addRowCount)
     Do While lstObj.listRows.Count < endCount
-        lstObj.listRows.add
+        lstObj.listRows.Add
     Loop
     
     Dim firstNewRow As Long, lastNewRow As Long
@@ -836,7 +836,7 @@ On Error GoTo e:
     Next
     If Not oDict.Exists(sID) Then Set oDict(sID) = New Collection
 '    Call oDict(sID).Add(i - 1)
-    oDict(sID).add (i - 1)
+    oDict(sID).Add (i - 1)
   Next
   Set getIndex = oDict
   Exit Function

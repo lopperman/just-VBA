@@ -90,12 +90,12 @@ Attribute Count.VB_Description = "Get the number of items in the dictionary.\n"
 #End If
 End Property
 
-Public Property Get item(Key As Variant) As Variant
+Public Property Get item(key As Variant) As Variant
 Attribute item.VB_Description = "Set or get the item for a given key."
 Attribute item.VB_UserMemId = 0
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
     Dim dict_KeyValue As Variant
-    dict_KeyValue = dict_GetKeyValue(Key)
+    dict_KeyValue = dict_GetKeyValue(key)
 
     If Not IsEmpty(dict_KeyValue) Then
         If VBA.IsObject(dict_KeyValue(2)) Then
@@ -107,38 +107,38 @@ Attribute item.VB_UserMemId = 0
         ' Not found -> Returns Empty
     End If
 #Else
-    If VBA.IsObject(dict_pDictionary.item(Key)) Then
-        Set item = dict_pDictionary.item(Key)
+    If VBA.IsObject(dict_pDictionary.item(key)) Then
+        Set item = dict_pDictionary.item(key)
     Else
-        item = dict_pDictionary.item(Key)
+        item = dict_pDictionary.item(key)
     End If
 #End If
 End Property
-Public Property Let item(Key As Variant, value As Variant)
+Public Property Let item(key As Variant, value As Variant)
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
-    If Me.Exists(Key) Then
-        dict_ReplaceKeyValue dict_GetKeyValue(Key), Key, value
+    If Me.Exists(key) Then
+        dict_ReplaceKeyValue dict_GetKeyValue(key), key, value
     Else
-        dict_AddKeyValue Key, value
+        dict_AddKeyValue key, value
     End If
 #Else
-    dict_pDictionary.item(Key) = value
+    dict_pDictionary.item(key) = value
 #End If
 End Property
-Public Property Set item(Key As Variant, value As Variant)
+Public Property Set item(key As Variant, value As Variant)
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
-    If Me.Exists(Key) Then
-        dict_ReplaceKeyValue dict_GetKeyValue(Key), Key, value
+    If Me.Exists(key) Then
+        dict_ReplaceKeyValue dict_GetKeyValue(key), key, value
     Else
-        dict_AddKeyValue Key, value
+        dict_AddKeyValue key, value
     End If
 #Else
-    Set dict_pDictionary.item(Key) = value
+    Set dict_pDictionary.item(key) = value
 #End If
 End Property
 
-Public Property Let Key(previous As Variant, Updated As Variant)
-Attribute Key.VB_Description = "Change a key to a different key."
+Public Property Let key(previous As Variant, Updated As Variant)
+Attribute key.VB_Description = "Change a key to a different key."
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
     Dim dict_KeyValue As Variant
     dict_KeyValue = dict_GetKeyValue(previous)
@@ -147,7 +147,7 @@ Attribute Key.VB_Description = "Change a key to a different key."
         dict_ReplaceKeyValue dict_KeyValue, Updated, dict_KeyValue(2)
     End If
 #Else
-    dict_pDictionary.Key(previous) = Updated
+    dict_pDictionary.key(previous) = Updated
 #End If
 End Property
 
@@ -161,17 +161,17 @@ End Property
 ' @param {Variant} Key
 ' @param {Variant} Item
 ' --------------------------------------------- '
-Public Sub add(Key As Variant, item As Variant)
-Attribute add.VB_Description = "Add a new key and item to the dictionary."
+Public Sub Add(key As Variant, item As Variant)
+Attribute Add.VB_Description = "Add a new key and item to the dictionary."
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
-    If Not Me.Exists(Key) Then
-        dict_AddKeyValue Key, item
+    If Not Me.Exists(key) Then
+        dict_AddKeyValue key, item
     Else
         ' This key is already associated with an element of this collection
         Err.Raise 457
     End If
 #Else
-    dict_pDictionary.add Key, item
+    dict_pDictionary.Add key, item
 #End If
 End Sub
 
@@ -181,12 +181,12 @@ End Sub
 ' @param {Variant} Key
 ' @return {Boolean}
 ' --------------------------------------------- '
-Public Function Exists(Key As Variant) As Boolean
+Public Function Exists(key As Variant) As Boolean
 Attribute Exists.VB_Description = "Determine if a given key is in the dictionary."
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
-    Exists = Not IsEmpty(dict_GetKeyValue(Key))
+    Exists = Not IsEmpty(dict_GetKeyValue(key))
 #Else
-    Exists = dict_pDictionary.Exists(Key)
+    Exists = dict_pDictionary.Exists(key)
 #End If
 End Function
 
@@ -233,11 +233,11 @@ End Function
 '
 ' @param {Variant} Key
 ' --------------------------------------------- '
-Public Sub remove(Key As Variant)
-Attribute remove.VB_Description = "Remove a given key from the dictionary."
+Public Sub Remove(key As Variant)
+Attribute Remove.VB_Description = "Remove a given key from the dictionary."
 #If Mac Or Not UseScriptingDictionaryIfAvailable Then
     Dim dict_KeyValue As Variant
-    dict_KeyValue = dict_GetKeyValue(Key)
+    dict_KeyValue = dict_GetKeyValue(key)
 
     If Not VBA.IsEmpty(dict_KeyValue) Then
         dict_RemoveKeyValue dict_KeyValue
@@ -246,7 +246,7 @@ Attribute remove.VB_Description = "Remove a given key from the dictionary."
         Err.Raise 32811
     End If
 #Else
-    dict_pDictionary.remove Key
+    dict_pDictionary.Remove key
 #End If
 End Sub
 
@@ -310,7 +310,7 @@ Private Sub dict_AddKeyValue(dict_Key As Variant, dict_Value As Variant, Optiona
         End If
 
         ' Add key-value at proper index
-        dict_pKeyValues.add Array(dict_FormattedKey, dict_Key, dict_Value), dict_FormattedKey, Before:=dict_Index + 1
+        dict_pKeyValues.Add Array(dict_FormattedKey, dict_Key, dict_Value), dict_FormattedKey, Before:=dict_Index + 1
     Else
         ' Add key-value as last item
         If VBA.IsObject(dict_Key) Then
@@ -324,7 +324,7 @@ Private Sub dict_AddKeyValue(dict_Key As Variant, dict_Value As Variant, Optiona
             dict_pItems(UBound(dict_pItems)) = dict_Value
         End If
 
-        dict_pKeyValues.add Array(dict_FormattedKey, dict_Key, dict_Value), dict_FormattedKey
+        dict_pKeyValues.Add Array(dict_FormattedKey, dict_Key, dict_Value), dict_FormattedKey
     End If
 End Sub
 
@@ -369,7 +369,7 @@ Private Sub dict_RemoveKeyValue(dict_KeyValue As Variant, Optional ByVal dict_In
         End If
     End If
 
-    dict_pKeyValues.remove dict_KeyValue(0)
+    dict_pKeyValues.Remove dict_KeyValue(0)
     dict_RemoveObjectKey dict_KeyValue(1)
 End Sub
 
@@ -423,7 +423,7 @@ Private Function dict_GetObjectKey(dict_ObjKey As Variant) As String
         End If
     Next dict_i
 
-    dict_pObjectKeys.add dict_ObjKey
+    dict_pObjectKeys.Add dict_ObjKey
     dict_GetObjectKey = "__object__" & dict_pObjectKeys.Count
 End Function
 
@@ -431,7 +431,7 @@ Private Sub dict_RemoveObjectKey(dict_ObjKey As Variant)
     Dim dict_i As Integer
     For dict_i = 1 To dict_pObjectKeys.Count
         If dict_pObjectKeys.item(dict_i) Is dict_ObjKey Then
-            dict_pObjectKeys.remove dict_i
+            dict_pObjectKeys.Remove dict_i
             Exit Sub
         End If
     Next dict_i

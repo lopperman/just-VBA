@@ -30,33 +30,33 @@ Public Function DEV_ListSharepointConnections(Optional wkbk As Workbook)
     Dim tmpWBConn As WorkbookConnection
     Dim tmpOleDBConn As OLEDBConnection
     Dim tmpCol As New Collection
-    tmpCol.add Array("Sharepoint OLEDB Connections", wkbk.Name)
+    tmpCol.Add Array("Sharepoint OLEDB Connections", wkbk.Name)
     For Each tmpWBConn In wkbk.Connections
         If tmpWBConn.Type = xlConnectionTypeOLEDB Then
         
-            tmpCol.add Array("  ", "")
-            tmpCol.add Array("***** CONNECTION *****", "")
-            tmpCol.add Array("CONNECTION NAME", tmpWBConn.Name)
+            tmpCol.Add Array("  ", "")
+            tmpCol.Add Array("***** CONNECTION *****", "")
+            tmpCol.Add Array("CONNECTION NAME", tmpWBConn.Name)
             If Not tmpWBConn.Ranges Is Nothing Then
                 If tmpWBConn.Ranges.Count > 0 Then
-                    tmpCol.add Array("TARGET WORKSHEET", tmpWBConn.Ranges(1).Worksheet.Name)
-                    tmpCol.add Array("WORKSHEET RANGE", tmpWBConn.Ranges(1).Address)
+                    tmpCol.Add Array("TARGET WORKSHEET", tmpWBConn.Ranges(1).Worksheet.Name)
+                    tmpCol.Add Array("WORKSHEET RANGE", tmpWBConn.Ranges(1).Address)
                 Else
-                    tmpCol.add Array("TARGET WORKSHEET: ", " ** N/A **")
+                    tmpCol.Add Array("TARGET WORKSHEET: ", " ** N/A **")
                 End If
             End If
-            tmpCol.add Array("REFRESH WITH REFRESH ALL", tmpWBConn.refreshWithRefreshAll)
+            tmpCol.Add Array("REFRESH WITH REFRESH ALL", tmpWBConn.refreshWithRefreshAll)
             Set tmpOleDBConn = tmpWBConn.OLEDBConnection
-            tmpCol.add Array("COMMAND TEXT", tmpOleDBConn.CommandText)
-            tmpCol.add Array("CONNECTION", tmpOleDBConn.Connection)
-            tmpCol.add Array("ENABLE REFRESH", tmpOleDBConn.enableRefresh)
-            tmpCol.add Array("IS CONNECTED", tmpOleDBConn.IsConnected)
-            tmpCol.add Array("MAINTAIN CONNECTION", tmpOleDBConn.maintainConnection)
-            tmpCol.add Array("REFRESH ON FILE OPEN", tmpOleDBConn.refreshOnFileOpen)
-            tmpCol.add Array("REFRESH PERIOD", tmpOleDBConn.RefreshPeriod)
-            tmpCol.add Array("ROBUST CONNECT (xlRobustConnect)", tmpOleDBConn.RobustConnect)
-            tmpCol.add Array("SERVER CREDENTIALS METHOD (xlCredentialsMethod)", tmpOleDBConn.serverCredentialsMethod)
-            tmpCol.add Array("USE LOCAL CONNECTION", tmpOleDBConn.UseLocalConnection)
+            tmpCol.Add Array("COMMAND TEXT", tmpOleDBConn.CommandText)
+            tmpCol.Add Array("CONNECTION", tmpOleDBConn.Connection)
+            tmpCol.Add Array("ENABLE REFRESH", tmpOleDBConn.enableRefresh)
+            tmpCol.Add Array("IS CONNECTED", tmpOleDBConn.IsConnected)
+            tmpCol.Add Array("MAINTAIN CONNECTION", tmpOleDBConn.maintainConnection)
+            tmpCol.Add Array("REFRESH ON FILE OPEN", tmpOleDBConn.refreshOnFileOpen)
+            tmpCol.Add Array("REFRESH PERIOD", tmpOleDBConn.RefreshPeriod)
+            tmpCol.Add Array("ROBUST CONNECT (xlRobustConnect)", tmpOleDBConn.RobustConnect)
+            tmpCol.Add Array("SERVER CREDENTIALS METHOD (xlCredentialsMethod)", tmpOleDBConn.serverCredentialsMethod)
+            tmpCol.Add Array("USE LOCAL CONNECTION", tmpOleDBConn.UseLocalConnection)
         End If
     Next tmpWBConn
     Dim cItem, useTab As Boolean

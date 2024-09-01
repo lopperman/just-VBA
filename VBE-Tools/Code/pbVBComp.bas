@@ -331,7 +331,7 @@ Public Function VBEdevUpdateComponent( _
             sourceWB.VBProject.VBComponents("aaDELETE").Export PathCombine(False, saveFullPath, "aaDELETE.bas")
             targetWB.VBProject.VBComponents.Import PathCombine(False, saveFullPath, "aaDELETE.bas")
             DoEvents
-            targetWB.VBProject.VBComponents.remove targetWB.VBProject.VBComponents("aaDELETE")
+            targetWB.VBProject.VBComponents.Remove targetWB.VBProject.VBComponents("aaDELETE")
             DoEvents
             
             
@@ -354,7 +354,7 @@ Public Function VBEdevUpdateComponent( _
         srcComp.Export exportPath
         If Err.number = 0 Then
             If Not existTarget Is Nothing Then
-                targetWB.VBProject.VBComponents.remove existTarget
+                targetWB.VBProject.VBComponents.Remove existTarget
             End If
             targetWB.VBProject.VBComponents.Import exportPath
             With targetWB.VBProject.VBComponents(srcComponentName).CodeModule

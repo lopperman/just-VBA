@@ -129,9 +129,9 @@ Public Function AddOption(ByVal updateOption As ListObjUpdateOptions, ByVal opti
     End If
     OnLog "TRACE", "AddOption (" & updateOption & ") = " & optionValue
     If CollectionKeyExists(l_options, CStr(updateOption)) Then
-        l_options.remove CStr(updateOption)
+        l_options.Remove CStr(updateOption)
     End If
-    l_options.add optionValue, Key:=CStr(updateOption)
+    l_options.Add optionValue, key:=CStr(updateOption)
 End Function
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
@@ -264,7 +264,7 @@ Private Function BuildResultsCollection(matchedVal As Boolean) As Collection
     Dim i As Long
     For i = 1 To UBound(l_IndexResults)
         If l_IndexResults(i, 2) = matchedVal Then
-            resp.add (i)
+            resp.Add (i)
         End If
     Next i
     Set BuildResultsCollection = resp
@@ -365,7 +365,7 @@ Private Function MatchedIndexes(listColumn, _
     
     Dim resp As New Collection
     Dim colIdx As Long
-    colIdx = l_searchListObject.ListColumns(listColumn).Index
+    colIdx = l_searchListObject.ListColumns(listColumn).index
     
     Dim i As Long, curValue As Variant, isMatched As Boolean
     For i = 1 To UBound(l_IndexResults)
@@ -389,7 +389,7 @@ Private Function MatchedIndexes(listColumn, _
                 isMatched = (curValue < MinV(searchVal1, searchVal2)) Or (curValue > MaxV(searchVal1, searchVal2))
         End Select
         If isMatched Then
-            resp.add i
+            resp.Add i
         End If
     Next i
     Set MatchedIndexes = resp
@@ -448,16 +448,16 @@ End Function
 ''       'error was returned
 ''   End if
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
-Private Function CollectionItemByKey(ByRef col As Collection, ByVal Key)
+Private Function CollectionItemByKey(ByRef col As Collection, ByVal key)
 On Error Resume Next
-    Key = CStr(Key)
-    If IsObject(col(Key)) Then
+    key = CStr(key)
+    If IsObject(col(key)) Then
         If Err.number = 0 Then
-            Set CollectionItemByKey = col(Key)
+            Set CollectionItemByKey = col(key)
         End If
     Else
         If Err.number = 0 Then
-            CollectionItemByKey = col(Key)
+            CollectionItemByKey = col(key)
         End If
     End If
     If Err.number <> 0 Then
@@ -465,10 +465,10 @@ On Error Resume Next
         CollectionItemByKey = CVErr(1004)
     End If
 End Function
-Private Function CollectionKeyExists(ByRef col As Collection, ByVal Key)
+Private Function CollectionKeyExists(ByRef col As Collection, ByVal key)
 On Error Resume Next
-    Key = CStr(Key)
-    If IsObject(col(Key)) Then
+    key = CStr(key)
+    If IsObject(col(key)) Then
         If Err.number = 0 Then
             CollectionKeyExists = True
         Else
@@ -550,9 +550,10 @@ Private Function OnErrorRaise(errNumber, errMessage As String)
 End Function
 
 Private Function OnLog(logLvl As String, msg As String)
-    l_logMessages.add TimeStamp & " " & UCase(logLvl) & " " & msg
+    l_logMessages.Add TimeStamp & " " & UCase(logLvl) & " " & msg
     RaiseEvent OnLogMessage(logLvl, msg)
 End Function
+
 
 
 Private Sub Class_Initialize()

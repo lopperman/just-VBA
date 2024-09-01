@@ -53,7 +53,7 @@ Private Function TmpUtilSheet() As Worksheet
     If WorksheetExists(TMP_RANGE_UTIL_WORKSHEET) = False Then
         Dim retWS As Worksheet
         
-        Set retWS = Excel.Application.Worksheets.add(After:=Worksheets(Worksheets.Count))
+        Set retWS = Excel.Application.Worksheets.Add(After:=Worksheets(Worksheets.Count))
         retWS.Name = TMP_RANGE_UTIL_WORKSHEET
         retWS.visible = xlSheetVeryHidden
         Set TmpUtilSheet = retWS
@@ -75,10 +75,10 @@ Public Function RangeToUniqueArray(rng As Range, Optional Sorted As Boolean = Tr
             If Not d.Exists(tmpVal) Then
                 If excludeEmpty = True Then
                     If Not StringsMatch(TypeName(tmpVal), "Empty") Then
-                        d.add tmpVal, tmpVal
+                        d.Add tmpVal, tmpVal
                     End If
                 Else
-                        d.add tmpVal, tmpVal
+                        d.Add tmpVal, tmpVal
                 End If
             End If
         Next rngCell
@@ -94,7 +94,7 @@ Public Function RangeToUniqueArray(rng As Range, Optional Sorted As Boolean = Tr
             sRng.value = ArrArray(d.Keys, aoNone)
             
             TmpUtilSheet.Sort.SortFields.Clear
-            TmpUtilSheet.Sort.SortFields.add2 Key:=Range( _
+            TmpUtilSheet.Sort.SortFields.add2 key:=Range( _
                 sRng.Address), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:= _
                 xlSortNormal
             With TmpUtilSheet.Sort
@@ -262,7 +262,7 @@ Public Function GetUniqueSortedListCol(lstObj As ListObject, lstCol As Variant, 
         Case ListReturnType.lrtCollection
             Set tDic = New Collection
             For aIdx = LBound(arr) To UBound(arr)
-                tCol.add arr(aIdx, 1)
+                tCol.Add arr(aIdx, 1)
             Next aIdx
             Set GetUniqueSortedListCol = tCol
     End Select
@@ -287,7 +287,7 @@ Public Function ArrListCols(lstObj As ListObject, flags As ArrayOptionFlags, Par
         For IDX = LBound(listCols) To UBound(listCols)
             If rng Is Nothing Then
                 If inclHeader Then
-                    Set rng = lstObj.HeaderRowRange(1, lstObj.ListColumns(listCols(IDX)).Index)
+                    Set rng = lstObj.HeaderRowRange(1, lstObj.ListColumns(listCols(IDX)).index)
                     Set rng = rng.Resize(RowSize:=lstObj.listRows.Count + lstObj.HeaderRowRange.rows.Count)
                 Else
                     Set rng = lstObj.ListColumns(listCols(IDX)).DataBodyRange
@@ -295,7 +295,7 @@ Public Function ArrListCols(lstObj As ListObject, flags As ArrayOptionFlags, Par
             Else
                 If inclHeader Then
                     Dim tRng As Range
-                    Set tRng = lstObj.HeaderRowRange(1, lstObj.ListColumns(listCols(IDX)).Index)
+                    Set tRng = lstObj.HeaderRowRange(1, lstObj.ListColumns(listCols(IDX)).index)
                     Set tRng = tRng.Resize(RowSize:=lstObj.listRows.Count + lstObj.HeaderRowRange.rows.Count)
                     Set rng = Union(rng, tRng)
                     Set tRng = Nothing
@@ -548,7 +548,7 @@ Private Function UniqueRC1Arr(ByVal arr As Variant, flags As ArrayOptionFlags) A
             .Sort.SortFields.Clear
             For sidx = 1 To tmpRng.Columns.Count
                 Set sRng = tmpRng.Resize(ColumnSize:=1).Offset(ColumnOffset:=sidx - 1)
-                .Sort.SortFields.add2 Key:=.Range(sRng.Address), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+                .Sort.SortFields.add2 key:=.Range(sRng.Address), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
             Next sidx
             Set sRng = Nothing
             With .Sort

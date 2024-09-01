@@ -409,11 +409,11 @@ Public Function CheckSort(lstObj As ListObject, col As Variant, sortPosition As 
         retV = True
         Dim sortFld As SortField
         Set sortFld = lstObj.Sort.SortFields(sortPosition)
-        If sortFld.Key.Columns.Count <> 1 Then
+        If sortFld.key.Columns.Count <> 1 Then
             retV = False
             Exit Function
         End If
-        If StrComp(sortFld.Key.Address, lstObj.ListColumns(col).DataBodyRange.Address, vbTextCompare) <> 0 Then
+        If StrComp(sortFld.key.Address, lstObj.ListColumns(col).DataBodyRange.Address, vbTextCompare) <> 0 Then
             retV = False
             Exit Function
         End If
@@ -438,7 +438,7 @@ Public Function GetRangeMultipleCrit(lstObj As ListObject, Columns As Variant, c
     If sortcols = False Then
         For sidx = LBound(Columns) To UBound(Columns)
             tmpIdx = tmpIdx + 1
-            If StrComp(lstObj.Sort.SortFields(tmpIdx).Key.Address, lstObj.ListColumns(Columns(sidx)).DataBodyRange.Address, vbTextCompare) <> 0 Then
+            If StrComp(lstObj.Sort.SortFields(tmpIdx).key.Address, lstObj.ListColumns(Columns(sidx)).DataBodyRange.Address, vbTextCompare) <> 0 Then
                 sortcols = True
                 Exit For
             End If
@@ -1063,7 +1063,7 @@ Private Function GetFieldIndex(ByRef listObj As ListObject, field As Variant) As
     If IsNumeric(field) Then
         fieldIdx = CLng(field)
     Else
-        fieldIdx = listObj.ListColumns(field).Index
+        fieldIdx = listObj.ListColumns(field).index
     End If
     GetFieldIndex = fieldIdx
 End Function
@@ -1334,7 +1334,7 @@ Private Function GetRowIndex(ByRef listObj As ListObject, field As Variant, crit
             Else
                 Dim srtField As SortField
                 Set srtField = .Sort.SortFields(1)
-                If srtField.Key.column <> .ListColumns(fieldIdx).Range.column Then
+                If srtField.key.column <> .ListColumns(fieldIdx).Range.column Then
                     AddSort listObj, field, clearPreviousSorts:=True
                 End If
             End If
@@ -1452,7 +1452,7 @@ On Error GoTo e:
         With lstObj.Sort
             .SortFields.Clear
             For colIdx = LBound(tCols) To UBound(tCols)
-                .SortFields.add lstObj.ListColumns(tCols(colIdx, 1)).DataBodyRange, SortOn:=xlSortOnValues, Order:=sortOrder
+                .SortFields.Add lstObj.ListColumns(tCols(colIdx, 1)).DataBodyRange, SortOn:=xlSortOnValues, Order:=sortOrder
             Next colIdx
             .Apply
             DoEvents
@@ -1497,7 +1497,7 @@ On Error GoTo e:
                 .SortFields.Clear
             Else
             End If
-            .SortFields.add listObj.ListColumns(field).DataBodyRange, SortOn:=xlSortOnValues, Order:=Order
+            .SortFields.Add listObj.ListColumns(field).DataBodyRange, SortOn:=xlSortOnValues, Order:=Order
             .Apply
         End With
     End If

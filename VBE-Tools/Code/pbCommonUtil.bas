@@ -159,7 +159,7 @@ Public Const STG_ENABLE_SPLIT_PANES = "SPLIT_PANES_ENABLED"
 ''   GENERALIZED TYPES
 '' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
 Public Type KVP
-  Key As String
+  key As String
   value As Variant
 End Type
 Public Type StringSequenceResult
@@ -841,38 +841,38 @@ Public Function GetPerfText(Optional notNormalOnly As Boolean = False) As String
     'CHECK EVENTS
     
     If EnumCompare(curPerf, PerfEnum.peEventsOn) = False Then
-        c.add "evts:N"
+        c.Add "evts:N"
     ElseIf notNormalOnly = False Then
-        c.add "evts:Y"
+        c.Add "evts:Y"
     End If
     'CHECK SCREEN UPDATING
     If EnumCompare(curPerf, PerfEnum.peScreenUpdatingON) = False Then
-        c.add "scrn:N"
+        c.Add "scrn:N"
     ElseIf notNormalOnly = False Then
-        c.add "scrn:Y"
+        c.Add "scrn:Y"
     End If
     'CHECK INTERACTIVE
     If EnumCompare(curPerf, PerfEnum.peInteractiveON) = False Then
-        c.add "intr:N"
+        c.Add "intr:N"
     ElseIf notNormalOnly = False Then
-        c.add "intr:Y"
+        c.Add "intr:Y"
     End If
     'CHECK ALERTS
     If EnumCompare(curPerf, PerfEnum.peAlertsON) = False Then
-        c.add "alrt:N"
+        c.Add "alrt:N"
     ElseIf notNormalOnly = False Then
-        c.add "alrt:Y"
+        c.Add "alrt:Y"
     End If
     'CHECK CALC MODE
     If EnumCompare(curPerf, PerfEnum.peCalcAutomatic) = False Then
-        c.add "calc:M"
+        c.Add "calc:M"
     ElseIf notNormalOnly = False Then
-        c.add "calc:A"
+        c.Add "calc:A"
     End If
     If EnumCompare(curPerf, PerfEnum.peMousePointerDefault) = False Then
-        c.add "curs:W"
+        c.Add "curs:W"
     ElseIf notNormalOnly = False Then
-        c.add "curs:D"
+        c.Add "curs:D"
     End If
     If notNormalOnly Then
         resp = " ( Abnormal States:"
@@ -1213,9 +1213,9 @@ Public Function AddSheetProtectionCache(ByRef wksht As Worksheet, pwd As String,
     If existKey And allowReplace = False Then
         Err.Raise 457
     ElseIf existKey Then
-        protSettingCache.remove (colKey)
+        protSettingCache.Remove (colKey)
     End If
-    protSettingCache.add Array(pwd, protectOptions), Key:=colKey
+    protSettingCache.Add Array(pwd, protectOptions), key:=colKey
 End Function
 
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
@@ -2451,7 +2451,7 @@ Public Function CopySheetToNewWB(ByVal ws As Worksheet, Optional filePath As Var
 On Error Resume Next
     Application.EnableEvents = False
     Dim newWB As Workbook
-    Set newWB = Application.Workbooks.add
+    Set newWB = Application.Workbooks.Add
     With ws
         .Copy Before:=newWB.Worksheets(1)
         DoEvents
@@ -2890,7 +2890,7 @@ On Error Resume Next
     MyName = Dir(MyPath, vbNormal)
     Do While MyName <> ""
         If (GetAttr(PathCombine(False, MyPath, MyName)) And vbNormal) = vbNormal Then
-            cl.add MyName
+            cl.Add MyName
         End If
         MyName = Dir()
     Loop
@@ -2991,16 +2991,16 @@ End Function
 ''       'error was returned
 ''   End if
 ' ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ '
-Public Function CollectionItemByKey(ByRef col As Collection, ByVal Key)
+Public Function CollectionItemByKey(ByRef col As Collection, ByVal key)
 On Error Resume Next
-    Key = CStr(Key)
-    If IsObject(col(Key)) Then
+    key = CStr(key)
+    If IsObject(col(key)) Then
         If Err.number = 0 Then
-            Set CollectionItemByKey = col(Key)
+            Set CollectionItemByKey = col(key)
         End If
     Else
         If Err.number = 0 Then
-            CollectionItemByKey = col(Key)
+            CollectionItemByKey = col(key)
         End If
     End If
     If Err.number <> 0 Then
@@ -3008,10 +3008,10 @@ On Error Resume Next
         CollectionItemByKey = CVErr(1004)
     End If
 End Function
-Public Function CollectionKeyExists(ByRef col As Collection, ByVal Key)
+Public Function CollectionKeyExists(ByRef col As Collection, ByVal key)
 On Error Resume Next
-    Key = CStr(Key)
-    If IsObject(col(Key)) Then
+    key = CStr(key)
+    If IsObject(col(key)) Then
         If Err.number = 0 Then
             CollectionKeyExists = True
         Else
@@ -3130,7 +3130,7 @@ Public Function GetEnvironSettings( _
             End If
         End If
         If canReturn Then
-            tColl.add Array(tKey, tVal), Key:=tKey
+            tColl.Add Array(tKey, tVal), key:=tKey
         End If
         
         i = i + 1
@@ -3187,7 +3187,7 @@ On Error GoTo e:
             For Each tmpLO In tmpWS.ListObjects
                 If StringsMatch(tmpLO.Name, lstObjName) Then
                     If cacheReference Then
-                        loCol.add tmpLO, Key:=lstObjName
+                        loCol.Add tmpLO, key:=lstObjName
                     End If
                     Set wt = tmpLO
                 End If
@@ -3775,7 +3775,7 @@ Public Function HideSheets(ParamArray doNotHide() As Variant)
     Dim DoNotHideSheets As New Collection
     Dim tmpCodeName
     For Each tmpCodeName In doNotHide
-        DoNotHideSheets.add tmpCodeName, Key:=CStr(tmpCodeName)
+        DoNotHideSheets.Add tmpCodeName, key:=CStr(tmpCodeName)
     Next
     
     Dim p As PerfEnum
@@ -3817,11 +3817,11 @@ Public Function UnhideSheets(wkbk As Workbook, ParamArray keepHiddenSheets() As 
         Dim sht
         For Each sht In keepHiddenSheets
             If StringsMatch(TypeName(sht), "Worksheet") Then
-                hideColl.add sht.CodeName, Key:=sht.CodeName
+                hideColl.Add sht.CodeName, key:=sht.CodeName
             ElseIf StringsMatch(TypeName(sht), "String") Then
                 For Each ws In wkbk.Worksheets
                     If StringsMatch(ws.CodeName, sht) Or StringsMatch(ws.Name, sht) Then
-                        hideColl.add ws.CodeName, Key:=ws.CodeName
+                        hideColl.Add ws.CodeName, key:=ws.CodeName
                     End If
                 Next ws
             End If
@@ -3966,9 +3966,9 @@ Public Function HiddenWorksheets( _
     Dim resp As New Collection
     For Each tws In wkbk.Worksheets
         If tws.visible = xlSheetHidden And includeHidden Then
-            resp.add tws, Key:=tws.Name
+            resp.Add tws, key:=tws.Name
         ElseIf tws.visible = xlSheetVeryHidden And includeVeryHidden Then
-            resp.add tws, Key:=tws.Name
+            resp.Add tws, key:=tws.Name
         End If
     Next tws
     Set HiddenWorksheets = resp
@@ -3994,7 +3994,7 @@ Public Function ProtectedWorksheets( _
     Dim resp As New Collection
     For Each tws In wkbk.Worksheets
         If tws.protectContents Or tws.protectDrawingObjects Then
-            resp.add tws, Key:=tws.Name
+            resp.Add tws, key:=tws.Name
         End If
     Next tws
     Set ProtectedWorksheets = resp
