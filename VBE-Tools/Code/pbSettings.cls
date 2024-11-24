@@ -2080,7 +2080,8 @@ Attribute stgwb.VB_VarHelpID = -1
            UserNameOrLogin = Environ("UserName")
         #End If
     End Property
-
+    
+    
     Private Function ResetDataTypeOption(ByVal currentOptions As pbSettingOption, ByVal dataType As pbSettingOption, ByVal isArray As Boolean) As pbSettingOption
         Dim resp As pbSettingOption
         resp = currentOptions
